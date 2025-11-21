@@ -4,7 +4,8 @@ import html2pdf from 'html2pdf.js';
 import { 
   LayoutDashboard, Table as TableIcon, MapPin, Search, Filter, Siren, Users, 
   FileText, Calendar, ChevronRight, X, Menu, BarChart3, Map as MapIcon, 
-  RotateCcw, Building2, ChevronLeft, ListFilter, Layers, Navigation, AlertTriangle 
+  RotateCcw, Building2, ChevronLeft, ListFilter, Layers, Navigation, AlertTriangle,
+  Truck, FileWarning // <--- 1. เพิ่มไอคอนใหม่ตรงนี้
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
@@ -29,9 +30,8 @@ const parseThaiDate = (dateStr) => {
   return new Date(year, month, day);
 };
 
-// StatCard: ปรับให้ Responsive ยิ่งขึ้น (ลด Padding ในมือถือ)
 const StatCard = ({ title, value, icon: Icon, colorClass }) => (
-  <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-3 sm:space-x-4">
+  <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-3 sm:space-x-4 hover:shadow-md transition-shadow">
     <div className={`p-2 sm:p-3 rounded-lg ${colorClass} bg-opacity-10 flex-shrink-0`}>
       <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${colorClass.replace('bg-', 'text-')}`} />
     </div>
@@ -230,7 +230,6 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, []);
 
-  // --- แก้ไข: Export PDF เป็นแนวตั้ง (Portrait) ---
   const handleExportPDF = () => {
     const element = document.getElementById('dashboard-content');
     if(!element) return;
@@ -239,7 +238,6 @@ export default function App() {
       filename: `รายงานสรุป_${new Date().toISOString().slice(0,10)}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2 },
-      // 👇 ปรับเป็น Portrait ตรงนี้ครับ
       jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
     };
     html2pdf().set(opt).from(element).save();
@@ -282,9 +280,13 @@ export default function App() {
 
   const stats = useMemo(() => {
     const totalCases = filteredData.length;
+    const uniqueUnits = [...new Set(filteredData.map(d => `${d.unit_kk}-${d.unit_s_tl}`))].length;
+    
+    // --- 2. เพิ่มสูตรคำนวณตรงนี้ ---
     const drugCases = filteredData.filter(d => d.charge?.includes('ยาเสพติด') || d.topic?.includes('ยาเสพติด')).length;
     const weaponCases = filteredData.filter(d => d.charge?.includes('อาวุธ') || d.topic?.includes('อาวุธ')).length;
-    const uniqueUnits = [...new Set(filteredData.map(d => `${d.unit_kk}-${d.unit_s_tl}`))].length;
+    const heavyTruckCases = filteredData.filter(d => d.charge?.includes('น้ำหนัก') || d.topic?.includes('น้ำหนัก') || d.topic?.includes('รถบรรทุก')).length;
+    const warrantCases = filteredData.filter(d => d.arrest_type?.includes('หมายจับ') || d.charge?.includes('หมายจับ') || d.topic?.includes('หมายจับ')).length;
 
     let unitData = {};
     let unitChartTitle = "";
@@ -305,14 +307,16 @@ export default function App() {
 
     const unitChartData = Object.entries(unitData)
       .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value); // Sort High -> Low
+      .sort((a, b) => b.value - a.value);
 
     const typeData = filteredData.reduce((acc, curr) => {
       const key = curr.topic || 'อื่นๆ';
       acc[key] = (acc[key] || 0) + 1; return acc;
     }, {});
     const typeChartData = Object.entries(typeData).map(([name, value]) => ({ name, value }));
-    return { totalCases, drugCases, weaponCases, uniqueUnits, unitChartData, typeChartData, unitChartTitle };
+    
+    // Return ค่าใหม่ที่เพิ่ม
+    return { totalCases, drugCases, weaponCases, heavyTruckCases, warrantCases, uniqueUnits, unitChartData, typeChartData, unitChartTitle };
   }, [filteredData, filters.unit_kk]);
 
   const handleFilterChange = (key, value) => {
@@ -427,33 +431,36 @@ export default function App() {
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto bg-slate-50/50">
           
-          {/* --- TAB: DASHBOARD (ปรับปรุงกราฟ Mobile) --- */}
+          {/* --- TAB: DASHBOARD --- */}
           {activeTab === 'dashboard' && (
+            // ใช้ id นี้สำหรับ PDF
             <div id="dashboard-content" className="p-4 sm:p-6 space-y-4 sm:space-y-6 animate-in fade-in duration-300">
               
-              {/* 1. Stats Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              {/* --- 3. ปรับ Grid เป็น 3 คอลัมน์ในจอใหญ่ เพื่อให้แสดง 6 การ์ดได้พอดี (2 แถว x 3 ช่อง) --- */}
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 <StatCard title="ผลการจับกุมรวม" value={stats.totalCases} icon={FileText} colorClass="text-blue-600 bg-blue-600" />
                 <StatCard title="คดียาเสพติด" value={stats.drugCases} icon={Siren} colorClass="text-red-600 bg-red-600" />
                 <StatCard title="คดีอาวุธปืน" value={stats.weaponCases} icon={MapPin} colorClass="text-orange-600 bg-orange-600" />
+                <StatCard title="รถบรรทุกหนัก" value={stats.heavyTruckCases} icon={Truck} colorClass="text-purple-600 bg-purple-600" />
+                <StatCard title="บุคคลตามหมายจับ" value={stats.warrantCases} icon={FileWarning} colorClass="text-indigo-600 bg-indigo-600" />
                 <StatCard title="หน่วยที่รายงาน" value={stats.uniqueUnits} icon={Users} colorClass="text-green-600 bg-green-600" />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                
-                {/* 2. กราฟแท่ง: ปรับลดพื้นที่ว่างด้านล่าง (Fix Whitespace) */}
+                {/* 2. กราฟแท่ง: ปรับความสูงและ Margin ให้เหมาะกับมือถือ */}
                 <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100">
                   <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center">
                     <BarChart3 className="w-5 h-5 mr-2 text-slate-500" />
                     {stats.unitChartTitle}
                   </h3>
                   {stats.unitChartData.length > 0 ? (
-                    <div className="h-64 sm:h-96 w-full"> {/* ปรับความสูง container เล็กน้อย */}
+                    // ปรับความสูง mobile เป็น h-72 (สูงขึ้นเพื่อให้มีที่ให้ตัวหนังสือ) / desktop h-96
+                    <div className="h-72 sm:h-96 w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart 
                           data={stats.unitChartData} 
-                          // ⭐ แก้จุดที่ 1: ลด bottom จาก 60 เหลือ 20
-                          margin={{ top: 10, right: 0, left: -20, bottom: -40 }} 
+                          // ปรับ Margin ล่างให้เยอะขึ้น (80) เพื่อกันตัวหนังสือตกขอบ
+                          margin={{ top: 10, right: 0, left: -20, bottom: 20 }} 
                         >
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                           <XAxis 
@@ -461,9 +468,8 @@ export default function App() {
                             interval={0} 
                             angle={-45} 
                             textAnchor="end" 
-                            // ⭐ แก้จุดที่ 2: ลด height จาก 80 เหลือ 50 (เพราะข้อความเราไม่ยาวมาก)
                             height={50} 
-                            tick={{fontSize: 10, fill: '#64748b'}} 
+                            tick={{fontSize: 10, fill: '#64748b'}} // ลดขนาดฟอนต์ลงนิดนึง
                             axisLine={{ stroke: '#e2e8f0' }} 
                             tickLine={false} 
                           />
@@ -477,12 +483,7 @@ export default function App() {
                             contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
                             cursor={{ fill: '#f1f5f9' }} 
                           />
-                          <Bar 
-                            dataKey="value" 
-                            fill="#3b82f6" 
-                            radius={[4, 4, 0, 0]} 
-                            maxBarSize={60} // ปรับขนาดความกว้างสูงสุดของแท่งกราฟ
-                          />
+                          <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={60} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
