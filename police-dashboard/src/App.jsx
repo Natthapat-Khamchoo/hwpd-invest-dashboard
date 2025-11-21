@@ -441,19 +441,19 @@ export default function App() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 
-                {/* 2. กราฟแท่ง: ปรับให้เต็มพื้นที่มากขึ้น */}
+                {/* 2. กราฟแท่ง: ปรับลดพื้นที่ว่างด้านล่าง (Fix Whitespace) */}
                 <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100">
                   <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center">
                     <BarChart3 className="w-5 h-5 mr-2 text-slate-500" />
                     {stats.unitChartTitle}
                   </h3>
                   {stats.unitChartData.length > 0 ? (
-                    <div className="h-72 sm:h-96 w-full">
+                    <div className="h-64 sm:h-96 w-full"> {/* ปรับความสูง container เล็กน้อย */}
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart 
                           data={stats.unitChartData} 
-                          // ปรับ Margin ขวาให้เป็น 0 เพื่อให้กราฟชิดขอบมากขึ้น
-                          margin={{ top: 10, right: 0, left: -20, bottom: 60 }} 
+                          // ⭐ แก้จุดที่ 1: ลด bottom จาก 60 เหลือ 20
+                          margin={{ top: 10, right: 0, left: -20, bottom: 20 }} 
                         >
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                           <XAxis 
@@ -461,7 +461,8 @@ export default function App() {
                             interval={0} 
                             angle={-45} 
                             textAnchor="end" 
-                            height={80} 
+                            // ⭐ แก้จุดที่ 2: ลด height จาก 80 เหลือ 50 (เพราะข้อความเราไม่ยาวมาก)
+                            height={50} 
                             tick={{fontSize: 10, fill: '#64748b'}} 
                             axisLine={{ stroke: '#e2e8f0' }} 
                             tickLine={false} 
@@ -476,13 +477,11 @@ export default function App() {
                             contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
                             cursor={{ fill: '#f1f5f9' }} 
                           />
-                          {/* ⭐ จุดที่แก้: เปลี่ยนจาก barSize={30} เป็น maxBarSize={80} */}
-                          {/* และเอา barSize ออกเพื่อให้มันคำนวณความกว้างอัตโนมัติ */}
                           <Bar 
                             dataKey="value" 
                             fill="#3b82f6" 
                             radius={[4, 4, 0, 0]} 
-                            maxBarSize={80} 
+                            maxBarSize={60} // ปรับขนาดความกว้างสูงสุดของแท่งกราฟ
                           />
                         </BarChart>
                       </ResponsiveContainer>
