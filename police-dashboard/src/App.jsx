@@ -427,12 +427,11 @@ export default function App() {
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto bg-slate-50/50">
           
-          {/* --- TAB: DASHBOARD --- */}
+          {/* --- TAB: DASHBOARD (ปรับปรุงกราฟ Mobile) --- */}
           {activeTab === 'dashboard' && (
-            // ใช้ id นี้สำหรับ PDF
             <div id="dashboard-content" className="p-4 sm:p-6 space-y-4 sm:space-y-6 animate-in fade-in duration-300">
               
-              {/* 1. Stats Cards: ปรับเป็น grid-cols-2 ใน mobile เพื่อให้ดูง่ายขึ้น */}
+              {/* 1. Stats Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <StatCard title="ผลการจับกุมรวม" value={stats.totalCases} icon={FileText} colorClass="text-blue-600 bg-blue-600" />
                 <StatCard title="คดียาเสพติด" value={stats.drugCases} icon={Siren} colorClass="text-red-600 bg-red-600" />
@@ -441,22 +440,105 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                {/* 2. กราฟแท่ง: ปรับความสูง h-64 ใน mobile / h-96 ใน desktop */}
+                
+                {/* 2. กราฟแท่ง: ปรับความสูงและ Margin ให้เหมาะกับมือถือ */}
                 <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100">
-                  <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center"><BarChart3 className="w-5 h-5 mr-2 text-slate-500" />{stats.unitChartTitle}</h3>
+                  <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center">
+                    <BarChart3 className="w-5 h-5 mr-2 text-slate-500" />
+                    {stats.unitChartTitle}
+                  </h3>
                   {stats.unitChartData.length > 0 ? (
-                    <div className="h-64 sm:h-96"><ResponsiveContainer width="100%" height="100%"><BarChart data={stats.unitChartData} margin={{ bottom: 60 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" /><XAxis dataKey="name" interval={0} angle={-45} textAnchor="end" height={80} tick={{fontSize: 10, fill: '#64748b'}} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} /><YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} allowDecimals={false} /><RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} cursor={{ fill: '#f1f5f9' }} /><Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={30} /></BarChart></ResponsiveContainer></div>
-                  ) : (<div className="h-64 flex items-center justify-center text-slate-400 flex-col"><FileText className="w-8 h-8 mb-2 opacity-50" /><span>ไม่พบข้อมูลตามเงื่อนไข</span></div>)}
+                    // ปรับความสูง mobile เป็น h-72 (สูงขึ้นเพื่อให้มีที่ให้ตัวหนังสือ) / desktop h-96
+                    <div className="h-72 sm:h-96 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart 
+                          data={stats.unitChartData} 
+                          // ปรับ Margin ล่างให้เยอะขึ้น (80) เพื่อกันตัวหนังสือตกขอบ
+                          margin={{ top: 10, right: 10, left: -20, bottom: 80 }} 
+                        >
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                          <XAxis 
+                            dataKey="name" 
+                            interval={0} 
+                            angle={-45} 
+                            textAnchor="end" 
+                            height={80} 
+                            tick={{fontSize: 10, fill: '#64748b'}} // ลดขนาดฟอนต์ลงนิดนึง
+                            axisLine={{ stroke: '#e2e8f0' }} 
+                            tickLine={false} 
+                          />
+                          <YAxis 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{fontSize: 12, fill: '#64748b'}} 
+                            allowDecimals={false} 
+                          />
+                          <RechartsTooltip 
+                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                            cursor={{ fill: '#f1f5f9' }} 
+                          />
+                          <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={30} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="h-64 flex items-center justify-center text-slate-400 flex-col">
+                      <FileText className="w-8 h-8 mb-2 opacity-50" />
+                      <span>ไม่พบข้อมูลตามเงื่อนไข</span>
+                    </div>
+                  )}
                 </div>
-                {/* 3. กราฟวงกลม: ปรับความสูงเช่นกัน */}
+
+                {/* 3. กราฟวงกลม: ใช้ % แทน Pixel เพื่อความยืดหยุ่น */}
                 <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100">
-                  <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center"><PieChart className="w-5 h-5 mr-2 text-slate-500" />สัดส่วนประเภทคดี</h3>
+                  <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center">
+                    <PieChart className="w-5 h-5 mr-2 text-slate-500" />
+                    สัดส่วนประเภทคดี
+                  </h3>
                   {stats.typeChartData.length > 0 ? (
                     <>
-                      <div className="h-56 sm:h-80 flex justify-center"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={stats.typeChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value" stroke="none">{stats.typeChartData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}</Pie><RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} /></PieChart></ResponsiveContainer></div>
-                      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-4">{stats.typeChartData.map((entry, index) => (<div key={index} className="flex items-center text-[10px] sm:text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded-full border border-slate-100"><div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>{entry.name} <span className="font-semibold ml-1">({entry.value})</span></div>))}</div>
+                      <div className="h-64 sm:h-80 flex justify-center w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie 
+                              data={stats.typeChartData} 
+                              cx="50%" 
+                              cy="50%" 
+                              // ⭐ ไฮไลท์: ใช้ % แทนค่าคงที่ กราฟจะยืดหดตามจอมือถือ
+                              innerRadius="45%" 
+                              outerRadius="70%" 
+                              paddingAngle={2} 
+                              dataKey="value" 
+                              stroke="none"
+                            >
+                              {stats.typeChartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip 
+                              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      
+                      {/* Legend ด้านล่าง */}
+                      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-2">
+                        {stats.typeChartData.map((entry, index) => (
+                          <div key={index} className="flex items-center text-[10px] sm:text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded-full border border-slate-100">
+                            <div className="w-2 h-2 rounded-full mr-2 flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                            <span className="truncate max-w-[100px]">{entry.name}</span> 
+                            <span className="font-semibold ml-1">({entry.value})</span>
+                          </div>
+                        ))}
+                      </div>
                     </>
-                  ) : (<div className="h-64 flex items-center justify-center text-slate-400 flex-col"><FileText className="w-8 h-8 mb-2 opacity-50" /><span>ไม่พบข้อมูลตามเงื่อนไข</span></div>)}
+                  ) : (
+                    <div className="h-64 flex items-center justify-center text-slate-400 flex-col">
+                      <FileText className="w-8 h-8 mb-2 opacity-50" />
+                      <span>ไม่พบข้อมูลตามเงื่อนไข</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
