@@ -441,20 +441,19 @@ export default function App() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 
-                {/* 2. กราฟแท่ง: ปรับความสูงและ Margin ให้เหมาะกับมือถือ */}
+                {/* 2. กราฟแท่ง: ปรับให้เต็มพื้นที่มากขึ้น */}
                 <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100">
                   <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center">
                     <BarChart3 className="w-5 h-5 mr-2 text-slate-500" />
                     {stats.unitChartTitle}
                   </h3>
                   {stats.unitChartData.length > 0 ? (
-                    // ปรับความสูง mobile เป็น h-72 (สูงขึ้นเพื่อให้มีที่ให้ตัวหนังสือ) / desktop h-96
                     <div className="h-72 sm:h-96 w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart 
                           data={stats.unitChartData} 
-                          // ปรับ Margin ล่างให้เยอะขึ้น (80) เพื่อกันตัวหนังสือตกขอบ
-                          margin={{ top: 10, right: 10, left: -20, bottom: 80 }} 
+                          // ปรับ Margin ขวาให้เป็น 0 เพื่อให้กราฟชิดขอบมากขึ้น
+                          margin={{ top: 10, right: 0, left: -20, bottom: 60 }} 
                         >
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                           <XAxis 
@@ -463,7 +462,7 @@ export default function App() {
                             angle={-45} 
                             textAnchor="end" 
                             height={80} 
-                            tick={{fontSize: 10, fill: '#64748b'}} // ลดขนาดฟอนต์ลงนิดนึง
+                            tick={{fontSize: 10, fill: '#64748b'}} 
                             axisLine={{ stroke: '#e2e8f0' }} 
                             tickLine={false} 
                           />
@@ -477,7 +476,14 @@ export default function App() {
                             contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
                             cursor={{ fill: '#f1f5f9' }} 
                           />
-                          <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={30} />
+                          {/* ⭐ จุดที่แก้: เปลี่ยนจาก barSize={30} เป็น maxBarSize={80} */}
+                          {/* และเอา barSize ออกเพื่อให้มันคำนวณความกว้างอัตโนมัติ */}
+                          <Bar 
+                            dataKey="value" 
+                            fill="#3b82f6" 
+                            radius={[4, 4, 0, 0]} 
+                            maxBarSize={80} 
+                          />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
