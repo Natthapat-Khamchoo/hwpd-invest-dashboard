@@ -453,7 +453,7 @@ export default function App() {
                         <BarChart 
                           data={stats.unitChartData} 
                           // ⭐ แก้จุดที่ 1: ลด bottom จาก 60 เหลือ 20
-                          margin={{ top: 10, right: 0, left: -20, bottom: -20 }} 
+                          margin={{ top: 10, right: 0, left: -20, bottom: -40 }} 
                         >
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                           <XAxis 
