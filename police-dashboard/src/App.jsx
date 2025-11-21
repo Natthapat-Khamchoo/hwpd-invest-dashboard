@@ -11,12 +11,9 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell 
 } from 'recharts';
 
-// --- Configuration: โครงสร้างหน่วยงาน บก.ทล. ---
+// --- Configuration ---
 const UNIT_HIERARCHY = { "1": 6, "2": 6, "3": 5, "4": 5, "5": 6, "6": 6, "7": 5, "8": 4 };
-
-// --- Configuration: สีประจำกองกำกับการ (GIS Style Colors) ---
 const UNIT_COLORS = { "1": "#e6194b", "2": "#f58231", "3": "#ffe119", "4": "#3cb44b", "5": "#42d4f4", "6": "#4363d8", "7": "#911eb4", "8": "#f032e6" };
-
 const THAI_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
 
@@ -32,19 +29,20 @@ const parseThaiDate = (dateStr) => {
   return new Date(year, month, day);
 };
 
+// StatCard: ปรับให้ Responsive ยิ่งขึ้น (ลด Padding ในมือถือ)
 const StatCard = ({ title, value, icon: Icon, colorClass }) => (
-  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-4 hover:shadow-md transition-shadow">
-    <div className={`p-3 rounded-lg ${colorClass} bg-opacity-10`}>
-      <Icon className={`w-6 h-6 ${colorClass.replace('bg-', 'text-')}`} />
+  <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-3 sm:space-x-4">
+    <div className={`p-2 sm:p-3 rounded-lg ${colorClass} bg-opacity-10 flex-shrink-0`}>
+      <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${colorClass.replace('bg-', 'text-')}`} />
     </div>
-    <div>
-      <p className="text-sm text-slate-500 font-medium">{title}</p>
-      <h3 className="text-2xl font-bold text-slate-800">{value}</h3>
+    <div className="min-w-0">
+      <p className="text-xs sm:text-sm text-slate-500 font-medium truncate">{title}</p>
+      <h3 className="text-lg sm:text-2xl font-bold text-slate-800">{value}</h3>
     </div>
   </div>
 );
 
-// --- Components: Map ---
+// --- Map Components ---
 const SimpleMapVisualization = ({ data, onSelectCase }) => {
   const MIN_LAT = 5.6; const MAX_LAT = 20.5; const MIN_LONG = 97.3; const MAX_LONG = 105.8;
   const [hoveredItem, setHoveredItem] = useState(null);
@@ -52,7 +50,7 @@ const SimpleMapVisualization = ({ data, onSelectCase }) => {
   const getY = (lat) => 100 - ((parseFloat(lat) - MIN_LAT) / (MAX_LAT - MIN_LAT)) * 100;
 
   return (
-    <div className="relative w-full h-full min-h-[600px] bg-slate-50 rounded-lg overflow-hidden border border-slate-200 flex items-center justify-center">
+    <div className="relative w-full h-full min-h-[50vh] sm:min-h-[600px] bg-slate-50 rounded-lg overflow-hidden border border-slate-200 flex items-center justify-center">
       <div className="absolute top-4 left-4 z-10 bg-yellow-50 text-yellow-700 text-xs px-2 py-1 rounded border border-yellow-200 flex items-center shadow-sm">
         <AlertTriangle className="w-3 h-3 mr-1" /> Graphic Mode
       </div>
@@ -158,7 +156,7 @@ const LeafletMap = ({ data, onSelectCase, onError }) => {
     }
   }, [data, onSelectCase, isMapReady]);
 
-  return <div ref={mapRef} className="w-full h-full min-h-[500px] bg-slate-100 z-0" />;
+  return <div ref={mapRef} className="w-full h-full min-h-[50vh] sm:min-h-[500px] bg-slate-100 z-0" />;
 };
 
 // ==========================================
@@ -166,11 +164,9 @@ const LeafletMap = ({ data, onSelectCase, onError }) => {
 // ==========================================
 
 export default function App() {
-  // 1. Change state to empty array (Remove MOCK_DATA)
-  const [data, setData] = useState([]); 
+  const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
-
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedCase, setSelectedCase] = useState(null);
   const [mapError, setMapError] = useState(false); 
@@ -185,7 +181,6 @@ export default function App() {
     unit_kk: '', unit_s_tl: '', topic: '', charge: '' 
   });
 
-  // 2. Restore Data Fetching Logic (From previous steps)
   useEffect(() => {
     const fetchData = () => {
       // 🔴 EDIT HERE: ใส่ Link CSV ของคุณตรงนี้
@@ -231,11 +226,11 @@ export default function App() {
     };
 
     fetchData();
-    const intervalId = setInterval(fetchData, 300000); // 5 minutes
+    const intervalId = setInterval(fetchData, 300000); 
     return () => clearInterval(intervalId);
   }, []);
 
-  // 3. Restore PDF Export Function
+  // --- แก้ไข: Export PDF เป็นแนวตั้ง (Portrait) ---
   const handleExportPDF = () => {
     const element = document.getElementById('dashboard-content');
     if(!element) return;
@@ -244,7 +239,8 @@ export default function App() {
       filename: `รายงานสรุป_${new Date().toISOString().slice(0,10)}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+      // 👇 ปรับเป็น Portrait ตรงนี้ครับ
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
     };
     html2pdf().set(opt).from(element).save();
   };
@@ -294,27 +290,22 @@ export default function App() {
     let unitChartTitle = "";
 
     if (filters.unit_kk) {
-      unitChartTitle = `สถิติแยกตาม สถานี (ส.ทล.) - ภายใน กก.${filters.unit_kk}`;
+      unitChartTitle = `สถิติ ส.ทล. (กก.${filters.unit_kk})`;
       unitData = filteredData.reduce((acc, curr) => {
-        const key = `ส.ทล.${curr.unit_s_tl} กก.${curr.unit_kk}`;
+        const key = `ส.ทล.${curr.unit_s_tl}`;
         acc[key] = (acc[key] || 0) + 1; return acc;
       }, {});
     } else {
-      unitChartTitle = "สถิติแยกตาม กองกำกับการ (กก.)";
+      unitChartTitle = "สถิติแยกตาม กองกำกับการ";
       unitData = filteredData.reduce((acc, curr) => {
-        const key = `กก.${curr.unit_kk} บก.ทล.`;
+        const key = `กก.${curr.unit_kk}`;
         acc[key] = (acc[key] || 0) + 1; return acc;
       }, {});
     }
 
     const unitChartData = Object.entries(unitData)
       .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => {
-        const numsA = a.name.match(/\d+/g)?.map(Number) || [0];
-        const numsB = b.name.match(/\d+/g)?.map(Number) || [0];
-        if (numsA[0] !== numsB[0]) return numsA[0] - numsB[0];
-        return (numsA[1] || 0) - (numsB[1] || 0);
-      });
+      .sort((a, b) => b.value - a.value); // Sort High -> Low
 
     const typeData = filteredData.reduce((acc, curr) => {
       const key = curr.topic || 'อื่นๆ';
@@ -356,13 +347,9 @@ export default function App() {
         lg:relative lg:translate-x-0 ${desktopSidebarOpen ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden'}
       `}>
         <div className="p-6 border-b border-slate-800 flex justify-between items-center whitespace-nowrap">
-          <div className="flex items-center space-x-2">
-           <img 
-        src="https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png" 
-        alt="Logo" 
-        className="w-10 h-10 flex-shrink-0 object-contain" 
-      />
-            <span className={`text-xl font-bold tracking-tight transition-opacity duration-200 ${!desktopSidebarOpen && 'lg:opacity-0'}`}>Highway Police</span>
+          <div className="flex items-center space-x-3">
+            <img src="https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png" alt="Logo" className="w-10 h-10 flex-shrink-0 object-contain" />
+            <span className={`text-xl font-bold tracking-tight transition-opacity duration-200 ${!desktopSidebarOpen && 'lg:opacity-0'}`}>HIGHWAY POLICE</span>
           </div>
           <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white">
             <X className="w-6 h-6" />
@@ -374,51 +361,36 @@ export default function App() {
             <button key={tab} onClick={() => { setActiveTab(tab); setMobileSidebarOpen(false); }}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === tab ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
               {tab === 'dashboard' ? <LayoutDashboard className="w-5 h-5 flex-shrink-0" /> : tab === 'list' ? <TableIcon className="w-5 h-5 flex-shrink-0" /> : <MapIcon className="w-5 h-5 flex-shrink-0" />}
-              <span>{tab === 'dashboard' ? 'ภาพรวมคดี' : tab === 'list' ? 'รายการจับกุม' : 'แผนที่จุดเกิดเหตุ'}</span>
+              <span>{tab === 'dashboard' ? 'ภาพรวมคดี' : tab === 'list' ? 'รายการจับกุม' : 'แผนที่'}</span>
             </button>
           ))}
         </nav>
-
-        <div className={`absolute bottom-0 w-full p-4 border-t border-slate-800 whitespace-nowrap ${!desktopSidebarOpen && 'lg:hidden'}`}>
-          <div className="flex items-center space-x-3 text-slate-400 text-sm">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span>Realtime Status: Online</span>
-          </div>
-        </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {/* Header */}
-        <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between shadow-sm z-10">
+        {/* Header: ปรับ padding สำหรับ mobile */}
+        <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm z-10">
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"><Menu className="w-6 h-6" /></button>
             <button onClick={() => setDesktopSidebarOpen(!desktopSidebarOpen)} className="hidden lg:block p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
               {desktopSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             
-            <h1 className="text-lg sm:text-xl font-semibold text-slate-800 truncate">
-              {activeTab === 'dashboard' ? 'Dashboard สรุปผลการปฏิบัติงาน' : activeTab === 'list' ? 'ฐานข้อมูลการจับกุม' : 'พิกัดแผนที่ภูมิสารสนเทศ'}
+            <h1 className="text-base sm:text-xl font-semibold text-slate-800 truncate">
+              {activeTab === 'dashboard' ? 'Dashboard' : activeTab === 'list' ? 'Database' : 'GIS Map'}
             </h1>
           </div>
 
-          <div className="flex items-center space-x-3 sm:space-x-4">
-            {/* 4. Insert Update Time & PDF Button */}
+          <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="hidden md:flex text-xs text-slate-400 items-center mr-2"><span className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></span>Updated: {lastUpdated.toLocaleTimeString('th-TH')}</div>
             {activeTab === 'dashboard' && (
-              <button onClick={handleExportPDF} className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm flex items-center"><FileText className="w-4 h-4 mr-1" /> PDF</button>
+              <button onClick={handleExportPDF} className="bg-red-600 hover:bg-red-700 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center"><FileText className="w-4 h-4 mr-1" /> PDF</button>
             )}
-
-            <button onClick={() => setShowFilterPanel(!showFilterPanel)} className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${showFilterPanel ? 'bg-blue-50 text-blue-600 border border-blue-200 ring-2 ring-blue-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}>
+            <button onClick={() => setShowFilterPanel(!showFilterPanel)} className={`flex items-center space-x-1 sm:space-x-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${showFilterPanel ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-white text-slate-600 border border-slate-200'}`}>
               <Filter className="w-4 h-4" /><span className="hidden sm:inline">ตัวกรอง</span>
             </button>
-
-            <div className="w-px h-6 bg-slate-200 hidden sm:block"></div>
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-slate-800">ผู้ดูแลระบบ</p>
-              <p className="text-xs text-slate-500">กองบังคับการตำรวจทางหลวง</p>
-            </div>
-            <div className="w-9 h-9 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm">A</div>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm">A</div>
           </div>
         </header>
 
@@ -457,36 +429,41 @@ export default function App() {
           
           {/* --- TAB: DASHBOARD --- */}
           {activeTab === 'dashboard' && (
-            // 5. Added ID for PDF Export
-            <div id="dashboard-content" className="p-4 sm:p-6 space-y-6 animate-in fade-in duration-300">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            // ใช้ id นี้สำหรับ PDF
+            <div id="dashboard-content" className="p-4 sm:p-6 space-y-4 sm:space-y-6 animate-in fade-in duration-300">
+              
+              {/* 1. Stats Cards: ปรับเป็น grid-cols-2 ใน mobile เพื่อให้ดูง่ายขึ้น */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <StatCard title="ผลการจับกุมรวม" value={stats.totalCases} icon={FileText} colorClass="text-blue-600 bg-blue-600" />
                 <StatCard title="คดียาเสพติด" value={stats.drugCases} icon={Siren} colorClass="text-red-600 bg-red-600" />
                 <StatCard title="คดีอาวุธปืน" value={stats.weaponCases} icon={MapPin} colorClass="text-orange-600 bg-orange-600" />
                 <StatCard title="หน่วยที่รายงาน" value={stats.uniqueUnits} icon={Users} colorClass="text-green-600 bg-green-600" />
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                  <h3 className="text-lg font-semibold mb-6 flex items-center"><BarChart3 className="w-5 h-5 mr-2 text-slate-500" />{stats.unitChartTitle}</h3>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                {/* 2. กราฟแท่ง: ปรับความสูง h-64 ใน mobile / h-96 ใน desktop */}
+                <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100">
+                  <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center"><BarChart3 className="w-5 h-5 mr-2 text-slate-500" />{stats.unitChartTitle}</h3>
                   {stats.unitChartData.length > 0 ? (
-                    <div className="h-80"><ResponsiveContainer width="100%" height="100%"><BarChart data={stats.unitChartData} margin={{ bottom: 60 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" /><XAxis dataKey="name" interval={0} angle={-45} textAnchor="end" height={80} tick={{fontSize: 11, fill: '#64748b'}} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} /><YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} allowDecimals={false} /><RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} cursor={{ fill: '#f1f5f9' }} /><Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={30} /></BarChart></ResponsiveContainer></div>
-                  ) : (<div className="h-80 flex items-center justify-center text-slate-400 flex-col"><FileText className="w-8 h-8 mb-2 opacity-50" /><span>ไม่พบข้อมูลตามเงื่อนไข</span></div>)}
+                    <div className="h-64 sm:h-96"><ResponsiveContainer width="100%" height="100%"><BarChart data={stats.unitChartData} margin={{ bottom: 60 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" /><XAxis dataKey="name" interval={0} angle={-45} textAnchor="end" height={80} tick={{fontSize: 10, fill: '#64748b'}} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} /><YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} allowDecimals={false} /><RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} cursor={{ fill: '#f1f5f9' }} /><Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={30} /></BarChart></ResponsiveContainer></div>
+                  ) : (<div className="h-64 flex items-center justify-center text-slate-400 flex-col"><FileText className="w-8 h-8 mb-2 opacity-50" /><span>ไม่พบข้อมูลตามเงื่อนไข</span></div>)}
                 </div>
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                  <h3 className="text-lg font-semibold mb-6 flex items-center"><PieChart className="w-5 h-5 mr-2 text-slate-500" />สัดส่วนประเภทคดี</h3>
+                {/* 3. กราฟวงกลม: ปรับความสูงเช่นกัน */}
+                <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100">
+                  <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center"><PieChart className="w-5 h-5 mr-2 text-slate-500" />สัดส่วนประเภทคดี</h3>
                   {stats.typeChartData.length > 0 ? (
                     <>
-                      <div className="h-64 flex justify-center"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={stats.typeChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={2} dataKey="value" stroke="none">{stats.typeChartData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}</Pie><RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} /></PieChart></ResponsiveContainer></div>
-                      <div className="flex flex-wrap justify-center gap-3 mt-4">{stats.typeChartData.map((entry, index) => (<div key={index} className="flex items-center text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded-full border border-slate-100"><div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>{entry.name} <span className="font-semibold ml-1">({entry.value})</span></div>))}</div>
+                      <div className="h-56 sm:h-80 flex justify-center"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={stats.typeChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value" stroke="none">{stats.typeChartData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}</Pie><RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} /></PieChart></ResponsiveContainer></div>
+                      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-4">{stats.typeChartData.map((entry, index) => (<div key={index} className="flex items-center text-[10px] sm:text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded-full border border-slate-100"><div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>{entry.name} <span className="font-semibold ml-1">({entry.value})</span></div>))}</div>
                     </>
-                  ) : (<div className="h-80 flex items-center justify-center text-slate-400 flex-col"><FileText className="w-8 h-8 mb-2 opacity-50" /><span>ไม่พบข้อมูลตามเงื่อนไข</span></div>)}
+                  ) : (<div className="h-64 flex items-center justify-center text-slate-400 flex-col"><FileText className="w-8 h-8 mb-2 opacity-50" /><span>ไม่พบข้อมูลตามเงื่อนไข</span></div>)}
                 </div>
               </div>
             </div>
           )}
 
           {activeTab === 'list' && (
-            <div className="p-4 sm:p-6 h-full">
+            <div className="p-2 sm:p-6 h-full">
               <div className="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col h-full animate-in fade-in duration-300 overflow-hidden">
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50"><span className="text-sm font-medium text-slate-600">ข้อมูลรายการจับกุม</span></div>
                 <div className="flex-1 overflow-auto">
@@ -511,7 +488,7 @@ export default function App() {
           )}
 
           {activeTab === 'map' && (
-            <div className="h-full w-full p-4 sm:p-6 animate-in fade-in duration-300 flex flex-col">
+            <div className="h-full w-full p-2 sm:p-6 animate-in fade-in duration-300 flex flex-col">
               <div className="flex items-center justify-between mb-4">
                 <div><h3 className="text-lg font-bold text-slate-800 flex items-center"><MapIcon className="w-5 h-5 mr-2 text-blue-600" />แผนที่สถานการณ์ (GIS)</h3><p className="text-sm text-slate-500">แสดงพิกัดภูมิสารสนเทศบนแผนที่ฐาน (QGIS/OpenStreetMap Style)</p></div>
               </div>
