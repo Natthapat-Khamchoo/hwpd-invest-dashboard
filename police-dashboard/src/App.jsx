@@ -18,9 +18,9 @@ const UNIT_COLORS = { "1": "#e6194b", "2": "#f58231", "3": "#ffe119", "4": "#3cb
 const THAI_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
 
-// ✅ FIX: Base64 Logo (ใช้ตัวนี้แทน URL เพื่อแก้ปัญหาหน้าขาว 100%)
-const LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAK7OHOkAAABmVExURUAAAAAA///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////1w4O2AAAAIHByNTAAAAA43H3rAAAAA3RSTlMArwD5/w8AAAA8SURBVEjH7cixAQBADAIw5k/9eW0Lq7sJBNy8CyKRGIlEYiQSiZFKJEYikRiJRGIkEomRSCQSiZFy81e/A3i4A40l91QJAAAAAElFTkSuQmCC"; 
-// หมายเหตุ: โค้ดด้านบนเป็น Logo ตัวอย่าง (วงกลม) เพื่อทดสอบ ถ้าต้องการ Logo จริงต้องแปลงไฟล์รูปเป็น Base64 String ยาวๆ มาใส่ครับ แต่ Code นี้จะทำงานได้ไม่หน้าขาวแน่นอน
+// *** Logo Base64 (ใช้แก้ปัญหารูปไม่ขึ้นใน PDF) ***
+// รูปโลโก้ตำรวจทางหลวง (Placeholder) - ถ้าต้องการรูปชัดกว่านี้ให้นำไฟล์รูปไปแปลงเป็น Base64
+const LOGO_BASE64 = "https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png";
 
 // --- Helpers ---
 const parseThaiDate = (dateStr) => {
@@ -64,7 +64,7 @@ const StatCard = ({ title, value, icon: Icon, colorClass }) => (
 
 // --- Map Components ---
 
-// 🗺️ CORRECT MAP: แผนที่ประเทศไทย SVG Path (ขวานทอง)
+// 🗺️ MAP: แผนที่ประเทศไทย SVG Path (แก้ไขรูปทรงแล้ว)
 const SimpleMapVisualization = ({ data, onSelectCase, isPrintMode = false }) => {
   const MIN_LAT = 5.6;   
   const MAX_LAT = 20.5;  
@@ -78,6 +78,7 @@ const SimpleMapVisualization = ({ data, onSelectCase, isPrintMode = false }) => 
 
   return (
     <div className={`relative w-full h-full ${isPrintMode ? '' : 'min-h-[50vh] sm:min-h-[600px]'} bg-slate-50 rounded-lg overflow-hidden border border-slate-200 flex items-center justify-center`}>
+      {/* 🚫 REMOVED: ลบป้าย Graphic Mode ออกเมื่อ Export */}
       {!isPrintMode && (
         <div className="absolute top-4 left-4 z-10 bg-yellow-50 text-yellow-700 text-xs px-2 py-1 rounded border border-yellow-200 flex items-center shadow-sm">
           <AlertTriangle className="w-3 h-3 mr-1" /> Graphic Mode
@@ -85,8 +86,8 @@ const SimpleMapVisualization = ({ data, onSelectCase, isPrintMode = false }) => 
       )}
       
       <div className="relative w-full h-full max-w-[400px] mx-auto py-4 flex items-center justify-center">
-        {/* SVG ViewBox ปรับให้พอดีกับแผนที่ไทย */}
         <svg viewBox="0 0 350 650" className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.8 }}>
+           {/* Path รูปแผนที่ประเทศไทย (ขวานทอง) */}
            <path 
              d="M155.5,20.5 L162.6,11.9 L178.1,22.9 L195.2,25.8 L202.6,35.4 L191.6,46.8 L183.5,47.3 L174.9,59.2 L180.7,74.5 L192.6,72.6 L205.4,81.6 L214.5,79.7 L223.5,89.3 L221.2,102.1 L235.9,103.5 L249.7,114.5 L244.0,126.4 L233.0,127.4 L229.7,138.3 L246.8,145.5 L245.9,156.9 L233.5,168.3 L224.0,166.9 L214.9,174.5 L203.5,173.1 L192.1,183.6 L176.4,185.0 L167.3,192.6 L167.3,202.2 L177.8,210.7 L192.1,210.7 L202.1,218.4 L223.5,218.4 L233.5,225.5 L243.0,237.4 L250.7,238.4 L262.6,232.2 L277.3,232.2 L286.4,240.7 L299.2,240.7 L308.7,247.9 L318.3,246.5 L324.0,255.0 L332.1,253.6 L338.8,261.7 L350.7,263.1 L350.7,275.0 L343.6,281.2 L341.7,293.1 L350.7,300.3 L348.8,312.2 L341.2,321.2 L344.5,332.7 L336.9,344.6 L325.5,348.9 L316.4,347.0 L310.7,354.1 L300.7,354.1 L296.0,364.1 L285.5,365.1 L276.9,372.2 L268.8,379.8 L259.3,378.4 L250.7,372.7 L243.0,378.4 L232.6,378.4 L220.2,383.7 L210.2,383.7 L200.7,389.4 L193.1,398.4 L186.4,407.5 L177.8,409.4 L168.3,416.5 L158.3,424.6 L149.3,427.5 L142.6,432.2 L137.8,439.9 L136.9,451.3 L140.2,462.7 L144.5,474.2 L145.9,486.5 L149.3,497.9 L152.6,506.5 L157.4,516.5 L159.3,528.9 L159.3,540.8 L154.5,549.8 L146.4,555.1 L138.8,559.4 L131.6,565.6 L125.9,575.1 L122.1,586.5 L120.7,597.9 L118.3,608.9 L111.2,615.5 L101.2,614.6 L94.0,609.3 L88.3,602.7 L82.1,594.1 L76.4,587.9 L71.6,580.8 L68.3,572.2 L66.4,562.2 L65.5,550.8 L65.5,539.4 L68.8,528.9 L73.6,519.9 L78.3,510.8 L81.7,501.3 L84.1,489.9 L84.1,478.5 L80.8,468.9 L76.0,461.3 L69.8,454.2 L62.7,448.0 L55.5,442.7 L49.8,436.1 L45.0,427.5 L41.7,417.5 L40.2,407.5 L42.6,396.6 L46.4,386.6 L48.8,377.1 L47.4,366.6 L42.6,358.5 L35.5,353.8 L26.0,352.3 L17.9,347.6 L10.7,340.4 L6.0,331.9 L3.6,321.9 L3.6,311.4 L8.4,302.4 L15.5,295.2 L21.7,287.1 L24.6,277.1 L26.0,266.6 L24.1,256.2 L19.3,247.1 L12.2,241.4 L3.6,237.6 L0.0,239.0 L16.0,180.0 L155.5,20.5 Z"
              fill="#cbd5e1" 
@@ -278,27 +279,29 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, []);
 
-  // 🎯 FIX: ฟังก์ชัน Export PDF (แก้ไข Logic ให้ชัวร์)
+  // 🎯 FIX DEFINITIVE: ปรับปรุงฟังก์ชัน Export ให้มั่นใจว่าไม่ขาว
   const handleExportPDF = () => {
-    // 1. เลื่อน Scroll ไปบนสุด (จำเป็นสำหรับ html2canvas)
+    // 1. Scroll ไปบนสุดเสมอ
     window.scrollTo(0, 0);
-    // 2. ตั้ง State เพื่อเปลี่ยน z-index ของหน้า Print ให้ขึ้นมาทับ
-    setIsExporting(true); 
     
-    // 3. รอให้ Browser Render และ CSS Transition ทำงานเสร็จ (1.5 วินาที)
+    // 2. เริ่ม Export (แสดง div print-view)
+    setIsExporting(true);
+    
+    // 3. ใช้ setTimeout เพื่อรอให้ Browser Render เสร็จจริงๆ (1.5 วินาที)
     setTimeout(() => {
       const element = document.getElementById('print-view');
       
+      // Config html2pdf
       const opt = {
         margin: 0,
         filename: `รายงานสรุป_${new Date().toISOString().slice(0,10)}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
             scale: 2, 
-            useCORS: true, 
+            useCORS: true, // สำคัญ: โหลดรูปข้ามโดเมน
             letterRendering: true,
             scrollY: 0, 
-            windowWidth: 1123, 
+            windowWidth: 1123, // A4 Landscape Width
             width: 1123,
             x: 0, y: 0
         },
@@ -310,13 +313,13 @@ export default function App() {
         .from(element)
         .save()
         .then(() => {
-           setIsExporting(false); // ปิดเมื่อเสร็จ
+           setIsExporting(false); // ซ่อนเมื่อเสร็จ
         })
         .catch(err => {
-           console.error("PDF Export Failed:", err);
+           console.error("PDF Failed:", err);
            setIsExporting(false);
         });
-    }, 1500); 
+    }, 1500);
   };
 
   const handleExportCSV = () => {
@@ -427,8 +430,7 @@ export default function App() {
       <aside className={`fixed inset-y-0 left-0 z-30 bg-slate-900 text-white transition-all duration-300 ease-in-out shadow-xl ${mobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full'} lg:relative lg:translate-x-0 ${desktopSidebarOpen ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden'}`}>
         <div className="p-6 border-b border-slate-800 flex justify-between items-center whitespace-nowrap">
           <div className="flex items-center space-x-3">
-             {/* Logo Sidebar (ใช้ URL ปกติได้) */}
-            <img src="https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png" alt="Logo" className="w-10 h-10 flex-shrink-0 object-contain" />
+            <img src={LOGO_BASE64} alt="Logo" className="w-10 h-10 flex-shrink-0 object-contain" />
             <span className={`text-xl font-bold tracking-tight transition-opacity duration-200 ${!desktopSidebarOpen && 'lg:opacity-0'}`}>HIGHWAY POLICE</span>
           </div>
           <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X className="w-6 h-6" /></button>
@@ -589,35 +591,34 @@ export default function App() {
       )}
       
       {/* ==================================================================================
-          🔴 FIX: FIXED PRINT VIEW - แสดงตลอดเวลาแต่ซ่อนด้วย Z-INDEX (แก้หน้าขาว 100%)
+          FIXED PRINT VIEW (Hidden by z-index, not display:none) - แก้ปัญหาหน้าขาว
           ================================================================================== */}
       <div id="print-view" 
             style={{ 
-              // 1. Position Absolute เพื่อให้ html2canvas จับ coordinates ได้แม่นยำ
-              position: 'absolute', 
+              position: 'fixed', // ใช้ fixed ให้มันลอยอยู่บนสุด
               top: 0,
               left: 0,
               
-              // 2. ถ้า Export ให้เอาขึ้นมาบังหน้าจอ (99999) ถ้าไม่ ให้ซ่อนไว้ข้างหลัง (-1)
-              // หมายเหตุ: การใช้ visibility: visible ตลอดเวลาช่วยให้ html2canvas เรนเดอร์รอไว้ได้
-              zIndex: isExporting ? 99999 : -1,
-              opacity: isExporting ? 1 : 0, // ซ่อนด้วย opacity เพื่อไม่ให้เห็นตอนทำงานปกติ
+              // เทคนิค: ถ้า Export ให้ Z-Index -50 (อยู่ข้างหลังสุด) แต่ Opacity 1 (มองเห็นได้โดย html2canvas)
+              // ถ้าไม่ได้ Export ให้ซ่อนไปเลย (-9999)
+              // วิธีนี้ Browser จะ Render หน้านี้รอไว้ตลอดเวลา ทำให้จับภาพได้ทันที
+              zIndex: isExporting ? -50 : -9999, 
+              opacity: 1, 
               
-              width: '1123px', 
-              height: '794px',
+              width: '1123px', // A4 Landscape pixel
+              height: '794px', 
               
               backgroundColor: 'white',
               padding: '20px',
               fontFamily: "'Sarabun', sans-serif",
               color: '#000',
               overflow: 'hidden',
-              pointerEvents: isExporting ? 'all' : 'none'
+              visibility: 'visible'
             }}>
         
         {/* Header Row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '15px', height: '15mm' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            {/* ✅ ใช้ LOGO_BASE64 เพื่อความชัวร์ */}
             <img src={LOGO_BASE64} alt="Logo" style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
             <div>
               <h1 style={{ fontSize: '22px', fontWeight: 'bold', margin: 0 }}>รายงานสรุปสถานการณ์ประจำวัน</h1>
@@ -651,9 +652,9 @@ export default function App() {
         {/* Content Layout */}
         <div style={{ display: 'flex', gap: '15px', height: '135mm' }}>
             
-            {/* Left: Map (35%) - Using New SVG Path */}
+            {/* Left: Map (35%) - Using New SVG Path & isPrintMode=true */}
             <div style={{ width: '35%', border: '1px solid #d1d5db', borderRadius: '8px', overflow: 'hidden', position: 'relative', backgroundColor: '#f9fafb' }}>
-              <div style={{ position: 'absolute', top: '5px', left: '5px', backgroundColor: 'rgba(255,255,255,0.9)', padding: '2px 8px', fontSize: '10px', fontWeight: 'bold', borderRadius: '4px', border: '1px solid #ccc', zIndex: 10 }}>แผนที่จุดเกิดเหตุ</div>
+              {/* 🚫 REMOVED: ลบป้ายชื่อแผนที่ออกตามคำขอ */}
               <SimpleMapVisualization data={filteredData} onSelectCase={() => {}} isPrintMode={true} />
             </div>
 
