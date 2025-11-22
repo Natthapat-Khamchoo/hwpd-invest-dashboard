@@ -73,21 +73,24 @@ const SimpleMapVisualization = ({ data, onSelectCase, isPrintMode = false }) => 
         </div>
       )}
       <div className="relative w-full h-full max-w-[450px] mx-auto py-4">
+        {/* SVG Map Base */}
         <svg viewBox="0 0 330 550" className="absolute inset-0 w-full h-full pointer-events-none opacity-30">
            <path d="M145.6,23.5c-2.4,2.7-6.5,3.9-8.2,7.2c-2.7,5.3-1.2,12.2-4.3,17.3c-1.8,2.9-6.3,2.9-8.4,5.5c-3.9,4.9-3.1,12.6-6.5,17.8c-2.4,3.7-8.4,4.5-10.8,8.2c-2.9,4.5-1.4,10.8-3.6,15.6c-2.2,4.9-8.6,7.3-10.8,12.2c-1.8,3.9,0.6,8.8-1.2,12.7c-2.4,5.3-10.4,6.9-13.4,12c-1.8,3.1,0.4,7.1-1.2,10.3c-3.3,6.5-13.7,8.2-16.1,15.1c-1.4,3.9,2.4,8.6,1.7,12.7c-0.8,4.5-7.3,7.3-8.4,11.8c-1.4,5.3,3.5,10.6,3.4,16.1c-0.2,13.3,7.8,23.7,7.4,37.2c-0.2,6.7-4.7,12.6-4.3,19.4c0.6,8.8,8.4,14.9,10.1,23.3c1.8,9.4-2.9,19.2-0.5,28.6c1.8,7.3,9.6,11.8,12.2,18.7c2.9,7.8,0.4,17.1,3.6,24.7c2.7,6.3,10.8,9.4,14.4,15.6c3.3,5.7,2.4,13.5,5.8,19.2c3.1,5.3,10.6,8,14.2,13.2c3.1,4.5,2.7,10.8,5.8,15.4c3.1,4.5,9.4,6.9,12.5,11.3c4.3,6.1,3.9,15.1,8.9,20.6c2.9,3.3,7.8,4.9,10.8,8.2c3.9,4.3,4.7,11.2,9.1,14.9c4.9,4.1,13.1,2.9,18.7,5.8c4.7,2.4,7.3,8.4,12.2,10.3c6.3,2.4,13.5-2.4,19.2-0.5c4.9,1.6,7.8,7.8,12.7,8.9c6.9,1.6,14.1-4.1,20.2-1.9c4.3,1.6,7.3,6.9,11.8,8.2c5.7,1.6,12-2.7,17.3-1.7c5.3,1,9.2,6.5,14.6,6.7c12.2,0.4,23.1-10.4,32.6-16.3c4.3-2.7,7.3-7.8,12.2-9.6c5.3-2,11.6,0.8,16.3-1.9c3.7-2.2,5.3-7.3,8.6-9.8c4.9-3.7,12.4-3.5,17-7.7c3.1-2.9,3.7-8,6.5-11c4.3-4.7,11.8-5.3,15.6-10.3c2.4-3.3,1.4-8.2,3.4-11.8c2.9-5.3,10.4-7.3,12.7-12.7c1.6-3.7-1.6-8.2-0.5-12c1.8-6.3,10.6-8.4,12-14.9c1-4.3-2.9-8.8-2.4-13.2c0.6-5.3,6.9-9,7-14.4c0.2-11.4-10.4-18.4-12.7-28.3c-1.2-5.3,2.4-10.8,0.7-16.1c-2.2-6.7-11.6-9-14.9-15.1c-2.7-4.9,0.2-11.6-2.6-16.3c-3.9-6.5-13.9-8.6-17.5-15.4c-2.2-4.1,0.4-9.6-1.9-13.7c-3.3-5.9-12.2-8.2-15.4-14.2c-2-3.9,0.2-8.8-1.9-12.7c-2.9-5.3-10.6-7.1-13.2-12.2c-1.8-3.7,0.4-8.4-1.4-12c-3.1-5.9-11.8-8.4-14.6-14.6c-1.8-3.9,0.6-9-1.2-12.7c-2.7-5.3-10.4-6.9-12.7-12.2c-1.4-3.1,0.4-6.9-1-10.1c-2.7-6.1-11.2-8-13.2-14.2c-1.2-3.7,1.2-8-0.2-11.8c-2.4-6.3-11.4-8.6-13.7-14.9c-1.4-3.9,1.2-8.6-0.2-12.5c-2.4-6.5-11.6-8.4-13.9-14.9c-1.2-3.3,0.8-7.1-0.5-10.6C223.7,45.7,219.2,43.1,216.8,37.4z" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="2" />
         </svg>
+        {/* Dots */}
         {data.filter(d => d.lat && d.long).map((item) => {
           const lat = parseFloat(item.lat);
           const long = parseFloat(item.long);
           if(lat < MIN_LAT || lat > MAX_LAT || long < MIN_LONG || long > MAX_LONG) return null;
           return (
             <div key={item.id}
-              className="absolute rounded-full cursor-pointer"
+              className="absolute rounded-full"
               style={{
                 left: `${getX(long)}%`, top: `${getY(lat)}%`, 
-                width: isPrintMode ? '6px' : '10px', height: isPrintMode ? '6px' : '10px',
+                width: isPrintMode ? '8px' : '10px', height: isPrintMode ? '8px' : '10px',
                 backgroundColor: UNIT_COLORS[item.unit_kk] || '#64748b', opacity: 0.8, transform: 'translate(-50%, -50%)',
-                border: '1px solid white'
+                border: '1px solid white',
+                zIndex: 10
               }}
               onMouseEnter={() => !isPrintMode && setHoveredItem(item)} onMouseLeave={() => setHoveredItem(null)} onClick={() => !isPrintMode && onSelectCase(item)}
             />
@@ -250,11 +253,11 @@ export default function App() {
   }, []);
 
   const handleExportPDF = () => {
-    // 1. บังคับ Scroll ไปที่ 0,0 ก่อนเสมอ
+    // 1. บังคับ Scroll ไปที่ 0,0 และ Lock Scroll
     window.scrollTo(0, 0);
-    setIsExporting(true); // Trigger แสดงหน้า Overlay
+    document.body.style.overflow = 'hidden';
+    setIsExporting(true);
     
-    // 2. รอเวลาให้ React Render Overlay และโหลดรูป
     setTimeout(() => {
       const element = document.getElementById('print-view');
       const opt = {
@@ -267,7 +270,9 @@ export default function App() {
             letterRendering: true,
             scrollY: 0, 
             scrollX: 0,
-            windowWidth: 1123, // บังคับความกว้าง Canvas (A4 landscape ~1123px)
+            // 2. FORCE WIDTH (สำคัญมาก) เพื่อไม่ให้ Responsive ทำงานผิด
+            windowWidth: 1200, 
+            width: 1123 // A4 Landscape pixel approx
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
       };
@@ -277,9 +282,10 @@ export default function App() {
         .from(element)
         .save()
         .then(() => {
-           setIsExporting(false); // ซ่อนกลับ
+           setIsExporting(false);
+           document.body.style.overflow = 'auto';
         });
-    }, 2000); // เพิ่มเวลาเป็น 2 วินาที เพื่อความชัวร์
+    }, 1500);
   };
 
   const handleExportCSV = () => {
@@ -551,131 +557,128 @@ export default function App() {
       )}
       
       {/* ==================================================================================
-          HIDDEN PRINT VIEW (MODAL OVERLAY STRATEGY)
+          HIDDEN PRINT VIEW (OVERLAY MODE - FIXED LAYOUT - A4 LANDSCAPE)
           ================================================================================== */}
       <div id="print-view" 
-         className={isExporting ? "fixed inset-0 z-[9999] bg-white flex items-center justify-center" : "fixed top-0 left-0 z-[-50] opacity-0 pointer-events-none"} 
+         className={isExporting ? "fixed inset-0 z-[9999] bg-white" : "fixed top-0 left-[-10000px] bg-white z-[-50]"} 
          style={{ 
-           // ถ้ากำลัง export ให้แสดงเต็มจอ, ถ้าไม่ ให้ซ่อนแต่ไม่ย้ายตำแหน่ง (display:none บางที render ไม่ทัน)
-           display: isExporting ? 'block' : 'none', 
-           width: '100vw',
-           height: '100vh',
-           overflow: 'auto'
-         }}>
-         
-         {/* Container A4 Landscape Fixed Size */}
-         <div style={{ 
-            width: '297mm', 
-            minHeight: '210mm', 
-            padding: '10mm', 
-            background: 'white',
-            margin: '0 auto', // จัดกึ่งกลางเวลา preview
-            fontFamily: "'Sarabun', sans-serif",
-            color: '#000'
+           // ต้องแสดงเป็น Block เมื่อ Export เพื่อให้ browser render ได้ถูกต้อง
+           display: isExporting ? 'block' : 'none',
+           width: '297mm', // A4 Landscape Exact Width
+           height: '210mm', // A4 Landscape Exact Height
+           padding: '10mm',
+           fontFamily: "'Sarabun', sans-serif",
+           color: '#000',
+           overflow: 'hidden', // ห้ามมี Scrollbar ในหน้านี้
+           margin: '0 auto', // Center align
+           backgroundColor: 'white'
          }}>
         
-        {/* Header */}
-        <div className="flex justify-between items-center mb-4 pb-2 border-b-2 border-black">
-          <div className="flex items-center gap-3">
-            <img src="https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png" alt="Logo" className="w-16 h-16 object-contain" />
+        {/* Header Row */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '15px', height: '15mm' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <img src="https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png" alt="Logo" style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
             <div>
-              <h1 className="text-2xl font-bold text-black">รายงานสรุปสถานการณ์ประจำวัน</h1>
-              <p className="text-sm text-gray-600">กองบังคับการตำรวจทางหลวง (Highway Police)</p>
+              <h1 style={{ fontSize: '22px', fontWeight: 'bold', margin: 0 }}>รายงานสรุปสถานการณ์ประจำวัน</h1>
+              <p style={{ fontSize: '14px', color: '#555', margin: 0 }}>กองบังคับการตำรวจทางหลวง (Highway Police)</p>
             </div>
           </div>
-          <div className="text-right">
-             <p className="text-xs font-bold text-gray-500">ข้อมูล ณ วันที่</p>
-             <p className="text-xl font-bold text-black">{new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-             <p className="text-[10px] text-gray-500">เงื่อนไข: {filters.year || 'ทุกปี'} | กก.{filters.unit_kk || 'ทั้งหมด'}</p>
+          <div style={{ textAlign: 'right' }}>
+             <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#777', margin: 0 }}>ข้อมูล ณ วันที่</p>
+             <p style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>{new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+             <p style={{ fontSize: '12px', color: '#777', margin: 0 }}>เงื่อนไข: {filters.year || 'ทุกปี'} | กก.{filters.unit_kk || 'ทั้งหมด'}</p>
           </div>
         </div>
 
-        {/* Stats Bar (Row) */}
-        <div className="flex justify-between mb-4 gap-2">
+        {/* Stats Row (Fixed Flex) */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '15px', height: '20mm' }}>
            {[
-             { t: 'จับกุมรวม', v: stats.totalCases, c: 'bg-blue-50' },
-             { t: 'ยาเสพติด', v: stats.drugCases, c: 'bg-red-50' },
-             { t: 'อาวุธปืน', v: stats.weaponCases, c: 'bg-orange-50' },
-             { t: 'รถบรรทุก', v: stats.heavyTruckCases, c: 'bg-purple-50' },
-             { t: 'หมายจับ', v: stats.warrantCases, c: 'bg-indigo-50' },
-             { t: 'หน่วยงาน', v: stats.uniqueUnits, c: 'bg-green-50' }
+             { t: 'จับกุมรวม', v: stats.totalCases, c: '#eff6ff', ct: '#1d4ed8' }, // blue
+             { t: 'ยาเสพติด', v: stats.drugCases, c: '#fef2f2', ct: '#b91c1c' }, // red
+             { t: 'อาวุธปืน', v: stats.weaponCases, c: '#fff7ed', ct: '#c2410c' }, // orange
+             { t: 'รถบรรทุก', v: stats.heavyTruckCases, c: '#faf5ff', ct: '#7e22ce' }, // purple
+             { t: 'หมายจับ', v: stats.warrantCases, c: '#eef2ff', ct: '#4338ca' }, // indigo
+             { t: 'หน่วยงาน', v: stats.uniqueUnits, c: '#f0fdf4', ct: '#15803d' } // green
            ].map((s, i) => (
-             <div key={i} className={`flex-1 ${s.c} border border-gray-200 rounded px-2 py-2 text-center`}>
-               <p className="text-[10px] text-gray-600 font-bold mb-1">{s.t}</p>
-               <p className="text-xl font-bold text-black leading-none">{s.v}</p>
+             <div key={i} style={{ flex: 1, backgroundColor: s.c, borderRadius: '8px', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+               <p style={{ fontSize: '12px', color: s.ct, fontWeight: 'bold', margin: 0 }}>{s.t}</p>
+               <p style={{ fontSize: '24px', color: '#000', fontWeight: 'bold', margin: 0, lineHeight: 1 }}>{s.v}</p>
              </div>
            ))}
         </div>
 
-        {/* Main Layout: Map | Charts | List */}
-        <div className="flex gap-4 mb-4" style={{ height: '100mm' }}>
+        {/* Content Layout (Table Style for rigidity) */}
+        <div style={{ display: 'flex', gap: '15px', height: '135mm' }}>
            
-           {/* Col 1: Map (35%) */}
-           <div className="w-[35%] border border-gray-300 rounded overflow-hidden relative bg-slate-50">
-              <div className="absolute top-1 left-1 bg-white/90 px-2 py-0.5 text-[10px] font-bold border border-gray-300 z-10">แผนที่จุดเกิดเหตุ</div>
+           {/* Left: Map (35%) */}
+           <div style={{ width: '35%', border: '1px solid #d1d5db', borderRadius: '8px', overflow: 'hidden', position: 'relative', backgroundColor: '#f9fafb' }}>
+              <div style={{ position: 'absolute', top: '5px', left: '5px', backgroundColor: 'rgba(255,255,255,0.9)', padding: '2px 8px', fontSize: '10px', fontWeight: 'bold', borderRadius: '4px', border: '1px solid #ccc', zIndex: 10 }}>แผนที่จุดเกิดเหตุ</div>
               <SimpleMapVisualization data={filteredData} onSelectCase={() => {}} isPrintMode={true} />
            </div>
 
-           {/* Col 2: Charts (25%) */}
-           <div className="w-[25%] flex flex-col gap-2">
-              <div className="flex-1 border border-gray-300 rounded p-2 flex flex-col items-center justify-center">
-                 <p className="text-[10px] font-bold mb-1 w-full text-left">สัดส่วนคดี (Pie Chart)</p>
-                 <div className="w-full h-full flex items-center justify-center flex-col">
-                   <div style={{ width: '100%', height: '80px' }}>
+           {/* Middle: Charts (25%) */}
+           <div style={{ width: '25%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {/* Pie Chart */}
+              <div style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                 <p style={{ fontSize: '12px', fontWeight: 'bold', margin: '0 0 5px 0', width: '100%' }}>สัดส่วนคดี</p>
+                 <div style={{ width: '100%', flex: 1, minHeight: '0' }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-                          <Pie data={stats.typeChartData} cx="50%" cy="50%" outerRadius={35} dataKey="value">
+                          <Pie data={stats.typeChartData} cx="50%" cy="50%" outerRadius={40} dataKey="value">
                             {stats.typeChartData.map((entry, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
                           </Pie>
                         </PieChart>
                     </ResponsiveContainer>
-                   </div>
-                   <div className="mt-1 text-[9px] w-full px-2 space-y-0.5">
-                      {stats.typeChartData.slice(0,3).map((e,i) => (
-                        <div key={i} className="flex justify-between"><span>{e.name}</span><span className="font-bold">{e.value}</span></div>
-                      ))}
-                   </div>
+                 </div>
+                 <div style={{ width: '100%', fontSize: '10px', marginTop: '5px' }}>
+                    {stats.typeChartData.slice(0,3).map((e,i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', padding: '2px 0' }}>
+                        <span style={{color: '#555'}}>{e.name}</span><span style={{fontWeight:'bold'}}>{e.value}</span>
+                      </div>
+                    ))}
                  </div>
               </div>
-              <div className="flex-1 border border-gray-300 rounded p-2">
-                 <p className="text-[10px] font-bold mb-1">สถิติแยกหน่วย (Top 5)</p>
-                 <div className="space-y-1.5 mt-2">
-                    {stats.unitChartData.slice(0,3).map((u, i) => (
-                      <div key={i} className="flex items-center text-[9px]">
-                        <span className="w-8 font-bold text-gray-600 truncate">{u.name}</span>
-                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden mx-2">
-                          <div className="h-full bg-blue-600" style={{ width: `${(u.value / stats.totalCases) * 100}%` }}></div>
+              
+              {/* Bar Chart (Simulated) */}
+              <div style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: '8px', padding: '10px' }}>
+                 <p style={{ fontSize: '12px', fontWeight: 'bold', margin: '0 0 10px 0' }}>สถิติแยกหน่วย (Top 5)</p>
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    {stats.unitChartData.slice(0,4).map((u, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', fontSize: '10px' }}>
+                        <span style={{ width: '30px', fontWeight: 'bold', color: '#555' }}>{u.name}</span>
+                        <div style={{ flex: 1, height: '6px', backgroundColor: '#f3f4f6', borderRadius: '3px', margin: '0 8px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', backgroundColor: '#2563eb', width: `${(u.value / stats.totalCases) * 100}%` }}></div>
                         </div>
-                        <span className="text-black font-bold">{u.value}</span>
+                        <span style={{ fontWeight: 'bold' }}>{u.value}</span>
                       </div>
                     ))}
                  </div>
               </div>
            </div>
 
-           {/* Col 3: Table (40%) */}
-           <div className="w-[40%] border border-gray-300 rounded overflow-hidden flex flex-col">
-              <div className="bg-gray-100 px-3 py-1.5 border-b border-gray-300 flex justify-between items-center shrink-0">
-                <h3 className="text-xs font-bold text-black">รายการจับกุมล่าสุด</h3>
-                <span className="text-[9px] text-gray-500">*10 รายการแรก</span>
+           {/* Right: Table (40%) */}
+           <div style={{ width: '40%', border: '1px solid #d1d5db', borderRadius: '8px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ backgroundColor: '#f3f4f6', padding: '8px 12px', borderBottom: '1px solid #d1d5db', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>รายการจับกุมล่าสุด</span>
+                <span style={{ fontSize: '10px', color: '#666' }}>*10 รายการแรก</span>
               </div>
-              <div className="flex-1 overflow-hidden relative">
-                <table className="w-full text-left">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-2 py-1 text-[9px] font-bold text-black w-16">วัน/เวลา</th>
-                      <th className="px-2 py-1 text-[9px] font-bold text-black w-14">หน่วย</th>
-                      <th className="px-2 py-1 text-[9px] font-bold text-black">ข้อหา</th>
-                      <th className="px-2 py-1 text-[9px] font-bold text-black w-16">สถานที่</th>
+              <div style={{ flex: 1, padding: '0' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#fff', borderBottom: '1px solid #e5e7eb' }}>
+                      <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>วัน/เวลา</th>
+                      <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>หน่วย</th>
+                      <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>ข้อหา</th>
+                      <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>สถานที่</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredData.slice(0, 12).map((item, idx) => (
-                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="px-2 py-1 text-[9px] align-top leading-tight">{item.date_capture}<br/><span className="text-gray-400">{item.time_capture}</span></td>
-                        <td className="px-2 py-1 text-[9px] align-top leading-tight">กก.{item.unit_kk}<br/>ส.ทล.{item.unit_s_tl}</td>
-                        <td className="px-2 py-1 text-[9px] align-top font-semibold truncate max-w-[100px] leading-tight">{item.charge}</td>
-                        <td className="px-2 py-1 text-[9px] align-top truncate max-w-[60px] leading-tight">{item.location}</td>
+                  <tbody>
+                    {filteredData.slice(0, 10).map((item, idx) => (
+                      <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#fff' : '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top' }}>{item.date_capture}<br/><span style={{color:'#9ca3af'}}>{item.time_capture}</span></td>
+                        <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top' }}>กก.{item.unit_kk}<br/>ส.ทล.{item.unit_s_tl}</td>
+                        <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top', fontWeight: '600', maxWidth: '120px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.charge}</td>
+                        <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top', maxWidth: '80px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.location}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -684,11 +687,10 @@ export default function App() {
            </div>
         </div>
         
-        {/* Footer Watermark */}
-        <div className="absolute bottom-4 left-0 w-full text-center text-[9px] text-gray-300 font-light">
+        {/* Footer */}
+        <div style={{ position: 'absolute', bottom: '5mm', left: 0, width: '100%', textAlign: 'center', fontSize: '9px', color: '#9ca3af' }}>
            TRAFFIC OPERATIONS DATABASE SYSTEM | GENERATED BY HIGHWAY POLICE DASHBOARD
         </div>
-      </div>
       </div>
 
     </div>
