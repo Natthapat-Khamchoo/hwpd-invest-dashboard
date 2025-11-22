@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Table as TableIcon, MapPin, Search, Filter, Siren, Users, 
   FileText, Calendar, ChevronRight, X, Menu, BarChart3, Map as MapIcon, 
   RotateCcw, Building2, ChevronLeft, ListFilter, Layers, Navigation, AlertTriangle,
-  Truck, FileWarning // <--- 1. เพิ่มไอคอนใหม่ตรงนี้
+  Truck, FileWarning, Download // เพิ่ม Download icon
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
@@ -28,6 +28,23 @@ const parseThaiDate = (dateStr) => {
   let year = parseInt(parts[2], 10);
   if (year > 2400) year -= 543;
   return new Date(year, month, day);
+};
+
+// ฟังก์ชันช่วยดึงปี (ย้ายมาไว้นอก Component เพื่อความสะอาด)
+const getYearFromDate = (dateStr) => {
+  if (!dateStr) return null;
+  const cleanStr = dateStr.replace(/-/g, '/');
+  const parts = cleanStr.split('/');
+  if (parts.length < 3) return null;
+  let year = parts.find(p => p.trim().length === 4 && !isNaN(p));
+  if (!year) {
+    year = parts[parts.length - 1].trim().split(' ')[0]; 
+  }
+  if (year && year.length === 2) {
+    const yVal = parseInt(year, 10);
+    year = yVal > 40 ? `25${year}` : `20${year}`;
+  }
+  return year;
 };
 
 const StatCard = ({ title, value, icon: Icon, colorClass }) => (
@@ -171,7 +188,8 @@ export default function App() {
   const [selectedCase, setSelectedCase] = useState(null);
   const [mapError, setMapError] = useState(false); 
   const handleMapError = useCallback(() => setMapError(true), []);
-  // เพิ่ม State สำหรับเช็คสถานะกำลังปริ้น
+  
+  // State สำหรับเช็คสถานะกำลังปริ้น
   const [isExporting, setIsExporting] = useState(false);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -232,10 +250,11 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, []);
 
- const handleExportPDF = () => {
-    setIsExporting(true); // 1. สั่งแสดงหน้า Print View ขึ้นมา
+  // --- Export PDF Function (Corrected) ---
+  const handleExportPDF = () => {
+    setIsExporting(true); // 1. สั่งแสดงหน้า Print View
     
-    // 2. รอให้ React วาดหน้าจอและกราฟให้เสร็จก่อน (500ms)
+    // 2. รอให้ React วาดหน้าจอและกราฟให้เสร็จก่อน (1000ms = 1 วินาที)
     setTimeout(() => {
       const element = document.getElementById('print-view');
       const opt = {
@@ -251,54 +270,38 @@ export default function App() {
         .from(element)
         .save()
         .then(() => {
-           setIsExporting(false); // 3. เมื่อเสร็จแล้ว สั่งซ่อนกลับไปเหมือนเดิม
+           setIsExporting(false); // 3. ซ่อนกลับเมื่อเสร็จ
         });
-    }, 500);
-  };
-    
-    // สั่ง save
-    html2pdf().set(opt).from(element).save();
+    }, 1000); // เพิ่มเวลาเป็น 1 วินาทีเพื่อความชัวร์
   };
 
- // --- ส่วนที่แก้ไข: Logic การสร้างตัวเลือกและกรองข้อมูล ---
-
- // ฟังก์ชันช่วยดึงปี (รองรับทั้ง DD/MM/YYYY, YYYY-MM-DD และปี 2 หลัก)
-const getYearFromDate = (dateStr) => {
-  if (!dateStr) return null;
-  
-  // แปลง - เป็น / เพื่อให้จัดการง่ายขึ้น
-  const cleanStr = dateStr.replace(/-/g, '/');
-  const parts = cleanStr.split('/');
-  
-  // กรณีไม่มีเครื่องหมายแบ่งเลย หรือข้อมูลไม่ครบ
-  if (parts.length < 3) return null;
-
-  // 1. ลองหาตัวที่มี 4 หลักก่อน (เช่น 2567 หรือ 2024)
-  let year = parts.find(p => p.trim().length === 4 && !isNaN(p));
-
-  // 2. ถ้าไม่เจอ 4 หลัก ให้เอาตำแหน่งสุดท้าย (สมมติว่าเป็น format dd/mm/yy)
-  if (!year) {
-    year = parts[parts.length - 1].trim().split(' ')[0]; // ตัดเวลาทิ้งถ้ามี
-  }
-
-  // 3. ถ้าปีเป็นเลข 2 หลัก (เช่น 67, 24) ให้แปลงเป็น 4 หลัก
-  if (year && year.length === 2) {
-    const yVal = parseInt(year, 10);
-    // ถ้าเลขมากกว่า 40 สันนิษฐานว่าเป็น พ.ศ. (เช่น 67 -> 2567)
-    // ถ้าน้อยกว่าให้เป็น ค.ศ. (เช่น 24 -> 2024)
-    year = yVal > 40 ? `25${year}` : `20${year}`;
-  }
-
-  return year;
-};
+  // --- Export CSV Function (Added back) ---
+  const handleExportCSV = () => {
+    if (filteredData.length === 0) { alert('ไม่มีข้อมูลสำหรับ Export'); return; }
+    const headers = {
+      date_capture: "วันที่", time_capture: "เวลา", unit_kk: "กก.", unit_s_tl: "ส.ทล.",
+      topic: "หัวข้อ", charge: "ข้อหา", suspect_name: "ผู้ถูกจับ", location: "สถานที่",
+      lat: "ละติจูด", long: "ลองจิจูด", seized_items: "ของกลาง", arrest_team: "ชุดจับกุม", behavior: "พฤติการณ์"
+    };
+    const csvRows = [];
+    csvRows.push(Object.values(headers).join(','));
+    filteredData.forEach(row => {
+      const values = Object.keys(headers).map(key => {
+        const val = row[key] ? String(row[key]) : '';
+        return `"${val.replace(/"/g, '""')}"`; 
+      });
+      csvRows.push(values.join(','));
+    });
+    const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `police_report_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+  };
 
   const filterOptions = useMemo(() => {
-    // 1. ดึง Topic มาเป็นตัวเลือกข้อหา
     const charges = [...new Set(data.map(d => d.topic))].filter(Boolean).sort(); 
-    
-    // 2. แก้ไข: ใช้ฟังก์ชัน getYearFromDate ดึงปี
     const years = [...new Set(data.map(d => getYearFromDate(d.date_capture)))].filter(Boolean).sort().reverse();
-
     return { charges, years };
   }, [data]);
 
@@ -319,23 +322,18 @@ const getYearFromDate = (dateStr) => {
       let monthMatch = true; 
       let rangeMatch = true;
 
-      // --- แก้ไข Logic การกรองปี ตรงนี้ ---
       if (filters.year) {
-         // ใช้ฟังก์ชันเดียวกันดึงปีจากข้อมูล เพื่อมาเทียบกับที่เลือกใน Dropdown
          const itemYear = getYearFromDate(item.date_capture);
          yearMatch = itemYear === filters.year;
       }
-      // --------------------------------
 
       if (itemDate) {
         if (filters.month) monthMatch = (itemDate.getMonth() + 1).toString() === filters.month;
         if (filters.startDate) rangeMatch = rangeMatch && itemDate >= new Date(filters.startDate);
         if (filters.endDate) rangeMatch = rangeMatch && itemDate <= new Date(filters.endDate);
       } else if (filters.month || filters.startDate || filters.endDate) {
-        // ถ้าแปลงวันที่ไม่ได้ แต่มีการเลือกตัวกรองวัน/เดือน ให้ถือว่าไม่ผ่าน
         return false;
       }
-
       return searchMatch && kkMatch && stlMatch && chargeMatch && yearMatch && monthMatch && rangeMatch;
     });
   }, [filters, data]);
@@ -344,7 +342,6 @@ const getYearFromDate = (dateStr) => {
     const totalCases = filteredData.length;
     const uniqueUnits = [...new Set(filteredData.map(d => `${d.unit_kk}-${d.unit_s_tl}`))].length;
     
-    // --- 2. เพิ่มสูตรคำนวณตรงนี้ ---
     const drugCases = filteredData.filter(d => d.charge?.includes('ยาเสพติด') || d.topic?.includes('ยาเสพติด')).length;
     const weaponCases = filteredData.filter(d => d.charge?.includes('อาวุธ') || d.topic?.includes('อาวุธ')).length;
     const heavyTruckCases = filteredData.filter(d => d.charge?.includes('น้ำหนัก') || d.topic?.includes('น้ำหนัก') || d.topic?.includes('รถบรรทุก')).length;
@@ -367,17 +364,10 @@ const getYearFromDate = (dateStr) => {
       }, {});
     }
 
-    const unitChartData = Object.entries(unitData)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-
-    const typeData = filteredData.reduce((acc, curr) => {
-      const key = curr.topic || 'อื่นๆ';
-      acc[key] = (acc[key] || 0) + 1; return acc;
-    }, {});
+    const unitChartData = Object.entries(unitData).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    const typeData = filteredData.reduce((acc, curr) => { const key = curr.topic || 'อื่นๆ'; acc[key] = (acc[key] || 0) + 1; return acc; }, {});
     const typeChartData = Object.entries(typeData).map(([name, value]) => ({ name, value }));
     
-    // Return ค่าใหม่ที่เพิ่ม
     return { totalCases, drugCases, weaponCases, heavyTruckCases, warrantCases, uniqueUnits, unitChartData, typeChartData, unitChartTitle };
   }, [filteredData, filters.unit_kk]);
 
@@ -435,7 +425,6 @@ const getYearFromDate = (dateStr) => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {/* Header: ปรับ padding สำหรับ mobile */}
         <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm z-10">
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"><Menu className="w-6 h-6" /></button>
@@ -453,6 +442,9 @@ const getYearFromDate = (dateStr) => {
             {activeTab === 'dashboard' && (
               <button onClick={handleExportPDF} className="bg-red-600 hover:bg-red-700 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center"><FileText className="w-4 h-4 mr-1" /> PDF</button>
             )}
+            <button onClick={handleExportCSV} className="bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center shadow-sm transition-all">
+                <Download className="w-4 h-4 mr-1" /> CSV
+            </button>
             <button onClick={() => setShowFilterPanel(!showFilterPanel)} className={`flex items-center space-x-1 sm:space-x-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${showFilterPanel ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-white text-slate-600 border border-slate-200'}`}>
               <Filter className="w-4 h-4" /><span className="hidden sm:inline">ตัวกรอง</span>
             </button>
@@ -464,7 +456,6 @@ const getYearFromDate = (dateStr) => {
         {showFilterPanel && (
           <div className="bg-white border-b border-slate-200 p-4 animate-in slide-in-from-top-2 duration-200 shadow-inner z-20 relative">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-4">
-              {/* ... Filters ... */}
               <div className="sm:col-span-2 md:col-span-3 xl:col-span-2">
                 <label className="block text-xs font-medium text-slate-500 mb-1">ค้นหา</label>
                 <div className="relative"><Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" /><input type="text" className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" placeholder="ชื่อ/ข้อหา/สถานที่..." value={filters.search} onChange={(e) => handleFilterChange('search', e.target.value)} /></div>
@@ -495,10 +486,7 @@ const getYearFromDate = (dateStr) => {
           
           {/* --- TAB: DASHBOARD --- */}
           {activeTab === 'dashboard' && (
-            // ใช้ id นี้สำหรับ PDF
             <div id="dashboard-content" className="p-4 sm:p-6 space-y-4 sm:space-y-6 animate-in fade-in duration-300">
-              
-              {/* --- 3. ปรับ Grid เป็น 3 คอลัมน์ในจอใหญ่ เพื่อให้แสดง 6 การ์ดได้พอดี (2 แถว x 3 ช่อง) --- */}
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 <StatCard title="ผลการจับกุมรวม" value={stats.totalCases} icon={FileText} colorClass="text-blue-600 bg-blue-600" />
                 <StatCard title="คดียาเสพติด" value={stats.drugCases} icon={Siren} colorClass="text-red-600 bg-red-600" />
@@ -509,42 +497,19 @@ const getYearFromDate = (dateStr) => {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                {/* 2. กราฟแท่ง: ปรับความสูงและ Margin ให้เหมาะกับมือถือ */}
                 <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100">
                   <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center">
                     <BarChart3 className="w-5 h-5 mr-2 text-slate-500" />
                     {stats.unitChartTitle}
                   </h3>
                   {stats.unitChartData.length > 0 ? (
-                    // ปรับความสูง mobile เป็น h-72 (สูงขึ้นเพื่อให้มีที่ให้ตัวหนังสือ) / desktop h-96
                     <div className="h-72 sm:h-96 w-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart 
-                          data={stats.unitChartData} 
-                          // ปรับ Margin ล่างให้เยอะขึ้น (80) เพื่อกันตัวหนังสือตกขอบ
-                          margin={{ top: 10, right: 0, left: -20, bottom: 20 }} 
-                        >
+                        <BarChart data={stats.unitChartData} margin={{ top: 10, right: 0, left: -20, bottom: 20 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                          <XAxis 
-                            dataKey="name" 
-                            interval={0} 
-                            angle={-45} 
-                            textAnchor="end" 
-                            height={50} 
-                            tick={{fontSize: 10, fill: '#64748b'}} // ลดขนาดฟอนต์ลงนิดนึง
-                            axisLine={{ stroke: '#e2e8f0' }} 
-                            tickLine={false} 
-                          />
-                          <YAxis 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{fontSize: 12, fill: '#64748b'}} 
-                            allowDecimals={false} 
-                          />
-                          <RechartsTooltip 
-                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
-                            cursor={{ fill: '#f1f5f9' }} 
-                          />
+                          <XAxis dataKey="name" interval={0} angle={-45} textAnchor="end" height={50} tick={{fontSize: 10, fill: '#64748b'}} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} />
+                          <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} allowDecimals={false} />
+                          <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} cursor={{ fill: '#f1f5f9' }} />
                           <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={60} />
                         </BarChart>
                       </ResponsiveContainer>
@@ -557,7 +522,6 @@ const getYearFromDate = (dateStr) => {
                   )}
                 </div>
 
-                {/* 3. กราฟวงกลม: ใช้ % แทน Pixel เพื่อความยืดหยุ่น */}
                 <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100">
                   <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center">
                     <PieChart className="w-5 h-5 mr-2 text-slate-500" />
@@ -568,29 +532,13 @@ const getYearFromDate = (dateStr) => {
                       <div className="h-64 sm:h-80 flex justify-center w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
-                            <Pie 
-                              data={stats.typeChartData} 
-                              cx="50%" 
-                              cy="50%" 
-                              // ⭐ ไฮไลท์: ใช้ % แทนค่าคงที่ กราฟจะยืดหดตามจอมือถือ
-                              innerRadius="45%" 
-                              outerRadius="70%" 
-                              paddingAngle={2} 
-                              dataKey="value" 
-                              stroke="none"
-                            >
-                              {stats.typeChartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                              ))}
+                            <Pie data={stats.typeChartData} cx="50%" cy="50%" innerRadius="45%" outerRadius="70%" paddingAngle={2} dataKey="value" stroke="none">
+                              {stats.typeChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                             </Pie>
-                            <RechartsTooltip 
-                              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
-                            />
+                            <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
-                      
-                      {/* Legend ด้านล่าง */}
                       <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-2">
                         {stats.typeChartData.map((entry, index) => (
                           <div key={index} className="flex items-center text-[10px] sm:text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded-full border border-slate-100">
@@ -676,12 +624,13 @@ const getYearFromDate = (dateStr) => {
           </div>
         </div>
       )}
+      
       {/* ==================================================================================
           HIDDEN PRINT VIEW (ส่วนนี้จะมองไม่เห็นบนหน้าจอ แต่จะถูกดึงไปทำ PDF)
           ================================================================================== */}
       <div id="print-view" 
-     className={isExporting ? "fixed inset-0 bg-white z-[9999] overflow-auto" : "fixed top-0 left-[-10000px] bg-white z-[-50]"} 
-     style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}>
+         className={isExporting ? "fixed inset-0 bg-white z-[9999] overflow-auto" : "fixed top-0 left-[-10000px] bg-white z-[-50]"} 
+         style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}>
         
         {/* 1. Header Report */}
         <div className="flex justify-between items-start mb-6 border-b-2 border-slate-800 pb-4">
@@ -718,7 +667,7 @@ const getYearFromDate = (dateStr) => {
 
         {/* 3. Middle Section: Map & Chart */}
         <div className="grid grid-cols-2 gap-6 mb-6 h-[300px]">
-          {/* Map (ใช้ SimpleMap เพื่อความชัวร์ในการ Render PDF) */}
+          {/* Map */}
           <div className="border border-slate-200 rounded-xl overflow-hidden relative bg-slate-50 p-2">
             <div className="absolute top-2 left-2 bg-white/80 px-2 py-1 text-[10px] font-bold rounded z-10">แผนที่พิกัดเกิดเหตุ</div>
             <SimpleMapVisualization data={filteredData} onSelectCase={() => {}} />
@@ -761,7 +710,7 @@ const getYearFromDate = (dateStr) => {
           </div>
         </div>
 
-        {/* 4. Table (Top 10-12 items to fit page) */}
+        {/* 4. Table */}
         <div className="border border-slate-200 rounded-xl overflow-hidden flex-1">
           <div className="bg-slate-100 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
             <h3 className="text-sm font-bold text-slate-700">รายการจับกุมล่าสุด (12 รายการแรก)</h3>
@@ -795,6 +744,7 @@ const getYearFromDate = (dateStr) => {
            <span>Generated by AI Assistant</span>
         </div>
       </div>
+
     </div>
   );
 }
