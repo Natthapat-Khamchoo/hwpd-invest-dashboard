@@ -589,8 +589,8 @@ export default function App() {
             
             // ขนาดสำหรับ A4 Landscape (297mm x 210mm)
             // แปลงเป็น Pixel (96 DPI) ประมาณ 1123px x 794px
-            width: '1123px', 
-            minHeight: '794px', // ใช้ minHeight กันเนื้อหาล้น
+            width: '1754px', 
+            minHeight: '1240px', // ใช้ minHeight กันเนื้อหาล้น
             padding: '20px', // ลด padding หน่วย mm ออก ใช้ px เพื่อความชัวร์ในการคำนวณ
             
             fontFamily: "'Sarabun', sans-serif",
