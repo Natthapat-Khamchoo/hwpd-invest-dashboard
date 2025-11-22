@@ -268,26 +268,27 @@ export default function App() {
   }, []);
 
   const handleExportPDF = () => {
-    // 1. บังคับ Scroll ไปที่ 0,0
+    // 1. เลื่อน Scroll ไปบนสุดก่อน (สำคัญมากสำหรับ html2canvas)
     window.scrollTo(0, 0);
     setIsExporting(true);
     
+    // รอให้ State อัปเดตและ DOM Render เสร็จ (เพิ่มเวลาเล็กน้อยถ้าข้อมูลเยอะ)
     setTimeout(() => {
       const element = document.getElementById('print-view');
       const opt = {
         margin: 0,
         filename: `รายงานสรุป_${new Date().toISOString().slice(0,10)}.pdf`,
-        image: { type: 'jpeg', quality: 1.0 },
+        image: { type: 'jpeg', quality: 0.98 }, // ลด quality นิดหน่อยเพื่อลดขนาดไฟล์
         html2canvas: { 
             scale: 2, 
             useCORS: true, 
             letterRendering: true,
             scrollY: 0, 
-            scrollX: 0,
-            // 🔥 FIX KEY: บังคับให้ Render Canvas กว้างเท่าหน้าจอ Desktop (1600px)
-            // สิ่งนี้จะทำให้ Layout ไม่ยุบเป็น Mobile และโลโก้จะไม่ใหญ่
-            windowWidth: 1600,
-            width: 1600
+            // สำคัญ: กำหนด windowWidth ให้ตรงกับ CSS ที่เรา Fix ไว้
+            windowWidth: 1123, // A4 Landscape (approx pixel at 96DPI ~1123px) หรือใช้ 1600 ตามเดิมก็ได้
+            width: 1123, 
+            x: 0,
+            y: 0
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
       };
@@ -297,9 +298,10 @@ export default function App() {
         .from(element)
         .save()
         .then(() => {
+           // ปรินต์เสร็จแล้วค่อยซ่อน
            setIsExporting(false);
         });
-    }, 2000);
+    }, 2500); // เพิ่มเวลาเผื่อโหลดรูป/Map นิดหน่อย
   };
 
   const handleExportCSV = () => {
@@ -574,18 +576,33 @@ export default function App() {
           HIDDEN PRINT VIEW (OVERLAY MODE - FIXED LAYOUT - A4 LANDSCAPE)
           ================================================================================== */}
       <div id="print-view" 
-         className={isExporting ? "fixed inset-0 z-[9999] bg-white" : "fixed top-0 left-[-10000px] bg-white z-[-50]"} 
-         style={{ 
-           display: isExporting ? 'block' : 'none',
-           width: '297mm', 
-           height: '210mm',
-           padding: '10mm',
-           fontFamily: "'Sarabun', sans-serif",
-           color: '#000',
-           overflow: 'hidden',
-           margin: '0 auto',
-           backgroundColor: 'white'
-         }}>
+          // ลบ Class Tailwind ที่อาจจะขัดแย้งออก
+          className="bg-white" 
+          style={{ 
+            // 1. ใช้ Absolute แทน Fixed
+            position: 'absolute', 
+            top: 0,
+            // 2. เทคนิคซ่อน: ถ้า Export ให้ชิดซ้าย (0) ถ้าไม่ ให้ดีดไปไกลๆ (-9999px)
+            left: isExporting ? 0 : '-9999px',
+            // 3. ถ้า Export ให้ทับทุกอย่าง (z-index สูง)
+            zIndex: isExporting ? 9999 : -1,
+            
+            // ขนาดสำหรับ A4 Landscape (297mm x 210mm)
+            // แปลงเป็น Pixel (96 DPI) ประมาณ 1123px x 794px
+            width: '1123px', 
+            minHeight: '794px', // ใช้ minHeight กันเนื้อหาล้น
+            padding: '20px', // ลด padding หน่วย mm ออก ใช้ px เพื่อความชัวร์ในการคำนวณ
+            
+            fontFamily: "'Sarabun', sans-serif",
+            color: '#000',
+            backgroundColor: 'white',
+            
+            // ทำให้มองเห็นตลอดเวลาใน DOM Tree (แก้ปัญหาหน้าขาว)
+            visibility: 'visible', 
+            display: 'block' 
+          }}>
+        
+        {/* ... (เนื้อหาข้างในคงเดิม) ... */}
         
         {/* Header Row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '15px', height: '15mm' }}>
