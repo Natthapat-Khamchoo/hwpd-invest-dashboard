@@ -413,7 +413,7 @@ export default function App() {
               width: '1123px', height: '794px',
               backgroundColor: 'white', padding: '20px',
               fontFamily: "'Sarabun', sans-serif", color: '#000',
-              overflow: 'auto', visibility: 'visible', pointerEvents: 'none'
+              overflow: 'hidden', visibility: 'visible', pointerEvents: 'none'
             }}>
         
         {/* Header */}
