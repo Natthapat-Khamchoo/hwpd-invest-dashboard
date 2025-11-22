@@ -408,7 +408,7 @@ export default function App() {
       <div id="print-view" 
             style={{ 
               position: 'fixed', top: 0, left: 0,
-              zIndex: isExporting ? 99999 : -1,
+              zIndex: isExporting ? 0 : -1,
               opacity: isExporting ? 1 : 0,
               width: '1123px', height: '794px',
               backgroundColor: 'white', padding: '20px',
