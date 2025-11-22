@@ -250,15 +250,26 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, []);
 
-  const handleExportPDF = () => {
+const handleExportPDF = () => {
+    // 1. บังคับ Scroll ไปบนสุดก่อน เพื่อให้ html2canvas จับภาพได้ถูกตำแหน่ง
+    window.scrollTo(0, 0);
     setIsExporting(true);
+    
+    // 2. รอเวลาให้นานขึ้นนิดนึง (1.5 วินาที) เพื่อให้โหลดรูป/Map ทันแน่นอน
     setTimeout(() => {
       const element = document.getElementById('print-view');
       const opt = {
         margin: 0,
         filename: `รายงานสรุป_${new Date().toISOString().slice(0,10)}.pdf`,
         image: { type: 'jpeg', quality: 1.0 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            scrollY: 0, // บังคับให้จับภาพจากด้านบนสุด
+            scrollX: 0,
+            windowWidth: document.documentElement.offsetWidth, // บังคับความกว้างให้เต็ม
+            letterRendering: true 
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
@@ -266,8 +277,10 @@ export default function App() {
         .set(opt)
         .from(element)
         .save()
-        .then(() => setIsExporting(false));
-    }, 1000);
+        .then(() => {
+           setIsExporting(false);
+        });
+    }, 1500);
   };
 
   const handleExportCSV = () => {
@@ -542,10 +555,11 @@ export default function App() {
           HIDDEN PRINT VIEW (STRICT A4 LAYOUT & SARABUN FONT)
           ================================================================================== */}
       <div id="print-view" 
-         className={isExporting ? "fixed inset-0 bg-white z-[9999] overflow-auto" : "fixed top-0 left-[-10000px] bg-white z-[-50]"} 
+         className={isExporting ? "absolute top-0 left-0 z-[9999] bg-white" : "fixed top-0 left-[-10000px] bg-white z-[-50]"} 
          style={{ 
            width: '210mm', 
-           minHeight: '297mm', 
+           minHeight: '297mm', // บังคับความสูงขั้นต่ำเท่า A4
+           height: isExporting ? 'auto' : '297mm',
            padding: '10mm',
            fontFamily: "'Sarabun', sans-serif",
            color: '#000'
