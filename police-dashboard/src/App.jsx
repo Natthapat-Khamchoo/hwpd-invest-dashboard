@@ -171,6 +171,8 @@ export default function App() {
   const [selectedCase, setSelectedCase] = useState(null);
   const [mapError, setMapError] = useState(false); 
   const handleMapError = useCallback(() => setMapError(true), []);
+  // เพิ่ม State สำหรับเช็คสถานะกำลังปริ้น
+  const [isExporting, setIsExporting] = useState(false);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true); 
@@ -230,17 +232,29 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, []);
 
-  const handleExportPDF = () => {
-    // เปลี่ยนไปจับ element ลับที่เราจะสร้างขึ้น
-    const element = document.getElementById('print-view');
+ const handleExportPDF = () => {
+    setIsExporting(true); // 1. สั่งแสดงหน้า Print View ขึ้นมา
     
-    const opt = {
-      margin: 0, // ตัดขอบขาวออกเพื่อให้เราจัด Layout เอง
-      filename: `รายงานสรุปสถานการณ์_${new Date().toISOString().slice(0,10)}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true }, // เพิ่ม Scale ให้ชัด
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+    // 2. รอให้ React วาดหน้าจอและกราฟให้เสร็จก่อน (500ms)
+    setTimeout(() => {
+      const element = document.getElementById('print-view');
+      const opt = {
+        margin: 0,
+        filename: `รายงานสรุป_${new Date().toISOString().slice(0,10)}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf()
+        .set(opt)
+        .from(element)
+        .save()
+        .then(() => {
+           setIsExporting(false); // 3. เมื่อเสร็จแล้ว สั่งซ่อนกลับไปเหมือนเดิม
+        });
+    }, 500);
+  };
     
     // สั่ง save
     html2pdf().set(opt).from(element).save();
@@ -665,7 +679,9 @@ const getYearFromDate = (dateStr) => {
       {/* ==================================================================================
           HIDDEN PRINT VIEW (ส่วนนี้จะมองไม่เห็นบนหน้าจอ แต่จะถูกดึงไปทำ PDF)
           ================================================================================== */}
-      <div id="print-view" className="fixed top-0 left-[-10000px] bg-white z-[-50]" style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}>
+      <div id="print-view" 
+     className={isExporting ? "fixed inset-0 bg-white z-[9999] overflow-auto" : "fixed top-0 left-[-10000px] bg-white z-[-50]"} 
+     style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}>
         
         {/* 1. Header Report */}
         <div className="flex justify-between items-start mb-6 border-b-2 border-slate-800 pb-4">
