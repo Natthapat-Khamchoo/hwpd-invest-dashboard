@@ -245,19 +245,44 @@ export default function App() {
 
  // --- ส่วนที่แก้ไข: Logic การสร้างตัวเลือกและกรองข้อมูล ---
 
+ // ฟังก์ชันช่วยดึงปี (รองรับทั้ง DD/MM/YYYY, YYYY-MM-DD และปี 2 หลัก)
+const getYearFromDate = (dateStr) => {
+  if (!dateStr) return null;
+  
+  // แปลง - เป็น / เพื่อให้จัดการง่ายขึ้น
+  const cleanStr = dateStr.replace(/-/g, '/');
+  const parts = cleanStr.split('/');
+  
+  // กรณีไม่มีเครื่องหมายแบ่งเลย หรือข้อมูลไม่ครบ
+  if (parts.length < 3) return null;
+
+  // 1. ลองหาตัวที่มี 4 หลักก่อน (เช่น 2567 หรือ 2024)
+  let year = parts.find(p => p.trim().length === 4 && !isNaN(p));
+
+  // 2. ถ้าไม่เจอ 4 หลัก ให้เอาตำแหน่งสุดท้าย (สมมติว่าเป็น format dd/mm/yy)
+  if (!year) {
+    year = parts[parts.length - 1].trim().split(' ')[0]; // ตัดเวลาทิ้งถ้ามี
+  }
+
+  // 3. ถ้าปีเป็นเลข 2 หลัก (เช่น 67, 24) ให้แปลงเป็น 4 หลัก
+  if (year && year.length === 2) {
+    const yVal = parseInt(year, 10);
+    // ถ้าเลขมากกว่า 40 สันนิษฐานว่าเป็น พ.ศ. (เช่น 67 -> 2567)
+    // ถ้าน้อยกว่าให้เป็น ค.ศ. (เช่น 24 -> 2024)
+    year = yVal > 40 ? `25${year}` : `20${year}`;
+  }
+
+  return year;
+};
+
   const filterOptions = useMemo(() => {
-    // 1. แก้ไข: ดึง Unique Value จาก "item.topic" (หัวข้อ) แทน "item.charge"
-    // filter(Boolean) เพื่อตัดค่าว่างทิ้ง
+    // 1. ดึง Topic มาเป็นตัวเลือกข้อหา
     const charges = [...new Set(data.map(d => d.topic))].filter(Boolean).sort(); 
     
-    // 2. แก้ไข: ดึงปีจาก String โดยตรง (คาดว่าเป็น พ.ศ. จาก CSV) และใส่ filter(Boolean) กันค่าว่าง
-    const years = [...new Set(data.map(d => {
-      if (!d.date_capture) return null;
-      const parts = d.date_capture.split('/');
-      return parts.length === 3 ? parts[2] : null;
-    }))].filter(Boolean).sort().reverse();
+    // 2. แก้ไข: ใช้ฟังก์ชัน getYearFromDate ดึงปี
+    const years = [...new Set(data.map(d => getYearFromDate(d.date_capture)))].filter(Boolean).sort().reverse();
 
-    return { charges, years }; // topics ไม่จำเป็นต้องใช้แล้วใน Dropdown นี้แต่เก็บไว้ก็ได้
+    return { charges, years };
   }, [data]);
 
   const filteredData = useMemo(() => {
@@ -266,12 +291,10 @@ export default function App() {
         (item.charge && item.charge.toLowerCase().includes(filters.search.toLowerCase())) ||
         (item.suspect_name && item.suspect_name.toLowerCase().includes(filters.search.toLowerCase())) ||
         (item.location && item.location.toLowerCase().includes(filters.search.toLowerCase())) ||
-        (item.topic && item.topic.toLowerCase().includes(filters.search.toLowerCase())); // เพิ่มการค้นหาจาก Topic ด้วย
+        (item.topic && item.topic.toLowerCase().includes(filters.search.toLowerCase()));
 
       const kkMatch = !filters.unit_kk || String(item.unit_kk) === String(filters.unit_kk);
       const stlMatch = !filters.unit_s_tl || String(item.unit_s_tl) === String(filters.unit_s_tl);
-      
-      // 3. แก้ไข: เมื่อเลือกตัวกรอง "ข้อหา" ให้ไปเช็คกับ "item.topic" แทน
       const chargeMatch = !filters.charge || item.topic === filters.charge; 
 
       const itemDate = parseThaiDate(item.date_capture);
@@ -279,20 +302,20 @@ export default function App() {
       let monthMatch = true; 
       let rangeMatch = true;
 
+      // --- แก้ไข Logic การกรองปี ตรงนี้ ---
+      if (filters.year) {
+         // ใช้ฟังก์ชันเดียวกันดึงปีจากข้อมูล เพื่อมาเทียบกับที่เลือกใน Dropdown
+         const itemYear = getYearFromDate(item.date_capture);
+         yearMatch = itemYear === filters.year;
+      }
+      // --------------------------------
+
       if (itemDate) {
-        // 4. แก้ไข: Logic การกรองปี เช็คจาก String โดยตรงเพื่อให้ตรงกับ Dropdown พ.ศ.
-        if (filters.year) {
-           const itemYear = item.date_capture?.split('/')[2];
-           yearMatch = itemYear === filters.year;
-        }
-        
         if (filters.month) monthMatch = (itemDate.getMonth() + 1).toString() === filters.month;
         if (filters.startDate) rangeMatch = rangeMatch && itemDate >= new Date(filters.startDate);
         if (filters.endDate) rangeMatch = rangeMatch && itemDate <= new Date(filters.endDate);
-      }
-      
-      // กรณีไม่มีวันที่ แต่มีการเลือก Filter ปี/เดือน ให้ถือว่าไม่ผ่าน
-      if (!itemDate && (filters.year || filters.month || filters.startDate || filters.endDate)) {
+      } else if (filters.month || filters.startDate || filters.endDate) {
+        // ถ้าแปลงวันที่ไม่ได้ แต่มีการเลือกตัวกรองวัน/เดือน ให้ถือว่าไม่ผ่าน
         return false;
       }
 
