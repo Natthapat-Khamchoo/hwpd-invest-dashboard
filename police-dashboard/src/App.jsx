@@ -62,6 +62,8 @@ const StatCard = ({ title, value, icon: Icon, colorClass }) => (
 const SimpleMapVisualization = ({ data, onSelectCase, isPrintMode = false }) => {
   const MIN_LAT = 5.6; const MAX_LAT = 20.5; const MIN_LONG = 97.3; const MAX_LONG = 105.8;
   const [hoveredItem, setHoveredItem] = useState(null);
+  
+  // สูตรคำนวณพิกัดสำหรับแผนที่ไทย
   const getX = (long) => ((parseFloat(long) - MIN_LONG) / (MAX_LONG - MIN_LONG)) * 100;
   const getY = (lat) => 100 - ((parseFloat(lat) - MIN_LAT) / (MAX_LAT - MIN_LAT)) * 100;
 
@@ -72,30 +74,43 @@ const SimpleMapVisualization = ({ data, onSelectCase, isPrintMode = false }) => 
           <AlertTriangle className="w-3 h-3 mr-1" /> Graphic Mode
         </div>
       )}
-      <div className="relative w-full h-full max-w-[450px] mx-auto py-4">
-        {/* SVG Map Base */}
-        <svg viewBox="0 0 330 550" className="absolute inset-0 w-full h-full pointer-events-none opacity-30">
-           <path d="M145.6,23.5c-2.4,2.7-6.5,3.9-8.2,7.2c-2.7,5.3-1.2,12.2-4.3,17.3c-1.8,2.9-6.3,2.9-8.4,5.5c-3.9,4.9-3.1,12.6-6.5,17.8c-2.4,3.7-8.4,4.5-10.8,8.2c-2.9,4.5-1.4,10.8-3.6,15.6c-2.2,4.9-8.6,7.3-10.8,12.2c-1.8,3.9,0.6,8.8-1.2,12.7c-2.4,5.3-10.4,6.9-13.4,12c-1.8,3.1,0.4,7.1-1.2,10.3c-3.3,6.5-13.7,8.2-16.1,15.1c-1.4,3.9,2.4,8.6,1.7,12.7c-0.8,4.5-7.3,7.3-8.4,11.8c-1.4,5.3,3.5,10.6,3.4,16.1c-0.2,13.3,7.8,23.7,7.4,37.2c-0.2,6.7-4.7,12.6-4.3,19.4c0.6,8.8,8.4,14.9,10.1,23.3c1.8,9.4-2.9,19.2-0.5,28.6c1.8,7.3,9.6,11.8,12.2,18.7c2.9,7.8,0.4,17.1,3.6,24.7c2.7,6.3,10.8,9.4,14.4,15.6c3.3,5.7,2.4,13.5,5.8,19.2c3.1,5.3,10.6,8,14.2,13.2c3.1,4.5,2.7,10.8,5.8,15.4c3.1,4.5,9.4,6.9,12.5,11.3c4.3,6.1,3.9,15.1,8.9,20.6c2.9,3.3,7.8,4.9,10.8,8.2c3.9,4.3,4.7,11.2,9.1,14.9c4.9,4.1,13.1,2.9,18.7,5.8c4.7,2.4,7.3,8.4,12.2,10.3c6.3,2.4,13.5-2.4,19.2-0.5c4.9,1.6,7.8,7.8,12.7,8.9c6.9,1.6,14.1-4.1,20.2-1.9c4.3,1.6,7.3,6.9,11.8,8.2c5.7,1.6,12-2.7,17.3-1.7c5.3,1,9.2,6.5,14.6,6.7c12.2,0.4,23.1-10.4,32.6-16.3c4.3-2.7,7.3-7.8,12.2-9.6c5.3-2,11.6,0.8,16.3-1.9c3.7-2.2,5.3-7.3,8.6-9.8c4.9-3.7,12.4-3.5,17-7.7c3.1-2.9,3.7-8,6.5-11c4.3-4.7,11.8-5.3,15.6-10.3c2.4-3.3,1.4-8.2,3.4-11.8c2.9-5.3,10.4-7.3,12.7-12.7c1.6-3.7-1.6-8.2-0.5-12c1.8-6.3,10.6-8.4,12-14.9c1-4.3-2.9-8.8-2.4-13.2c0.6-5.3,6.9-9,7-14.4c0.2-11.4-10.4-18.4-12.7-28.3c-1.2-5.3,2.4-10.8,0.7-16.1c-2.2-6.7-11.6-9-14.9-15.1c-2.7-4.9,0.2-11.6-2.6-16.3c-3.9-6.5-13.9-8.6-17.5-15.4c-2.2-4.1,0.4-9.6-1.9-13.7c-3.3-5.9-12.2-8.2-15.4-14.2c-2-3.9,0.2-8.8-1.9-12.7c-2.9-5.3-10.6-7.1-13.2-12.2c-1.8-3.7,0.4-8.4-1.4-12c-3.1-5.9-11.8-8.4-14.6-14.6c-1.8-3.9,0.6-9-1.2-12.7c-2.7-5.3-10.4-6.9-12.7-12.2c-1.4-3.1,0.4-6.9-1-10.1c-2.7-6.1-11.2-8-13.2-14.2c-1.2-3.7,1.2-8-0.2-11.8c-2.4-6.3-11.4-8.6-13.7-14.9c-1.4-3.9,1.2-8.6-0.2-12.5c-2.4-6.5-11.6-8.4-13.9-14.9c-1.2-3.3,0.8-7.1-0.5-10.6C223.7,45.7,219.2,43.1,216.8,37.4z" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="2" />
+      <div className="relative w-full h-full max-w-[400px] mx-auto py-4 flex items-center justify-center">
+        {/* SVG Thailand Map Base */}
+        <svg viewBox="0 0 400 800" className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.4 }}>
+           {/* รูปแผนที่ประเทศไทย (Simplified Path) */}
+           <path d="M140,20 L180,10 L220,30 L210,80 L250,90 L280,120 L270,160 L290,180 L280,220 L230,230 L220,280 L190,300 L180,350 L190,400 L160,450 L150,550 L170,600 L200,650 L220,700 L200,750 L160,740 L140,680 L120,620 L110,550 L100,480 L110,420 L120,380 L90,320 L80,250 L90,180 L100,120 L80,80 L100,40 Z" 
+                 fill="#cbd5e1" stroke="#94a3b8" strokeWidth="2" />
         </svg>
-        {/* Dots */}
+        
+        {/* Points */}
         {data.filter(d => d.lat && d.long).map((item) => {
           const lat = parseFloat(item.lat);
           const long = parseFloat(item.long);
+          // กรองจุดที่อยู่นอกกรอบประเทศไทย
           if(lat < MIN_LAT || lat > MAX_LAT || long < MIN_LONG || long > MAX_LONG) return null;
+          
           return (
             <div key={item.id}
-              className="absolute rounded-full"
+              className="absolute rounded-full cursor-pointer"
               style={{
-                left: `${getX(long)}%`, top: `${getY(lat)}%`, 
-                width: isPrintMode ? '8px' : '10px', height: isPrintMode ? '8px' : '10px',
-                backgroundColor: UNIT_COLORS[item.unit_kk] || '#64748b', opacity: 0.8, transform: 'translate(-50%, -50%)',
+                left: `${getX(long)}%`, 
+                top: `${getY(lat)}%`, 
+                width: isPrintMode ? '6px' : '10px', 
+                height: isPrintMode ? '6px' : '10px',
+                backgroundColor: UNIT_COLORS[item.unit_kk] || '#64748b', 
+                opacity: 0.8, 
+                transform: 'translate(-50%, -50%)',
                 border: '1px solid white',
-                zIndex: 10
+                zIndex: 10,
+                boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
               }}
-              onMouseEnter={() => !isPrintMode && setHoveredItem(item)} onMouseLeave={() => setHoveredItem(null)} onClick={() => !isPrintMode && onSelectCase(item)}
+              onMouseEnter={() => !isPrintMode && setHoveredItem(item)} 
+              onMouseLeave={() => setHoveredItem(null)} 
+              onClick={() => !isPrintMode && onSelectCase(item)}
             />
           );
         })}
+
         {hoveredItem && !isPrintMode && (
           <div className="absolute z-30 bg-white/95 backdrop-blur p-3 rounded-lg shadow-xl text-xs border border-slate-200 pointer-events-none whitespace-nowrap"
               style={{ left: `${getX(hoveredItem.long)}%`, top: `${getY(hoveredItem.lat)}%`, transform: 'translate(15px, -50%)' }}>
@@ -253,9 +268,8 @@ export default function App() {
   }, []);
 
   const handleExportPDF = () => {
-    // 1. บังคับ Scroll ไปที่ 0,0 และ Lock Scroll
+    // 1. บังคับ Scroll ไปที่ 0,0
     window.scrollTo(0, 0);
-    document.body.style.overflow = 'hidden';
     setIsExporting(true);
     
     setTimeout(() => {
@@ -270,9 +284,10 @@ export default function App() {
             letterRendering: true,
             scrollY: 0, 
             scrollX: 0,
-            // 2. FORCE WIDTH (สำคัญมาก) เพื่อไม่ให้ Responsive ทำงานผิด
-            windowWidth: 1200, 
-            width: 1123 // A4 Landscape pixel approx
+            // 🔥 FIX KEY: บังคับให้ Render Canvas กว้างเท่าหน้าจอ Desktop (1600px)
+            // สิ่งนี้จะทำให้ Layout ไม่ยุบเป็น Mobile และโลโก้จะไม่ใหญ่
+            windowWidth: 1600,
+            width: 1600
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
       };
@@ -283,9 +298,8 @@ export default function App() {
         .save()
         .then(() => {
            setIsExporting(false);
-           document.body.style.overflow = 'auto';
         });
-    }, 1500);
+    }, 2000);
   };
 
   const handleExportCSV = () => {
@@ -562,15 +576,14 @@ export default function App() {
       <div id="print-view" 
          className={isExporting ? "fixed inset-0 z-[9999] bg-white" : "fixed top-0 left-[-10000px] bg-white z-[-50]"} 
          style={{ 
-           // ต้องแสดงเป็น Block เมื่อ Export เพื่อให้ browser render ได้ถูกต้อง
            display: isExporting ? 'block' : 'none',
-           width: '297mm', // A4 Landscape Exact Width
-           height: '210mm', // A4 Landscape Exact Height
+           width: '297mm', 
+           height: '210mm',
            padding: '10mm',
            fontFamily: "'Sarabun', sans-serif",
            color: '#000',
-           overflow: 'hidden', // ห้ามมี Scrollbar ในหน้านี้
-           margin: '0 auto', // Center align
+           overflow: 'hidden',
+           margin: '0 auto',
            backgroundColor: 'white'
          }}>
         
