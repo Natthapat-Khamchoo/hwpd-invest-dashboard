@@ -18,8 +18,7 @@ const UNIT_COLORS = { "1": "#e6194b", "2": "#f58231", "3": "#ffe119", "4": "#3cb
 const THAI_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
 
-// *** สำคัญ: เพื่อป้องกันรูปไม่ขึ้น (CORS) แนะนำให้เปลี่ยน URL นี้เป็น Base64 String ***
-// คุณสามารถไปที่เว็บ https://www.base64-image.de/ เพื่อแปลงรูปเป็น Text ยาวๆ แล้วนำมาใส่แทน URL นี้
+// *** LOGO FIX: แนะนำให้ใช้ Base64 String แทน URL เพื่อแก้ปัญหาภาพไม่ขึ้นใน PDF ***
 const LOGO_URL = "https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png";
 
 // --- Helpers ---
@@ -64,14 +63,17 @@ const StatCard = ({ title, value, icon: Icon, colorClass }) => (
 
 // --- Map Components ---
 
-// แผนที่ SVG แบบ High Detail (ใช้ Path ละเอียดแทนสามเหลี่ยมเดิม)
+// 🗺️ NEW MAP: แผนที่ประเทศไทยรูปขวานทอง (Simplified SVG)
 const SimpleMapVisualization = ({ data, onSelectCase, isPrintMode = false }) => {
-  // พิกัด Boundary ของประเทศไทย (โดยประมาณ) เพื่อ Mapping จุด
-  const MIN_LAT = 5.6; const MAX_LAT = 20.5; 
-  const MIN_LONG = 97.3; const MAX_LONG = 105.8;
+  // 📌 CALIBRATION: ปรับค่าเหล่านี้เพื่อให้จุดตรงกับแผนที่ SVG ใหม่
+  const MIN_LAT = 5.6;   // ใต้สุด (เบตง)
+  const MAX_LAT = 20.5;  // เหนือสุด (แม่สาย)
+  const MIN_LONG = 97.3; // ตะวันตกสุด
+  const MAX_LONG = 105.7; // ตะวันออกสุด (อุบล)
+
   const [hoveredItem, setHoveredItem] = useState(null);
   
-  // แปลง Lat/Long เป็น % บน SVG container
+  // คำนวณพิกัด X, Y เป็น % เทียบกับกล่อง SVG
   const getX = (long) => ((parseFloat(long) - MIN_LONG) / (MAX_LONG - MIN_LONG)) * 100;
   const getY = (lat) => 100 - ((parseFloat(lat) - MIN_LAT) / (MAX_LAT - MIN_LAT)) * 100;
 
@@ -84,11 +86,11 @@ const SimpleMapVisualization = ({ data, onSelectCase, isPrintMode = false }) => 
       )}
       
       <div className="relative w-full h-full max-w-[400px] mx-auto py-4 flex items-center justify-center">
-        {/* SVG Map Container: viewBox ปรับให้เข้ากับสัดส่วนประเทศไทย */}
+        {/* SVG Map: ใช้ viewBox ที่สอดคล้องกับสัดส่วนประเทศไทย (กว้าง 320 สูง 600) */}
         <svg viewBox="0 0 320 600" className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.6 }}>
-           {/* Path แผนที่ประเทศไทย (Simplified High Res) */}
+           {/* Path รูปแผนที่ประเทศไทย (วาดใหม่ให้เป็นรูปขวาน) */}
            <path 
-             d="M152.9,8.6 L162.4,1.5 L175.0,13.0 L188.0,14.1 L194.1,21.8 L185.4,31.3 L178.2,30.7 L170.0,42.8 L175.5,54.3 L187.0,52.1 L199.0,60.3 L207.7,58.1 L216.4,66.3 L214.7,78.3 L228.4,79.5 L241.5,89.2 L236.6,100.2 L226.7,100.7 L223.4,111.1 L239.3,117.6 L238.7,128.0 L227.2,138.4 L218.5,137.3 L210.3,144.4 L199.4,143.4 L189.0,153.2 L174.2,154.8 L166.0,161.9 L166.0,170.6 L175.8,178.3 L189.0,178.3 L198.2,185.4 L218.4,185.4 L227.7,191.9 L236.4,202.9 L243.5,203.9 L254.4,198.4 L268.1,198.4 L276.3,206.1 L288.3,206.1 L297.0,212.6 L305.7,211.5 L311.2,219.2 L318.8,218.1 L324.8,225.7 L338.5,226.8 L345.0,236.6 L344.5,247.0 L336.3,253.0 L334.7,263.9 L342.8,270.4 L341.2,281.4 L334.1,289.6 L337.4,299.9 L330.3,310.9 L319.9,314.7 L311.7,313.0 L306.3,319.6 L297.0,319.6 L292.6,328.9 L282.8,330.0 L275.1,336.5 L267.5,343.6 L258.8,342.5 L251.1,337.1 L244.0,342.5 L234.2,342.5 L222.7,347.4 L213.4,347.4 L204.7,352.9 L197.6,361.1 L191.6,369.3 L183.4,370.9 L174.7,377.5 L165.4,385.1 L157.2,387.8 L151.2,392.2 L146.8,399.3 L145.8,409.7 L149.0,420.1 L152.9,430.4 L154.5,441.9 L157.8,452.3 L161.0,459.9 L165.4,469.2 L167.0,480.7 L167.0,491.6 L162.7,499.8 L155.0,504.7 L148.0,508.5 L141.4,514.0 L135.9,522.7 L132.7,533.1 L131.6,543.4 L129.4,553.3 L122.9,559.3 L113.6,558.7 L107.0,553.8 L101.6,547.8 L96.1,540.2 L90.7,534.7 L86.3,528.2 L83.0,520.5 L80.8,511.2 L79.8,500.9 L79.8,490.5 L83.0,480.7 L87.4,472.5 L91.8,464.3 L95.0,455.6 L97.2,445.2 L97.2,434.8 L94.0,426.1 L89.6,419.0 L84.1,412.5 L77.6,407.0 L71.0,402.1 L65.6,396.1 L61.2,388.4 L58.0,379.2 L56.9,369.9 L59.0,360.0 L62.3,350.8 L64.5,342.0 L63.4,332.7 L59.0,325.1 L52.5,320.7 L43.8,319.6 L36.1,315.2 L29.6,308.7 L25.2,301.1 L23.0,291.8 L23.0,282.0 L27.4,273.8 L33.9,267.2 L39.4,259.6 L42.6,250.8 L43.7,241.0 L41.6,231.2 L37.2,223.0 L30.6,217.5 L23.0,214.3 L15.3,214.3 L7.7,216.4 L0.0,219.7 L152.9,8.6 Z"
+             d="M106.5,21.5 C106.5,21.5 115.8,12.9 123.8,6.1 C130.0,0.8 138.6,5.4 140.5,12.9 C143.6,25.2 136.2,36.3 128.8,45.0 C128.8,45.0 136.8,46.2 146.1,51.8 C155.3,57.3 165.2,61.0 165.2,61.0 C165.2,61.0 176.3,63.5 184.3,70.3 C192.4,77.1 188.0,88.8 184.3,93.1 C180.6,97.5 175.1,106.7 175.1,106.7 L186.8,115.4 C186.8,115.4 183.1,125.2 175.1,131.4 C167.1,137.6 159.1,141.3 151.0,140.0 C143.0,138.8 130.7,143.7 130.7,143.7 L133.8,164.7 L154.7,166.0 C154.7,166.0 173.9,170.9 192.4,170.9 C210.9,170.9 247.9,184.5 259.0,190.7 C270.1,196.8 280.6,199.3 280.6,199.3 C280.6,199.3 289.2,212.9 285.5,224.0 C281.8,235.1 268.3,248.7 268.3,248.7 C268.3,248.7 274.4,259.8 274.4,272.2 C274.4,284.5 267.0,291.9 260.9,298.1 C254.7,304.3 242.4,303.0 242.4,303.0 L233.7,315.4 C233.7,315.4 219.5,316.6 212.1,324.0 C204.7,331.4 196.1,327.7 191.2,327.7 C186.2,327.7 171.4,330.2 164.0,338.9 C156.6,347.5 150.4,356.2 146.7,363.6 C143.0,371.0 136.9,374.7 136.9,374.7 C136.9,374.7 129.5,387.0 130.7,396.9 C131.9,406.8 134.4,417.9 134.4,417.9 C134.4,417.9 135.6,437.7 139.3,450.0 C143.0,462.4 141.8,480.9 136.9,489.5 C131.9,498.2 122.1,506.8 115.9,511.8 C109.7,516.7 99.8,524.1 96.1,532.8 C92.4,541.4 96.1,557.5 96.1,557.5 C96.1,557.5 88.7,563.7 83.8,561.2 C78.8,558.7 72.7,551.3 70.2,541.4 C67.7,531.6 70.2,518.0 70.2,518.0 C70.2,518.0 65.3,508.1 65.3,498.2 C65.3,488.3 70.2,473.5 73.9,461.2 C77.6,448.8 82.6,431.5 82.6,431.5 C82.6,431.5 80.1,415.5 76.4,408.1 C72.7,400.6 64.1,394.5 57.9,390.8 C51.7,387.0 45.6,379.6 45.6,369.7 C45.6,359.9 48.0,342.6 48.0,342.6 C48.0,342.6 44.3,332.7 36.9,327.7 C29.5,322.8 23.3,320.3 17.2,319.1 C11.0,317.9 3.6,310.4 3.6,300.6 C3.6,290.7 9.8,278.3 14.7,269.7 C19.6,261.0 28.3,252.4 29.5,242.5 C30.7,232.6 29.5,222.7 23.3,217.8 C17.2,212.8 4.8,214.1 4.8,214.1 L12.2,193.1 C12.2,193.1 19.6,182.0 23.3,170.9 C27.0,159.7 27.0,148.6 27.0,148.6 L24.6,117.7 C24.6,117.7 24.6,99.2 28.3,90.5 C32.0,81.9 38.1,73.2 45.6,69.5 C53.0,65.8 64.1,64.6 64.1,64.6 C64.1,64.6 65.3,51.0 62.8,43.6 C60.4,36.2 51.7,27.5 51.7,27.5 C51.7,27.5 62.8,21.3 75.2,21.3 C87.5,21.3 106.5,21.5 106.5,21.5 Z"
              fill="#cbd5e1" 
              stroke="#94a3b8" 
              strokeWidth="2"
@@ -280,14 +282,11 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, []);
 
-  // 🎯 FIX: ฟังก์ชัน Export PDF ที่ปรับปรุงแล้ว
+  // 🎯 FIX 1: Export PDF โดยไม่ใช้ Conditional Rendering
   const handleExportPDF = () => {
-    // 1. เลื่อน Scroll ไปบนสุด (สำคัญ)
     window.scrollTo(0, 0);
-    // 2. เปิดสถานะ Export เพื่อให้ div #print-view แสดงผลขึ้นมา (เป็น Overlay ทับหน้าจอ)
-    setIsExporting(true);
+    setIsExporting(true); // เปลี่ยน State เพื่อย้าย div print-view เข้ามาในจอ
     
-    // 3. รอเวลาให้ DOM Render เสร็จสมบูรณ์
     setTimeout(() => {
       const element = document.getElementById('print-view');
       if (!element) { setIsExporting(false); return; }
@@ -298,10 +297,10 @@ export default function App() {
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
             scale: 2, 
-            useCORS: true, // อนุญาตให้โหลดรูปข้ามโดเมน
+            useCORS: true, 
             letterRendering: true,
             scrollY: 0, 
-            windowWidth: 1123, // ขนาดความกว้าง A4 Landscape (px)
+            windowWidth: 1123, 
             width: 1123,
             x: 0, y: 0
         },
@@ -313,13 +312,13 @@ export default function App() {
         .from(element)
         .save()
         .then(() => {
-           setIsExporting(false); // ปิด Overlay เมื่อเสร็จ
+           setIsExporting(false); // ส่งกลับไปนอกจอ
         })
         .catch(err => {
            console.error(err);
            setIsExporting(false);
         });
-    }, 1500); // เพิ่มเวลาเป็น 1.5 วินาที เพื่อให้แน่ใจว่า Map วาดเสร็จ
+    }, 1000); // รอให้ CSS Transition ทำงานเสร็จ
   };
 
   const handleExportCSV = () => {
@@ -593,142 +592,141 @@ export default function App() {
       {/* ==================================================================================
           FIXED PRINT VIEW (OVERLAY MODE) - แก้ปัญหาหน้าขาวด้วยการซ้อนทับหน้าจอ
           ================================================================================== */}
-      {isExporting && (
-        <div id="print-view" 
-             style={{ 
-               position: 'fixed', // 🎯 Key Fix 1: ใช้ Fixed position
-               top: 0,
-               left: 0,
-               zIndex: 99999, // 🎯 Key Fix 2: ให้มั่นใจว่าอยู่บนสุด
-               
-               // ขนาด A4 แนวนอน (Landscape) ที่ความละเอียดหน้าจอทั่วไป
-               width: '1123px', 
-               height: '794px',
-               
-               backgroundColor: 'white',
-               padding: '20px',
-               fontFamily: "'Sarabun', sans-serif",
-               color: '#000',
-               boxShadow: '0 0 50px rgba(0,0,0,0.5)',
-               overflow: 'hidden'
-             }}>
-         
-          {/* Header Row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '15px', height: '15mm' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <img src={LOGO_URL} alt="Logo" style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
-              <div>
-                <h1 style={{ fontSize: '22px', fontWeight: 'bold', margin: 0 }}>รายงานสรุปสถานการณ์ประจำวัน</h1>
-                <p style={{ fontSize: '14px', color: '#555', margin: 0 }}>กองบังคับการตำรวจทางหลวง (Highway Police)</p>
-              </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-                <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#777', margin: 0 }}>ข้อมูล ณ วันที่</p>
-                <p style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>{new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                <p style={{ fontSize: '12px', color: '#777', margin: 0 }}>เงื่อนไข: {filters.year || 'ทุกปี'} | กก.{filters.unit_kk || 'ทั้งหมด'}</p>
-            </div>
-          </div>
-
-          {/* Stats Row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '15px', height: '20mm' }}>
-              {[
-                { t: 'จับกุมรวม', v: stats.totalCases, c: '#eff6ff', ct: '#1d4ed8' },
-                { t: 'ยาเสพติด', v: stats.drugCases, c: '#fef2f2', ct: '#b91c1c' },
-                { t: 'อาวุธปืน', v: stats.weaponCases, c: '#fff7ed', ct: '#c2410c' },
-                { t: 'รถบรรทุก', v: stats.heavyTruckCases, c: '#faf5ff', ct: '#7e22ce' },
-                { t: 'หมายจับ', v: stats.warrantCases, c: '#eef2ff', ct: '#4338ca' },
-                { t: 'หน่วยงาน', v: stats.uniqueUnits, c: '#f0fdf4', ct: '#15803d' }
-              ].map((s, i) => (
-                <div key={i} style={{ flex: 1, backgroundColor: s.c, borderRadius: '8px', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                  <p style={{ fontSize: '12px', color: s.ct, fontWeight: 'bold', margin: 0 }}>{s.t}</p>
-                  <p style={{ fontSize: '24px', color: '#000', fontWeight: 'bold', margin: 0, lineHeight: 1 }}>{s.v}</p>
-                </div>
-              ))}
-          </div>
-
-          {/* Content Layout */}
-          <div style={{ display: 'flex', gap: '15px', height: '135mm' }}>
+      <div id="print-view" 
+            style={{ 
+              position: 'fixed', 
+              top: 0,
+              left: isExporting ? 0 : '-10000px', // ถ้า Export ให้แสดง, ถ้าไม่ ให้ซ่อนนอกจอ (แต่ยัง Render อยู่)
+              zIndex: 99999, // ให้มั่นใจว่าอยู่บนสุดเมื่อแสดง
               
-              {/* Left: Map (35%) - Using New SVG Path */}
-              <div style={{ width: '35%', border: '1px solid #d1d5db', borderRadius: '8px', overflow: 'hidden', position: 'relative', backgroundColor: '#f9fafb' }}>
-                <div style={{ position: 'absolute', top: '5px', left: '5px', backgroundColor: 'rgba(255,255,255,0.9)', padding: '2px 8px', fontSize: '10px', fontWeight: 'bold', borderRadius: '4px', border: '1px solid #ccc', zIndex: 10 }}>แผนที่จุดเกิดเหตุ</div>
-                <SimpleMapVisualization data={filteredData} onSelectCase={() => {}} isPrintMode={true} />
-              </div>
-
-              {/* Middle: Charts (25%) */}
-              <div style={{ width: '25%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <p style={{ fontSize: '12px', fontWeight: 'bold', margin: '0 0 5px 0', width: '100%' }}>สัดส่วนคดี</p>
-                    <div style={{ width: '100%', flex: 1, minHeight: '0' }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie data={stats.typeChartData} cx="50%" cy="50%" outerRadius={40} dataKey="value">
-                              {stats.typeChartData.map((entry, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
-                            </Pie>
-                          </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div style={{ width: '100%', fontSize: '10px', marginTop: '5px' }}>
-                      {stats.typeChartData.slice(0,3).map((e,i) => (
-                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', padding: '2px 0' }}>
-                          <span style={{color: '#555'}}>{e.name}</span><span style={{fontWeight:'bold'}}>{e.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                </div>
-                <div style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: '8px', padding: '10px' }}>
-                    <p style={{ fontSize: '12px', fontWeight: 'bold', margin: '0 0 10px 0' }}>สถิติแยกหน่วย (Top 5)</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      {stats.unitChartData.slice(0,4).map((u, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', fontSize: '10px' }}>
-                          <span style={{ width: '30px', fontWeight: 'bold', color: '#555' }}>{u.name}</span>
-                          <div style={{ flex: 1, height: '6px', backgroundColor: '#f3f4f6', borderRadius: '3px', margin: '0 8px', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', backgroundColor: '#2563eb', width: `${(u.value / stats.totalCases) * 100}%` }}></div>
-                          </div>
-                          <span style={{ fontWeight: 'bold' }}>{u.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                </div>
-              </div>
-
-              {/* Right: Table (40%) */}
-              <div style={{ width: '40%', border: '1px solid #d1d5db', borderRadius: '8px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ backgroundColor: '#f3f4f6', padding: '8px 12px', borderBottom: '1px solid #d1d5db', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 'bold' }}>รายการจับกุมล่าสุด</span>
-                  <span style={{ fontSize: '10px', color: '#666' }}>*10 รายการแรก</span>
-                </div>
-                <div style={{ flex: 1, padding: '0' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#fff', borderBottom: '1px solid #e5e7eb' }}>
-                        <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>วัน/เวลา</th>
-                        <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>หน่วย</th>
-                        <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>ข้อหา</th>
-                        <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>สถานที่</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredData.slice(0, 10).map((item, idx) => (
-                        <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#fff' : '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
-                          <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top' }}>{item.date_capture}<br/><span style={{color:'#9ca3af'}}>{item.time_capture}</span></td>
-                          <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top' }}>กก.{item.unit_kk}<br/>ส.ทล.{item.unit_s_tl}</td>
-                          <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top', fontWeight: '600', maxWidth: '120px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.charge}</td>
-                          <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top', maxWidth: '80px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.location}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              width: '1123px', 
+              height: '794px',
+              
+              backgroundColor: 'white',
+              padding: '20px',
+              fontFamily: "'Sarabun', sans-serif",
+              color: '#000',
+              boxShadow: '0 0 50px rgba(0,0,0,0.5)',
+              overflow: 'hidden',
+              // บังคับให้มองเห็นเสมอในสายตาของ Browser เพื่อให้ Paint
+              visibility: 'visible'
+            }}>
+        
+        {/* Header Row */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '15px', height: '15mm' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <img src={LOGO_URL} alt="Logo" style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
+            <div>
+              <h1 style={{ fontSize: '22px', fontWeight: 'bold', margin: 0 }}>รายงานสรุปสถานการณ์ประจำวัน</h1>
+              <p style={{ fontSize: '14px', color: '#555', margin: 0 }}>กองบังคับการตำรวจทางหลวง (Highway Police)</p>
+            </div>
           </div>
-          
-          {/* Footer */}
-          <div style={{ position: 'absolute', bottom: '5mm', left: 0, width: '100%', textAlign: 'center', fontSize: '9px', color: '#9ca3af' }}>
-              TRAFFIC OPERATIONS DATABASE SYSTEM | GENERATED BY HIGHWAY POLICE DASHBOARD
+          <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#777', margin: 0 }}>ข้อมูล ณ วันที่</p>
+              <p style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>{new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+              <p style={{ fontSize: '12px', color: '#777', margin: 0 }}>เงื่อนไข: {filters.year || 'ทุกปี'} | กก.{filters.unit_kk || 'ทั้งหมด'}</p>
           </div>
         </div>
-      )}
+
+        {/* Stats Row */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '15px', height: '20mm' }}>
+            {[
+              { t: 'จับกุมรวม', v: stats.totalCases, c: '#eff6ff', ct: '#1d4ed8' },
+              { t: 'ยาเสพติด', v: stats.drugCases, c: '#fef2f2', ct: '#b91c1c' },
+              { t: 'อาวุธปืน', v: stats.weaponCases, c: '#fff7ed', ct: '#c2410c' },
+              { t: 'รถบรรทุก', v: stats.heavyTruckCases, c: '#faf5ff', ct: '#7e22ce' },
+              { t: 'หมายจับ', v: stats.warrantCases, c: '#eef2ff', ct: '#4338ca' },
+              { t: 'หน่วยงาน', v: stats.uniqueUnits, c: '#f0fdf4', ct: '#15803d' }
+            ].map((s, i) => (
+              <div key={i} style={{ flex: 1, backgroundColor: s.c, borderRadius: '8px', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                <p style={{ fontSize: '12px', color: s.ct, fontWeight: 'bold', margin: 0 }}>{s.t}</p>
+                <p style={{ fontSize: '24px', color: '#000', fontWeight: 'bold', margin: 0, lineHeight: 1 }}>{s.v}</p>
+              </div>
+            ))}
+        </div>
+
+        {/* Content Layout */}
+        <div style={{ display: 'flex', gap: '15px', height: '135mm' }}>
+            
+            {/* Left: Map (35%) - Using New SVG Path */}
+            <div style={{ width: '35%', border: '1px solid #d1d5db', borderRadius: '8px', overflow: 'hidden', position: 'relative', backgroundColor: '#f9fafb' }}>
+              <div style={{ position: 'absolute', top: '5px', left: '5px', backgroundColor: 'rgba(255,255,255,0.9)', padding: '2px 8px', fontSize: '10px', fontWeight: 'bold', borderRadius: '4px', border: '1px solid #ccc', zIndex: 10 }}>แผนที่จุดเกิดเหตุ</div>
+              <SimpleMapVisualization data={filteredData} onSelectCase={() => {}} isPrintMode={true} />
+            </div>
+
+            {/* Middle: Charts (25%) */}
+            <div style={{ width: '25%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <p style={{ fontSize: '12px', fontWeight: 'bold', margin: '0 0 5px 0', width: '100%' }}>สัดส่วนคดี</p>
+                  <div style={{ width: '100%', flex: 1, minHeight: '0' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={stats.typeChartData} cx="50%" cy="50%" outerRadius={40} dataKey="value">
+                            {stats.typeChartData.map((entry, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
+                          </Pie>
+                        </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div style={{ width: '100%', fontSize: '10px', marginTop: '5px' }}>
+                    {stats.typeChartData.slice(0,3).map((e,i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', padding: '2px 0' }}>
+                        <span style={{color: '#555'}}>{e.name}</span><span style={{fontWeight:'bold'}}>{e.value}</span>
+                      </div>
+                    ))}
+                  </div>
+              </div>
+              <div style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: '8px', padding: '10px' }}>
+                  <p style={{ fontSize: '12px', fontWeight: 'bold', margin: '0 0 10px 0' }}>สถิติแยกหน่วย (Top 5)</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    {stats.unitChartData.slice(0,4).map((u, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', fontSize: '10px' }}>
+                        <span style={{ width: '30px', fontWeight: 'bold', color: '#555' }}>{u.name}</span>
+                        <div style={{ flex: 1, height: '6px', backgroundColor: '#f3f4f6', borderRadius: '3px', margin: '0 8px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', backgroundColor: '#2563eb', width: `${(u.value / stats.totalCases) * 100}%` }}></div>
+                        </div>
+                        <span style={{ fontWeight: 'bold' }}>{u.value}</span>
+                      </div>
+                    ))}
+                  </div>
+              </div>
+            </div>
+
+            {/* Right: Table (40%) */}
+            <div style={{ width: '40%', border: '1px solid #d1d5db', borderRadius: '8px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ backgroundColor: '#f3f4f6', padding: '8px 12px', borderBottom: '1px solid #d1d5db', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>รายการจับกุมล่าสุด</span>
+                <span style={{ fontSize: '10px', color: '#666' }}>*10 รายการแรก</span>
+              </div>
+              <div style={{ flex: 1, padding: '0' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#fff', borderBottom: '1px solid #e5e7eb' }}>
+                      <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>วัน/เวลา</th>
+                      <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>หน่วย</th>
+                      <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>ข้อหา</th>
+                      <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>สถานที่</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredData.slice(0, 10).map((item, idx) => (
+                      <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#fff' : '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top' }}>{item.date_capture}<br/><span style={{color:'#9ca3af'}}>{item.time_capture}</span></td>
+                        <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top' }}>กก.{item.unit_kk}<br/>ส.ทล.{item.unit_s_tl}</td>
+                        <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top', fontWeight: '600', maxWidth: '120px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.charge}</td>
+                        <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top', maxWidth: '80px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.location}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+        </div>
+        
+        {/* Footer */}
+        <div style={{ position: 'absolute', bottom: '5mm', left: 0, width: '100%', textAlign: 'center', fontSize: '9px', color: '#9ca3af' }}>
+            TRAFFIC OPERATIONS DATABASE SYSTEM | GENERATED BY HIGHWAY POLICE DASHBOARD
+        </div>
+      </div>
 
     </div>
   );
