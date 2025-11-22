@@ -18,9 +18,8 @@ const UNIT_COLORS = { "1": "#e6194b", "2": "#f58231", "3": "#ffe119", "4": "#3cb
 const THAI_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
 
-// *** Logo Base64 (ใช้แก้ปัญหารูปไม่ขึ้นใน PDF) ***
-// รูปโลโก้ตำรวจทางหลวง (Placeholder) - ถ้าต้องการรูปชัดกว่านี้ให้นำไฟล์รูปไปแปลงเป็น Base64
-const LOGO_BASE64 = "https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png";
+// URL โลโก้ปกติ
+const LOGO_URL = "https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png";
 
 // --- Helpers ---
 const parseThaiDate = (dateStr) => {
@@ -63,69 +62,38 @@ const StatCard = ({ title, value, icon: Icon, colorClass }) => (
 );
 
 // --- Map Components ---
-
-// 🗺️ MAP: แผนที่ประเทศไทย SVG Path (แก้ไขรูปทรงแล้ว)
+// (ตัด SVG Map ที่ซับซ้อนออก เพื่อแก้ปัญหาหน้าขาว)
 const SimpleMapVisualization = ({ data, onSelectCase, isPrintMode = false }) => {
-  const MIN_LAT = 5.6;   
-  const MAX_LAT = 20.5;  
-  const MIN_LONG = 97.3; 
-  const MAX_LONG = 105.7;
-
+  // ... (Code เดิม แต่ไม่ได้ใช้ใน Print Mode แล้ว)
+  // ... (คงไว้สำหรับดูใน Dashboard ปกติ)
+  const MIN_LAT = 5.6; const MAX_LAT = 20.5; const MIN_LONG = 97.3; const MAX_LONG = 105.8;
   const [hoveredItem, setHoveredItem] = useState(null);
-  
   const getX = (long) => ((parseFloat(long) - MIN_LONG) / (MAX_LONG - MIN_LONG)) * 100;
   const getY = (lat) => 100 - ((parseFloat(lat) - MIN_LAT) / (MAX_LAT - MIN_LAT)) * 100;
 
   return (
     <div className={`relative w-full h-full ${isPrintMode ? '' : 'min-h-[50vh] sm:min-h-[600px]'} bg-slate-50 rounded-lg overflow-hidden border border-slate-200 flex items-center justify-center`}>
-      {/* 🚫 REMOVED: ลบป้าย Graphic Mode ออกเมื่อ Export */}
       {!isPrintMode && (
         <div className="absolute top-4 left-4 z-10 bg-yellow-50 text-yellow-700 text-xs px-2 py-1 rounded border border-yellow-200 flex items-center shadow-sm">
           <AlertTriangle className="w-3 h-3 mr-1" /> Graphic Mode
         </div>
       )}
-      
       <div className="relative w-full h-full max-w-[400px] mx-auto py-4 flex items-center justify-center">
-        <svg viewBox="0 0 350 650" className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.8 }}>
-           {/* Path รูปแผนที่ประเทศไทย (ขวานทอง) */}
-           <path 
-             d="M155.5,20.5 L162.6,11.9 L178.1,22.9 L195.2,25.8 L202.6,35.4 L191.6,46.8 L183.5,47.3 L174.9,59.2 L180.7,74.5 L192.6,72.6 L205.4,81.6 L214.5,79.7 L223.5,89.3 L221.2,102.1 L235.9,103.5 L249.7,114.5 L244.0,126.4 L233.0,127.4 L229.7,138.3 L246.8,145.5 L245.9,156.9 L233.5,168.3 L224.0,166.9 L214.9,174.5 L203.5,173.1 L192.1,183.6 L176.4,185.0 L167.3,192.6 L167.3,202.2 L177.8,210.7 L192.1,210.7 L202.1,218.4 L223.5,218.4 L233.5,225.5 L243.0,237.4 L250.7,238.4 L262.6,232.2 L277.3,232.2 L286.4,240.7 L299.2,240.7 L308.7,247.9 L318.3,246.5 L324.0,255.0 L332.1,253.6 L338.8,261.7 L350.7,263.1 L350.7,275.0 L343.6,281.2 L341.7,293.1 L350.7,300.3 L348.8,312.2 L341.2,321.2 L344.5,332.7 L336.9,344.6 L325.5,348.9 L316.4,347.0 L310.7,354.1 L300.7,354.1 L296.0,364.1 L285.5,365.1 L276.9,372.2 L268.8,379.8 L259.3,378.4 L250.7,372.7 L243.0,378.4 L232.6,378.4 L220.2,383.7 L210.2,383.7 L200.7,389.4 L193.1,398.4 L186.4,407.5 L177.8,409.4 L168.3,416.5 L158.3,424.6 L149.3,427.5 L142.6,432.2 L137.8,439.9 L136.9,451.3 L140.2,462.7 L144.5,474.2 L145.9,486.5 L149.3,497.9 L152.6,506.5 L157.4,516.5 L159.3,528.9 L159.3,540.8 L154.5,549.8 L146.4,555.1 L138.8,559.4 L131.6,565.6 L125.9,575.1 L122.1,586.5 L120.7,597.9 L118.3,608.9 L111.2,615.5 L101.2,614.6 L94.0,609.3 L88.3,602.7 L82.1,594.1 L76.4,587.9 L71.6,580.8 L68.3,572.2 L66.4,562.2 L65.5,550.8 L65.5,539.4 L68.8,528.9 L73.6,519.9 L78.3,510.8 L81.7,501.3 L84.1,489.9 L84.1,478.5 L80.8,468.9 L76.0,461.3 L69.8,454.2 L62.7,448.0 L55.5,442.7 L49.8,436.1 L45.0,427.5 L41.7,417.5 L40.2,407.5 L42.6,396.6 L46.4,386.6 L48.8,377.1 L47.4,366.6 L42.6,358.5 L35.5,353.8 L26.0,352.3 L17.9,347.6 L10.7,340.4 L6.0,331.9 L3.6,321.9 L3.6,311.4 L8.4,302.4 L15.5,295.2 L21.7,287.1 L24.6,277.1 L26.0,266.6 L24.1,256.2 L19.3,247.1 L12.2,241.4 L3.6,237.6 L0.0,239.0 L16.0,180.0 L155.5,20.5 Z"
-             fill="#cbd5e1" 
-             stroke="#94a3b8" 
-             strokeWidth="2"
-           />
+        <svg viewBox="0 0 320 600" className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.4 }}>
+           <path d="M152.9,8.6 L162.4,1.5 L175.0,13.0 L188.0,14.1 L194.1,21.8 L185.4,31.3 L178.2,30.7 L170.0,42.8 L175.5,54.3 L187.0,52.1 L199.0,60.3 L207.7,58.1 L216.4,66.3 L214.7,78.3 L228.4,79.5 L241.5,89.2 L236.6,100.2 L226.7,100.7 L223.4,111.1 L239.3,117.6 L238.7,128.0 L227.2,138.4 L218.5,137.3 L210.3,144.4 L199.4,143.4 L189.0,153.2 L174.2,154.8 L166.0,161.9 L166.0,170.6 L175.8,178.3 L189.0,178.3 L198.2,185.4 L218.4,185.4 L227.7,191.9 L236.4,202.9 L243.5,203.9 L254.4,198.4 L268.1,198.4 L276.3,206.1 L288.3,206.1 L297.0,212.6 L305.7,211.5 L311.2,219.2 L318.8,218.1 L324.8,225.7 L338.5,226.8 L345.0,236.6 L344.5,247.0 L336.3,253.0 L334.7,263.9 L342.8,270.4 L341.2,281.4 L334.1,289.6 L337.4,299.9 L330.3,310.9 L319.9,314.7 L311.7,313.0 L306.3,319.6 L297.0,319.6 L292.6,328.9 L282.8,330.0 L275.1,336.5 L267.5,343.6 L258.8,342.5 L251.1,337.1 L244.0,342.5 L234.2,342.5 L222.7,347.4 L213.4,347.4 L204.7,352.9 L197.6,361.1 L191.6,369.3 L183.4,370.9 L174.7,377.5 L165.4,385.1 L157.2,387.8 L151.2,392.2 L146.8,399.3 L145.8,409.7 L149.0,420.1 L152.9,430.4 L154.5,441.9 L157.8,452.3 L161.0,459.9 L165.4,469.2 L167.0,480.7 L167.0,491.6 L162.7,499.8 L155.0,504.7 L148.0,508.5 L141.4,514.0 L135.9,522.7 L132.7,533.1 L131.6,543.4 L129.4,553.3 L122.9,559.3 L113.6,558.7 L107.0,553.8 L101.6,547.8 L96.1,540.2 L90.7,534.7 L86.3,528.2 L83.0,520.5 L80.8,511.2 L79.8,500.9 L79.8,490.5 L83.0,480.7 L87.4,472.5 L91.8,464.3 L95.0,455.6 L97.2,445.2 L97.2,434.8 L94.0,426.1 L89.6,419.0 L84.1,412.5 L77.6,407.0 L71.0,402.1 L65.6,396.1 L61.2,388.4 L58.0,379.2 L56.9,369.9 L59.0,360.0 L62.3,350.8 L64.5,342.0 L63.4,332.7 L59.0,325.1 L52.5,320.7 L43.8,319.6 L36.1,315.2 L29.6,308.7 L25.2,301.1 L23.0,291.8 L23.0,282.0 L27.4,273.8 L33.9,267.2 L39.4,259.6 L42.6,250.8 L43.7,241.0 L41.6,231.2 L37.2,223.0 L30.6,217.5 L23.0,214.3 L15.3,214.3 L7.7,216.4 L0.0,219.7 L152.9,8.6 Z" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="2" />
         </svg>
-        
-        {/* Points */}
         {data.filter(d => d.lat && d.long).map((item) => {
-          const lat = parseFloat(item.lat);
-          const long = parseFloat(item.long);
+          const lat = parseFloat(item.lat); const long = parseFloat(item.long);
           if(lat < MIN_LAT || lat > MAX_LAT || long < MIN_LONG || long > MAX_LONG) return null;
-          
           return (
-            <div key={item.id}
-              className="absolute rounded-full cursor-pointer"
-              style={{
-                left: `${getX(long)}%`, 
-                top: `${getY(lat)}%`, 
-                width: isPrintMode ? '6px' : '10px', 
-                height: isPrintMode ? '6px' : '10px',
-                backgroundColor: UNIT_COLORS[item.unit_kk] || '#64748b', 
-                opacity: 0.8, 
-                transform: 'translate(-50%, -50%)',
-                border: '1px solid white',
-                zIndex: 10
-              }}
-              onMouseEnter={() => !isPrintMode && setHoveredItem(item)} 
-              onMouseLeave={() => setHoveredItem(null)} 
-              onClick={() => !isPrintMode && onSelectCase(item)}
+            <div key={item.id} className="absolute rounded-full cursor-pointer"
+              style={{ left: `${getX(long)}%`, top: `${getY(lat)}%`, width: '10px', height: '10px', backgroundColor: UNIT_COLORS[item.unit_kk] || '#64748b', opacity: 0.8, transform: 'translate(-50%, -50%)', border: '1px solid white', zIndex: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }}
+              onMouseEnter={() => !isPrintMode && setHoveredItem(item)} onMouseLeave={() => setHoveredItem(null)} onClick={() => !isPrintMode && onSelectCase(item)}
             />
           );
         })}
-
         {hoveredItem && !isPrintMode && (
-          <div className="absolute z-30 bg-white/95 backdrop-blur p-3 rounded-lg shadow-xl text-xs border border-slate-200 pointer-events-none whitespace-nowrap"
-              style={{ left: `${getX(hoveredItem.long)}%`, top: `${getY(hoveredItem.lat)}%`, transform: 'translate(15px, -50%)' }}>
+          <div className="absolute z-30 bg-white/95 backdrop-blur p-3 rounded-lg shadow-xl text-xs border border-slate-200 pointer-events-none whitespace-nowrap" style={{ left: `${getX(hoveredItem.long)}%`, top: `${getY(hoveredItem.lat)}%`, transform: 'translate(15px, -50%)' }}>
               <div className="font-bold text-slate-800 text-sm mb-1">{hoveredItem.topic}</div>
               <div className="text-slate-600 mb-1">กก.{hoveredItem.unit_kk} ส.ทล.{hoveredItem.unit_s_tl}</div>
           </div>
@@ -136,75 +104,33 @@ const SimpleMapVisualization = ({ data, onSelectCase, isPrintMode = false }) => 
 };
 
 const LeafletMap = ({ data, onSelectCase, onError }) => {
-  const mapRef = useRef(null);
-  const mapInstanceRef = useRef(null);
-  const markersGroupRef = useRef(null);
-  const [isMapReady, setIsMapReady] = useState(false);
-
+  const mapRef = useRef(null); const mapInstanceRef = useRef(null); const markersGroupRef = useRef(null); const [isMapReady, setIsMapReady] = useState(false);
   useEffect(() => {
     let isMounted = true;
     const loadLeaflet = async () => {
       if (window.L && typeof window.L.map === 'function') return window.L;
       try {
-        if (!document.querySelector('#leaflet-css')) {
-          const link = document.createElement('link');
-          link.id = 'leaflet-css'; link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-          document.head.appendChild(link);
-        }
-        if (!document.querySelector('#leaflet-js')) {
-          const script = document.createElement('script');
-          script.id = 'leaflet-js'; script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; script.async = true;
-          document.head.appendChild(script);
-        }
-        return new Promise((resolve, reject) => {
-          const checkL = () => { if (window.L && typeof window.L.map === 'function') resolve(window.L); else setTimeout(checkL, 100); };
-          setTimeout(() => reject(new Error('Timeout')), 8000); checkL();
-        });
+        if (!document.querySelector('#leaflet-css')) { const link = document.createElement('link'); link.id = 'leaflet-css'; link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link); }
+        if (!document.querySelector('#leaflet-js')) { const script = document.createElement('script'); script.id = 'leaflet-js'; script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; script.async = true; document.head.appendChild(script); }
+        return new Promise((resolve, reject) => { const checkL = () => { if (window.L && typeof window.L.map === 'function') resolve(window.L); else setTimeout(checkL, 100); }; setTimeout(() => reject(new Error('Timeout')), 8000); checkL(); });
       } catch (e) { throw e; }
     };
-
     loadLeaflet().then((L) => {
-      if (!isMounted) return;
-      if (mapInstanceRef.current) { setIsMapReady(true); return; }
-      if (!mapRef.current) return;
-      try {
-        const map = L.map(mapRef.current).setView([13.0, 101.0], 6);
-        mapInstanceRef.current = map;
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
-        markersGroupRef.current = L.featureGroup().addTo(map);
-        setIsMapReady(true);
-      } catch (err) { if (onError) onError(); }
-    }).catch((err) => { if (isMounted && onError) onError(); });
-    return () => { isMounted = false; };
+      if (!isMounted) return; if (mapInstanceRef.current) { setIsMapReady(true); return; } if (!mapRef.current) return;
+      try { const map = L.map(mapRef.current).setView([13.0, 101.0], 6); mapInstanceRef.current = map; L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map); markersGroupRef.current = L.featureGroup().addTo(map); setIsMapReady(true); } catch (err) { if (onError) onError(); }
+    }).catch((err) => { if (isMounted && onError) onError(); }); return () => { isMounted = false; };
   }, [onError]);
-
   useEffect(() => {
     if (!isMapReady || !mapInstanceRef.current || !window.L || !markersGroupRef.current) return;
-    const map = mapInstanceRef.current;
-    const markersGroup = markersGroupRef.current;
-    const L = window.L;
-
-    markersGroup.clearLayers();
-    const validPoints = data.filter(d => d.lat && d.long);
-
+    const map = mapInstanceRef.current; const markersGroup = markersGroupRef.current; const L = window.L;
+    markersGroup.clearLayers(); const validPoints = data.filter(d => d.lat && d.long);
     validPoints.forEach(item => {
-      const marker = L.circleMarker([parseFloat(item.lat), parseFloat(item.long)], {
-        radius: 8, fillColor: UNIT_COLORS[item.unit_kk] || '#666', color: '#fff', weight: 1, opacity: 1, fillOpacity: 0.7
-      });
+      const marker = L.circleMarker([parseFloat(item.lat), parseFloat(item.long)], { radius: 8, fillColor: UNIT_COLORS[item.unit_kk] || '#666', color: '#fff', weight: 1, opacity: 1, fillOpacity: 0.7 });
       const popupContent = `<div style="font-family: sans-serif; font-size: 14px;"><strong>${item.topic}</strong><br/><span style="color: #666;">กก.${item.unit_kk} ส.ทล.${item.unit_s_tl}</span><br/><div style="margin-top:4px; font-size:12px; color:#888;">${item.date_capture} | ${item.time_capture} น.</div></div>`;
-      marker.bindPopup(popupContent);
-      marker.on('click', () => onSelectCase(item));
-      markersGroup.addLayer(marker);
+      marker.bindPopup(popupContent); marker.on('click', () => onSelectCase(item)); markersGroup.addLayer(marker);
     });
-
-    if (validPoints.length > 0) {
-        try {
-            const bounds = markersGroup.getBounds();
-            if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50] });
-        } catch (e) { }
-    }
+    if (validPoints.length > 0) { try { const bounds = markersGroup.getBounds(); if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50] }); } catch (e) { } }
   }, [data, onSelectCase, isMapReady]);
-
   return <div ref={mapRef} className="w-full h-full min-h-[50vh] sm:min-h-[500px] bg-slate-100 z-0" />;
 };
 
@@ -234,115 +160,42 @@ export default function App() {
   useEffect(() => {
     const fetchData = () => {
       const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4VGxSCS_zy50dWol-qd317rLRYG1SdOPojU03EEuganUmtf7h86LjyqGdTNM-jPjeLhb2z4yOmbCb/pub?output=csv';
-
       Papa.parse(GOOGLE_SHEET_CSV_URL, {
-        download: true,
-        header: true,
+        download: true, header: true,
         complete: (results) => {
-          const formattedData = results.data
-            .filter(item => item['หัวข้อ'] && item['กก.'])
-            .map((item, index) => ({
-              id: index + 1,
-              timestamp: item['Timestamp'] || new Date().toISOString(),
-              unit_kk: item['กก.']?.toString() || '',
-              unit_s_tl: item['ส.ทล.']?.toString() || '',
-              topic: item['หัวข้อ'] || '',
-              captured_by: item['จับโดย'] || '',
-              arrest_type: item['ประเภทการจับกุม'] || '',
-              date_capture: item['วันที่'] || '',
-              time_capture: item['เวลา'] || '',
-              arrest_team: item['เจ้าหน้าที่ชุดจับกุม'] || '',
-              suspect_count: item['จำนวน'] || '1',
-              suspect_name: item['ชื่อ'] || '-',
-              nationality: item['สัญชาติ'] || 'ไทย',
-              age: item['อายุ'] || '',
-              address: item['ที่อยู่'] || 'ไม่ระบุ',
-              charge: item['ข้อหา'] || '',
-              location: item['สถานที่จับกุม'] || '',
-              lat: item['ละติจูด'] && !isNaN(item['ละติจูด']) ? parseFloat(item['ละติจูด']).toFixed(4) : null,
-              long: item['ลองจิจูด'] && !isNaN(item['ลองจิจูด']) ? parseFloat(item['ลองจิจูด']).toFixed(4) : null,
-              seized_items: item['ของกลาง'] || '-',
-              behavior: item['พฤติการณ์'] || '-',
-              delivery: item['การดำเนินการส่งต่อ'] || ''
+          const formattedData = results.data.filter(item => item['หัวข้อ'] && item['กก.']).map((item, index) => ({
+              id: index + 1, timestamp: item['Timestamp'] || new Date().toISOString(), unit_kk: item['กก.']?.toString() || '', unit_s_tl: item['ส.ทล.']?.toString() || '', topic: item['หัวข้อ'] || '', captured_by: item['จับโดย'] || '', arrest_type: item['ประเภทการจับกุม'] || '', date_capture: item['วันที่'] || '', time_capture: item['เวลา'] || '', arrest_team: item['เจ้าหน้าที่ชุดจับกุม'] || '', suspect_count: item['จำนวน'] || '1', suspect_name: item['ชื่อ'] || '-', nationality: item['สัญชาติ'] || 'ไทย', age: item['อายุ'] || '', address: item['ที่อยู่'] || 'ไม่ระบุ', charge: item['ข้อหา'] || '', location: item['สถานที่จับกุม'] || '', lat: item['ละติจูด'] && !isNaN(item['ละติจูด']) ? parseFloat(item['ละติจูด']).toFixed(4) : null, long: item['ลองจิจูด'] && !isNaN(item['ลองจิจูด']) ? parseFloat(item['ลองจิจูด']).toFixed(4) : null, seized_items: item['ของกลาง'] || '-', behavior: item['พฤติการณ์'] || '-', delivery: item['การดำเนินการส่งต่อ'] || ''
             }));
-          
-          setData(formattedData);
-          setLoading(false);
-          setLastUpdated(new Date());
+          setData(formattedData); setLoading(false); setLastUpdated(new Date());
         },
         error: (err) => { console.error(err); setLoading(false); }
       });
     };
-
-    fetchData();
-    const intervalId = setInterval(fetchData, 300000); 
-    return () => clearInterval(intervalId);
+    fetchData(); const intervalId = setInterval(fetchData, 300000); return () => clearInterval(intervalId);
   }, []);
 
-  // 🎯 FIX DEFINITIVE: ปรับปรุงฟังก์ชัน Export ให้มั่นใจว่าไม่ขาว
   const handleExportPDF = () => {
-    // 1. Scroll ไปบนสุดเสมอ
     window.scrollTo(0, 0);
-    
-    // 2. เริ่ม Export (แสดง div print-view)
     setIsExporting(true);
-    
-    // 3. ใช้ setTimeout เพื่อรอให้ Browser Render เสร็จจริงๆ (1.5 วินาที)
     setTimeout(() => {
       const element = document.getElementById('print-view');
-      
-      // Config html2pdf
       const opt = {
-        margin: 0,
-        filename: `รายงานสรุป_${new Date().toISOString().slice(0,10)}.pdf`,
+        margin: 0, filename: `รายงานสรุป_${new Date().toISOString().slice(0,10)}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-            scale: 2, 
-            useCORS: true, // สำคัญ: โหลดรูปข้ามโดเมน
-            letterRendering: true,
-            scrollY: 0, 
-            windowWidth: 1123, // A4 Landscape Width
-            width: 1123,
-            x: 0, y: 0
-        },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0, windowWidth: 1123, width: 1123, x: 0, y: 0 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
       };
-
-      html2pdf()
-        .set(opt)
-        .from(element)
-        .save()
-        .then(() => {
-           setIsExporting(false); // ซ่อนเมื่อเสร็จ
-        })
-        .catch(err => {
-           console.error("PDF Failed:", err);
-           setIsExporting(false);
-        });
+      html2pdf().set(opt).from(element).save().then(() => { setIsExporting(false); }).catch(err => { console.error("PDF Failed:", err); setIsExporting(false); });
     }, 1500);
   };
 
   const handleExportCSV = () => {
     if (filteredData.length === 0) { alert('ไม่มีข้อมูลสำหรับ Export'); return; }
-    const headers = {
-      date_capture: "วันที่", time_capture: "เวลา", unit_kk: "กก.", unit_s_tl: "ส.ทล.",
-      topic: "หัวข้อ", charge: "ข้อหา", suspect_name: "ผู้ถูกจับ", location: "สถานที่",
-      lat: "ละติจูด", long: "ลองจิจูด", seized_items: "ของกลาง", arrest_team: "ชุดจับกุม", behavior: "พฤติการณ์"
-    };
-    const csvRows = [];
-    csvRows.push(Object.values(headers).join(','));
-    filteredData.forEach(row => {
-      const values = Object.keys(headers).map(key => {
-        const val = row[key] ? String(row[key]) : '';
-        return `"${val.replace(/"/g, '""')}"`; 
-      });
-      csvRows.push(values.join(','));
-    });
+    const headers = { date_capture: "วันที่", time_capture: "เวลา", unit_kk: "กก.", unit_s_tl: "ส.ทล.", topic: "หัวข้อ", charge: "ข้อหา", suspect_name: "ผู้ถูกจับ", location: "สถานที่", lat: "ละติจูด", long: "ลองจิจูด", seized_items: "ของกลาง", arrest_team: "ชุดจับกุม", behavior: "พฤติการณ์" };
+    const csvRows = []; csvRows.push(Object.values(headers).join(','));
+    filteredData.forEach(row => { const values = Object.keys(headers).map(key => { const val = row[key] ? String(row[key]) : ''; return `"${val.replace(/"/g, '""')}"`; }); csvRows.push(values.join(',')); });
     const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `police_report_${new Date().toISOString().slice(0,10)}.csv`;
-    link.click();
+    const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `police_report_${new Date().toISOString().slice(0,10)}.csv`; link.click();
   };
 
   const filterOptions = useMemo(() => {
@@ -353,29 +206,14 @@ export default function App() {
 
   const filteredData = useMemo(() => {
     return data.filter(item => {
-      const searchMatch = !filters.search || 
-        (item.charge && item.charge.toLowerCase().includes(filters.search.toLowerCase())) ||
-        (item.suspect_name && item.suspect_name.toLowerCase().includes(filters.search.toLowerCase())) ||
-        (item.location && item.location.toLowerCase().includes(filters.search.toLowerCase())) ||
-        (item.topic && item.topic.toLowerCase().includes(filters.search.toLowerCase()));
-
+      const searchMatch = !filters.search || (item.charge && item.charge.toLowerCase().includes(filters.search.toLowerCase())) || (item.suspect_name && item.suspect_name.toLowerCase().includes(filters.search.toLowerCase())) || (item.location && item.location.toLowerCase().includes(filters.search.toLowerCase())) || (item.topic && item.topic.toLowerCase().includes(filters.search.toLowerCase()));
       const kkMatch = !filters.unit_kk || String(item.unit_kk) === String(filters.unit_kk);
       const stlMatch = !filters.unit_s_tl || String(item.unit_s_tl) === String(filters.unit_s_tl);
       const chargeMatch = !filters.charge || item.topic === filters.charge; 
       const itemDate = parseThaiDate(item.date_capture);
       let yearMatch = true; let monthMatch = true; let rangeMatch = true;
-
-      if (filters.year) {
-         const itemYear = getYearFromDate(item.date_capture);
-         yearMatch = itemYear === filters.year;
-      }
-      if (itemDate) {
-        if (filters.month) monthMatch = (itemDate.getMonth() + 1).toString() === filters.month;
-        if (filters.startDate) rangeMatch = rangeMatch && itemDate >= new Date(filters.startDate);
-        if (filters.endDate) rangeMatch = rangeMatch && itemDate <= new Date(filters.endDate);
-      } else if (filters.month || filters.startDate || filters.endDate) {
-        return false;
-      }
+      if (filters.year) { const itemYear = getYearFromDate(item.date_capture); yearMatch = itemYear === filters.year; }
+      if (itemDate) { if (filters.month) monthMatch = (itemDate.getMonth() + 1).toString() === filters.month; if (filters.startDate) rangeMatch = rangeMatch && itemDate >= new Date(filters.startDate); if (filters.endDate) rangeMatch = rangeMatch && itemDate <= new Date(filters.endDate); } else if (filters.month || filters.startDate || filters.endDate) { return false; }
       return searchMatch && kkMatch && stlMatch && chargeMatch && yearMatch && monthMatch && rangeMatch;
     });
   }, [filters, data]);
@@ -387,50 +225,27 @@ export default function App() {
     const weaponCases = filteredData.filter(d => d.charge?.includes('อาวุธ') || d.topic?.includes('อาวุธ')).length;
     const heavyTruckCases = filteredData.filter(d => d.charge?.includes('น้ำหนัก') || d.topic?.includes('น้ำหนัก') || d.topic?.includes('รถบรรทุก')).length;
     const warrantCases = filteredData.filter(d => d.arrest_type?.includes('หมายจับ') || d.charge?.includes('หมายจับ') || d.topic?.includes('หมายจับ')).length;
-
-    let unitData = {};
-    let unitChartTitle = "";
-    if (filters.unit_kk) {
-      unitChartTitle = `สถิติ ส.ทล. (กก.${filters.unit_kk})`;
-      unitData = filteredData.reduce((acc, curr) => { const key = `ส.ทล.${curr.unit_s_tl}`; acc[key] = (acc[key] || 0) + 1; return acc; }, {});
-    } else {
-      unitChartTitle = "สถิติแยกตาม กองกำกับการ";
-      unitData = filteredData.reduce((acc, curr) => { const key = `กก.${curr.unit_kk}`; acc[key] = (acc[key] || 0) + 1; return acc; }, {});
-    }
-
+    let unitData = {}; let unitChartTitle = "";
+    if (filters.unit_kk) { unitChartTitle = `สถิติ ส.ทล. (กก.${filters.unit_kk})`; unitData = filteredData.reduce((acc, curr) => { const key = `ส.ทล.${curr.unit_s_tl}`; acc[key] = (acc[key] || 0) + 1; return acc; }, {}); } else { unitChartTitle = "สถิติแยกตาม กองกำกับการ"; unitData = filteredData.reduce((acc, curr) => { const key = `กก.${curr.unit_kk}`; acc[key] = (acc[key] || 0) + 1; return acc; }, {}); }
     const unitChartData = Object.entries(unitData).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     const typeData = filteredData.reduce((acc, curr) => { const key = curr.topic || 'อื่นๆ'; acc[key] = (acc[key] || 0) + 1; return acc; }, {});
     const typeChartData = Object.entries(typeData).map(([name, value]) => ({ name, value }));
-    
     return { totalCases, drugCases, weaponCases, heavyTruckCases, warrantCases, uniqueUnits, unitChartData, typeChartData, unitChartTitle };
   }, [filteredData, filters.unit_kk]);
 
-  const handleFilterChange = (key, value) => {
-    if (key === 'unit_kk') setFilters(prev => ({ ...prev, [key]: value, unit_s_tl: '' }));
-    else setFilters(prev => ({ ...prev, [key]: value }));
-  };
-
+  const handleFilterChange = (key, value) => { if (key === 'unit_kk') setFilters(prev => ({ ...prev, [key]: value, unit_s_tl: '' })); else setFilters(prev => ({ ...prev, [key]: value })); };
   const clearFilters = () => { setFilters({ search: '', startDate: '', endDate: '', year: '', month: '', unit_kk: '', unit_s_tl: '', topic: '', charge: '' }); };
 
-  if (loading) {
-    return <div className="flex h-screen items-center justify-center bg-slate-50"><div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-4"></div></div>;
-  }
+  if (loading) return <div className="flex h-screen items-center justify-center bg-slate-50"><div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-4"></div></div>;
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
-       {/* Load Sarabun Font for PDF */}
-       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
-      `}</style>
-
-      {/* Sidebar Mobile Overlay */}
+       <style>{`@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');`}</style>
       {mobileSidebarOpen && (<div className="fixed inset-0 bg-black/50 z-20 lg:hidden" onClick={() => setMobileSidebarOpen(false)} />)}
-
-      {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-30 bg-slate-900 text-white transition-all duration-300 ease-in-out shadow-xl ${mobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full'} lg:relative lg:translate-x-0 ${desktopSidebarOpen ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden'}`}>
         <div className="p-6 border-b border-slate-800 flex justify-between items-center whitespace-nowrap">
           <div className="flex items-center space-x-3">
-            <img src={LOGO_BASE64} alt="Logo" className="w-10 h-10 flex-shrink-0 object-contain" />
+            <img src={LOGO_URL} alt="Logo" className="w-10 h-10 flex-shrink-0 object-contain" />
             <span className={`text-xl font-bold tracking-tight transition-opacity duration-200 ${!desktopSidebarOpen && 'lg:opacity-0'}`}>HIGHWAY POLICE</span>
           </div>
           <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X className="w-6 h-6" /></button>
@@ -445,7 +260,6 @@ export default function App() {
         </nav>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
         <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm z-10">
           <div className="flex items-center gap-3">
@@ -462,7 +276,6 @@ export default function App() {
           </div>
         </header>
 
-        {/* Filter Panel */}
         {showFilterPanel && (
           <div className="bg-white border-b border-slate-200 p-4 animate-in slide-in-from-top-2 duration-200 shadow-inner z-20 relative">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-4">
@@ -479,7 +292,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto bg-slate-50/50">
           {activeTab === 'dashboard' && (
             <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 animate-in fade-in duration-300">
@@ -591,133 +403,72 @@ export default function App() {
       )}
       
       {/* ==================================================================================
-          FIXED PRINT VIEW (Hidden by z-index, not display:none) - แก้ปัญหาหน้าขาว
+          FIXED PRINT VIEW (Layout: Charts Left, Table Right - NO MAP)
           ================================================================================== */}
       <div id="print-view" 
             style={{ 
-              position: 'fixed', // ใช้ fixed ให้มันลอยอยู่บนสุด
-              top: 0,
-              left: 0,
-              
-              // เทคนิค: ถ้า Export ให้ Z-Index -50 (อยู่ข้างหลังสุด) แต่ Opacity 1 (มองเห็นได้โดย html2canvas)
-              // ถ้าไม่ได้ Export ให้ซ่อนไปเลย (-9999)
-              // วิธีนี้ Browser จะ Render หน้านี้รอไว้ตลอดเวลา ทำให้จับภาพได้ทันที
-              zIndex: isExporting ? -50 : -9999, 
-              opacity: 1, 
-              
-              width: '1123px', // A4 Landscape pixel
-              height: '794px', 
-              
-              backgroundColor: 'white',
-              padding: '20px',
-              fontFamily: "'Sarabun', sans-serif",
-              color: '#000',
-              overflow: 'hidden',
-              visibility: 'visible'
+              position: 'fixed', top: 0, left: 0,
+              zIndex: isExporting ? 99999 : -1,
+              opacity: isExporting ? 1 : 0,
+              width: '1123px', height: '794px',
+              backgroundColor: 'white', padding: '20px',
+              fontFamily: "'Sarabun', sans-serif", color: '#000',
+              overflow: 'hidden', visibility: 'visible', pointerEvents: 'none'
             }}>
         
-        {/* Header Row */}
+        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '15px', height: '15mm' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <img src={LOGO_BASE64} alt="Logo" style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
-            <div>
-              <h1 style={{ fontSize: '22px', fontWeight: 'bold', margin: 0 }}>รายงานสรุปสถานการณ์ประจำวัน</h1>
-              <p style={{ fontSize: '14px', color: '#555', margin: 0 }}>กองบังคับการตำรวจทางหลวง (Highway Police)</p>
-            </div>
+            <img src={LOGO_URL} alt="Logo" style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
+            <div><h1 style={{ fontSize: '22px', fontWeight: 'bold', margin: 0 }}>รายงานสรุปสถานการณ์ประจำวัน</h1><p style={{ fontSize: '14px', color: '#555', margin: 0 }}>กองบังคับการตำรวจทางหลวง (Highway Police)</p></div>
           </div>
-          <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#777', margin: 0 }}>ข้อมูล ณ วันที่</p>
-              <p style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>{new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-              <p style={{ fontSize: '12px', color: '#777', margin: 0 }}>เงื่อนไข: {filters.year || 'ทุกปี'} | กก.{filters.unit_kk || 'ทั้งหมด'}</p>
-          </div>
+          <div style={{ textAlign: 'right' }}><p style={{ fontSize: '12px', fontWeight: 'bold', color: '#777', margin: 0 }}>ข้อมูล ณ วันที่</p><p style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>{new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p><p style={{ fontSize: '12px', color: '#777', margin: 0 }}>เงื่อนไข: {filters.year || 'ทุกปี'} | กก.{filters.unit_kk || 'ทั้งหมด'}</p></div>
         </div>
 
-        {/* Stats Row */}
+        {/* Stats */}
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '15px', height: '20mm' }}>
-            {[
-              { t: 'จับกุมรวม', v: stats.totalCases, c: '#eff6ff', ct: '#1d4ed8' },
-              { t: 'ยาเสพติด', v: stats.drugCases, c: '#fef2f2', ct: '#b91c1c' },
-              { t: 'อาวุธปืน', v: stats.weaponCases, c: '#fff7ed', ct: '#c2410c' },
-              { t: 'รถบรรทุก', v: stats.heavyTruckCases, c: '#faf5ff', ct: '#7e22ce' },
-              { t: 'หมายจับ', v: stats.warrantCases, c: '#eef2ff', ct: '#4338ca' },
-              { t: 'หน่วยงาน', v: stats.uniqueUnits, c: '#f0fdf4', ct: '#15803d' }
-            ].map((s, i) => (
-              <div key={i} style={{ flex: 1, backgroundColor: s.c, borderRadius: '8px', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                <p style={{ fontSize: '12px', color: s.ct, fontWeight: 'bold', margin: 0 }}>{s.t}</p>
-                <p style={{ fontSize: '24px', color: '#000', fontWeight: 'bold', margin: 0, lineHeight: 1 }}>{s.v}</p>
-              </div>
+            {[{ t: 'จับกุมรวม', v: stats.totalCases, c: '#eff6ff', ct: '#1d4ed8' }, { t: 'ยาเสพติด', v: stats.drugCases, c: '#fef2f2', ct: '#b91c1c' }, { t: 'อาวุธปืน', v: stats.weaponCases, c: '#fff7ed', ct: '#c2410c' }, { t: 'รถบรรทุก', v: stats.heavyTruckCases, c: '#faf5ff', ct: '#7e22ce' }, { t: 'หมายจับ', v: stats.warrantCases, c: '#eef2ff', ct: '#4338ca' }, { t: 'หน่วยงาน', v: stats.uniqueUnits, c: '#f0fdf4', ct: '#15803d' }].map((s, i) => (
+              <div key={i} style={{ flex: 1, backgroundColor: s.c, borderRadius: '8px', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}><p style={{ fontSize: '12px', color: s.ct, fontWeight: 'bold', margin: 0 }}>{s.t}</p><p style={{ fontSize: '24px', color: '#000', fontWeight: 'bold', margin: 0, lineHeight: 1 }}>{s.v}</p></div>
             ))}
         </div>
 
-        {/* Content Layout */}
+        {/* Content (No Map) */}
         <div style={{ display: 'flex', gap: '15px', height: '135mm' }}>
-            
-            {/* Left: Map (35%) - Using New SVG Path & isPrintMode=true */}
-            <div style={{ width: '35%', border: '1px solid #d1d5db', borderRadius: '8px', overflow: 'hidden', position: 'relative', backgroundColor: '#f9fafb' }}>
-              {/* 🚫 REMOVED: ลบป้ายชื่อแผนที่ออกตามคำขอ */}
-              <SimpleMapVisualization data={filteredData} onSelectCase={() => {}} isPrintMode={true} />
-            </div>
-
-            {/* Middle: Charts (25%) */}
-            <div style={{ width: '25%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <p style={{ fontSize: '12px', fontWeight: 'bold', margin: '0 0 5px 0', width: '100%' }}>สัดส่วนคดี</p>
-                  <div style={{ width: '100%', flex: 1, minHeight: '0' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={stats.typeChartData} cx="50%" cy="50%" outerRadius={40} dataKey="value">
-                            {stats.typeChartData.map((entry, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
-                          </Pie>
-                        </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div style={{ width: '100%', fontSize: '10px', marginTop: '5px' }}>
-                    {stats.typeChartData.slice(0,3).map((e,i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', padding: '2px 0' }}>
-                        <span style={{color: '#555'}}>{e.name}</span><span style={{fontWeight:'bold'}}>{e.value}</span>
-                      </div>
-                    ))}
-                  </div>
+            {/* Left: Charts (40%) */}
+            <div style={{ width: '40%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: '8px', padding: '15px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <p style={{ fontSize: '14px', fontWeight: 'bold', margin: '0 0 10px 0', width: '100%' }}>สัดส่วนคดี</p>
+                  <div style={{ width: '100%', flex: 1, minHeight: '0' }}><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={stats.typeChartData} cx="50%" cy="50%" outerRadius={55} dataKey="value">{stats.typeChartData.map((entry, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}</Pie></PieChart></ResponsiveContainer></div>
+                  <div style={{ width: '100%', fontSize: '11px', marginTop: '10px' }}>{stats.typeChartData.slice(0,4).map((e,i) => (<div key={i} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', padding: '4px 0' }}><span style={{color: '#555'}}>{e.name}</span><span style={{fontWeight:'bold'}}>{e.value}</span></div>))}</div>
               </div>
-              <div style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: '8px', padding: '10px' }}>
-                  <p style={{ fontSize: '12px', fontWeight: 'bold', margin: '0 0 10px 0' }}>สถิติแยกหน่วย (Top 5)</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    {stats.unitChartData.slice(0,4).map((u, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', fontSize: '10px' }}>
-                        <span style={{ width: '30px', fontWeight: 'bold', color: '#555' }}>{u.name}</span>
-                        <div style={{ flex: 1, height: '6px', backgroundColor: '#f3f4f6', borderRadius: '3px', margin: '0 8px', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', backgroundColor: '#2563eb', width: `${(u.value / stats.totalCases) * 100}%` }}></div>
-                        </div>
-                        <span style={{ fontWeight: 'bold' }}>{u.value}</span>
-                      </div>
-                    ))}
-                  </div>
+              <div style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: '8px', padding: '15px' }}>
+                  <p style={{ fontSize: '14px', fontWeight: 'bold', margin: '0 0 10px 0' }}>สถิติแยกหน่วย (Top 5)</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>{stats.unitChartData.slice(0,5).map((u, i) => (<div key={i} style={{ display: 'flex', alignItems: 'center', fontSize: '11px' }}><span style={{ width: '40px', fontWeight: 'bold', color: '#555' }}>{u.name}</span><div style={{ flex: 1, height: '8px', backgroundColor: '#f3f4f6', borderRadius: '4px', margin: '0 10px', overflow: 'hidden' }}><div style={{ height: '100%', backgroundColor: '#2563eb', width: `${(u.value / stats.totalCases) * 100}%` }}></div></div><span style={{ fontWeight: 'bold' }}>{u.value}</span></div>))}</div>
               </div>
             </div>
 
-            {/* Right: Table (40%) */}
-            <div style={{ width: '40%', border: '1px solid #d1d5db', borderRadius: '8px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ backgroundColor: '#f3f4f6', padding: '8px 12px', borderBottom: '1px solid #d1d5db', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>รายการจับกุมล่าสุด</span>
-                <span style={{ fontSize: '10px', color: '#666' }}>*10 รายการแรก</span>
+            {/* Right: Table (60%) - Expanded */}
+            <div style={{ width: '60%', border: '1px solid #d1d5db', borderRadius: '8px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ backgroundColor: '#f3f4f6', padding: '10px 15px', borderBottom: '1px solid #d1d5db', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '14px', fontWeight: 'bold' }}>รายการจับกุมล่าสุด</span><span style={{ fontSize: '11px', color: '#666' }}>*20 รายการแรก</span>
               </div>
               <div style={{ flex: 1, padding: '0' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ backgroundColor: '#fff', borderBottom: '1px solid #e5e7eb' }}>
-                      <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>วัน/เวลา</th>
-                      <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>หน่วย</th>
-                      <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>ข้อหา</th>
-                      <th style={{ padding: '6px 8px', fontSize: '10px', textAlign: 'left', color: '#374151' }}>สถานที่</th>
+                      <th style={{ padding: '8px', fontSize: '11px', textAlign: 'left', color: '#374151', width: '20%' }}>วัน/เวลา</th>
+                      <th style={{ padding: '8px', fontSize: '11px', textAlign: 'left', color: '#374151', width: '15%' }}>หน่วย</th>
+                      <th style={{ padding: '8px', fontSize: '11px', textAlign: 'left', color: '#374151', width: '35%' }}>ข้อหา</th>
+                      <th style={{ padding: '8px', fontSize: '11px', textAlign: 'left', color: '#374151', width: '30%' }}>สถานที่</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredData.slice(0, 10).map((item, idx) => (
+                    {filteredData.slice(0, 18).map((item, idx) => (
                       <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#fff' : '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
-                        <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top' }}>{item.date_capture}<br/><span style={{color:'#9ca3af'}}>{item.time_capture}</span></td>
-                        <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top' }}>กก.{item.unit_kk}<br/>ส.ทล.{item.unit_s_tl}</td>
-                        <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top', fontWeight: '600', maxWidth: '120px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.charge}</td>
-                        <td style={{ padding: '6px 8px', fontSize: '9px', verticalAlign: 'top', maxWidth: '80px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.location}</td>
+                        <td style={{ padding: '6px 8px', fontSize: '10px', verticalAlign: 'top' }}>{item.date_capture}<br/><span style={{color:'#9ca3af'}}>{item.time_capture}</span></td>
+                        <td style={{ padding: '6px 8px', fontSize: '10px', verticalAlign: 'top' }}>กก.{item.unit_kk}<br/>ส.ทล.{item.unit_s_tl}</td>
+                        <td style={{ padding: '6px 8px', fontSize: '10px', verticalAlign: 'top', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }}>{item.charge}</td>
+                        <td style={{ padding: '6px 8px', fontSize: '10px', verticalAlign: 'top', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>{item.location}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -726,12 +477,8 @@ export default function App() {
             </div>
         </div>
         
-        {/* Footer */}
-        <div style={{ position: 'absolute', bottom: '5mm', left: 0, width: '100%', textAlign: 'center', fontSize: '9px', color: '#9ca3af' }}>
-            TRAFFIC OPERATIONS DATABASE SYSTEM | GENERATED BY HIGHWAY POLICE DASHBOARD
-        </div>
+        <div style={{ position: 'absolute', bottom: '5mm', left: 0, width: '100%', textAlign: 'center', fontSize: '9px', color: '#9ca3af' }}>TRAFFIC OPERATIONS DATABASE SYSTEM | GENERATED BY HIGHWAY POLICE DASHBOARD</div>
       </div>
-
     </div>
   );
 }
