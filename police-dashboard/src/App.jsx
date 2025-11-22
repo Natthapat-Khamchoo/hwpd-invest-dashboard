@@ -231,15 +231,18 @@ export default function App() {
   }, []);
 
   const handleExportPDF = () => {
-    const element = document.getElementById('dashboard-content');
-    if(!element) return;
+    // เปลี่ยนไปจับ element ลับที่เราจะสร้างขึ้น
+    const element = document.getElementById('print-view');
+    
     const opt = {
-      margin: 0.3,
-      filename: `รายงานสรุป_${new Date().toISOString().slice(0,10)}.pdf`,
+      margin: 0, // ตัดขอบขาวออกเพื่อให้เราจัด Layout เอง
+      filename: `รายงานสรุปสถานการณ์_${new Date().toISOString().slice(0,10)}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      html2canvas: { scale: 2, useCORS: true }, // เพิ่ม Scale ให้ชัด
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
+    
+    // สั่ง save
     html2pdf().set(opt).from(element).save();
   };
 
@@ -659,6 +662,123 @@ const getYearFromDate = (dateStr) => {
           </div>
         </div>
       )}
+      {/* ==================================================================================
+          HIDDEN PRINT VIEW (ส่วนนี้จะมองไม่เห็นบนหน้าจอ แต่จะถูกดึงไปทำ PDF)
+          ================================================================================== */}
+      <div id="print-view" className="fixed top-0 left-[-10000px] bg-white z-[-50]" style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}>
+        
+        {/* 1. Header Report */}
+        <div className="flex justify-between items-start mb-6 border-b-2 border-slate-800 pb-4">
+          <div className="flex items-center gap-4">
+            <img src="https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png" alt="Logo" className="w-16 h-16 object-contain" />
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">รายงานสรุปสถานการณ์ (Daily Report)</h1>
+              <p className="text-sm text-slate-500">กองบังคับการตำรวจทางหลวง (Highway Police)</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs font-bold text-slate-400 uppercase">Export Date</div>
+            <div className="text-lg font-bold text-slate-800">{new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+            <div className="text-xs text-slate-500">เงื่อนไข: {filters.year ? `ปี ${filters.year}` : 'ทุกปี'} {filters.unit_kk ? `| กก.${filters.unit_kk}` : ''}</div>
+          </div>
+        </div>
+
+        {/* 2. Stats Grid (ย่อส่วน) */}
+        <div className="grid grid-cols-6 gap-3 mb-6">
+          {[
+            { t: 'รวม', v: stats.totalCases, c: 'bg-blue-100 text-blue-700' },
+            { t: 'ยาเสพติด', v: stats.drugCases, c: 'bg-red-100 text-red-700' },
+            { t: 'อาวุธ', v: stats.weaponCases, c: 'bg-orange-100 text-orange-700' },
+            { t: 'รถบรรทุก', v: stats.heavyTruckCases, c: 'bg-purple-100 text-purple-700' },
+            { t: 'หมายจับ', v: stats.warrantCases, c: 'bg-indigo-100 text-indigo-700' },
+            { t: 'หน่วย', v: stats.uniqueUnits, c: 'bg-green-100 text-green-700' }
+          ].map((s, i) => (
+            <div key={i} className={`${s.c} p-3 rounded-lg text-center border border-white/50 shadow-sm`}>
+              <div className="text-[10px] uppercase tracking-wider opacity-70">{s.t}</div>
+              <div className="text-xl font-bold">{s.v}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* 3. Middle Section: Map & Chart */}
+        <div className="grid grid-cols-2 gap-6 mb-6 h-[300px]">
+          {/* Map (ใช้ SimpleMap เพื่อความชัวร์ในการ Render PDF) */}
+          <div className="border border-slate-200 rounded-xl overflow-hidden relative bg-slate-50 p-2">
+            <div className="absolute top-2 left-2 bg-white/80 px-2 py-1 text-[10px] font-bold rounded z-10">แผนที่พิกัดเกิดเหตุ</div>
+            <SimpleMapVisualization data={filteredData} onSelectCase={() => {}} />
+          </div>
+
+          {/* Chart Combo */}
+          <div className="flex flex-col gap-4">
+             <div className="flex-1 border border-slate-200 rounded-xl p-4">
+                <h4 className="text-xs font-bold text-slate-500 mb-2">สัดส่วนคดี (Pie Chart)</h4>
+                <div className="h-[120px] w-full">
+                   <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={stats.typeChartData} cx="50%" cy="50%" outerRadius={50} dataKey="value">
+                          {stats.typeChartData.map((entry, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
+                        </Pie>
+                      </PieChart>
+                   </ResponsiveContainer>
+                </div>
+                <div className="flex flex-wrap gap-1 justify-center mt-2">
+                    {stats.typeChartData.slice(0,4).map((e,i) => (
+                      <span key={i} className="text-[9px] px-1.5 py-0.5 bg-slate-100 rounded text-slate-600">{e.name} {e.value}</span>
+                    ))}
+                </div>
+             </div>
+             
+             <div className="flex-1 border border-slate-200 rounded-xl p-4">
+                 <h4 className="text-xs font-bold text-slate-500 mb-2">สถิติแยกหน่วย (Top 5)</h4>
+                 <div className="space-y-2">
+                    {stats.unitChartData.slice(0,3).map((u, i) => (
+                      <div key={i} className="flex items-center text-xs">
+                        <span className="w-16 font-medium text-slate-600">{u.name}</span>
+                        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden mx-2">
+                          <div className="h-full bg-blue-500" style={{ width: `${(u.value / stats.totalCases) * 100}%` }}></div>
+                        </div>
+                        <span className="text-slate-800 font-bold">{u.value}</span>
+                      </div>
+                    ))}
+                 </div>
+             </div>
+          </div>
+        </div>
+
+        {/* 4. Table (Top 10-12 items to fit page) */}
+        <div className="border border-slate-200 rounded-xl overflow-hidden flex-1">
+          <div className="bg-slate-100 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
+            <h3 className="text-sm font-bold text-slate-700">รายการจับกุมล่าสุด (12 รายการแรก)</h3>
+            <span className="text-[10px] text-slate-500">*ข้อมูลทั้งหมดดูได้ในไฟล์ CSV</span>
+          </div>
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                {['วันที่', 'หน่วย', 'ข้อหา', 'สถานที่', 'ผู้ถูกจับ'].map(h => (
+                  <th key={h} className="px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredData.slice(0, 12).map((item, idx) => (
+                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                  <td className="px-3 py-2 text-[10px] whitespace-nowrap">{item.date_capture}</td>
+                  <td className="px-3 py-2 text-[10px] whitespace-nowrap">กก.{item.unit_kk} ส.ทล.{item.unit_s_tl}</td>
+                  <td className="px-3 py-2 text-[10px] truncate max-w-[150px]">{item.charge}</td>
+                  <td className="px-3 py-2 text-[10px] truncate max-w-[120px]">{item.location}</td>
+                  <td className="px-3 py-2 text-[10px] truncate max-w-[100px]">{item.suspect_name}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Footer */}
+        <div className="mt-4 pt-4 border-t border-slate-200 flex justify-between items-center text-[10px] text-slate-400">
+           <span>ระบบฐานข้อมูลปฏิบัติการจราจร (Traffic Operations Database)</span>
+           <span>Generated by AI Assistant</span>
+        </div>
+      </div>
     </div>
   );
 }
