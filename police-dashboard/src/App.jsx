@@ -203,7 +203,6 @@ export default function App() {
 
   useEffect(() => {
     const fetchData = () => {
-      // 🔴 EDIT HERE: Link CSV
       const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4VGxSCS_zy50dWol-qd317rLRYG1SdOPojU03EEuganUmtf7h86LjyqGdTNM-jPjeLhb2z4yOmbCb/pub?output=csv';
 
       Papa.parse(GOOGLE_SHEET_CSV_URL, {
@@ -250,12 +249,11 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, []);
 
-const handleExportPDF = () => {
-    // 1. บังคับ Scroll ไปบนสุดก่อน เพื่อให้ html2canvas จับภาพได้ถูกตำแหน่ง
+  const handleExportPDF = () => {
+    // 1. บังคับ Scroll ไปที่ 0,0 ก่อนเสมอ
     window.scrollTo(0, 0);
     setIsExporting(true);
     
-    // 2. รอเวลาให้นานขึ้นนิดนึง (1.5 วินาที) เพื่อให้โหลดรูป/Map ทันแน่นอน
     setTimeout(() => {
       const element = document.getElementById('print-view');
       const opt = {
@@ -265,12 +263,12 @@ const handleExportPDF = () => {
         html2canvas: { 
             scale: 2, 
             useCORS: true, 
-            scrollY: 0, // บังคับให้จับภาพจากด้านบนสุด
-            scrollX: 0,
-            windowWidth: document.documentElement.offsetWidth, // บังคับความกว้างให้เต็ม
-            letterRendering: true 
+            letterRendering: true,
+            scrollY: 0, // สำคัญ: บังคับจับภาพจากด้านบนสุด
+            scrollX: 0
         },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        // 2. ตั้งค่าเป็น แนวนอน (Landscape)
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
       };
 
       html2pdf()
@@ -280,7 +278,7 @@ const handleExportPDF = () => {
         .then(() => {
            setIsExporting(false);
         });
-    }, 1500);
+    }, 1500); // เพิ่มเวลารอให้มั่นใจว่าภาพมาครบ
   };
 
   const handleExportCSV = () => {
@@ -552,14 +550,14 @@ const handleExportPDF = () => {
       )}
       
       {/* ==================================================================================
-          HIDDEN PRINT VIEW (STRICT A4 LAYOUT & SARABUN FONT)
+          HIDDEN PRINT VIEW (LANDSCAPE A4 LAYOUT & SARABUN FONT)
           ================================================================================== */}
       <div id="print-view" 
          className={isExporting ? "absolute top-0 left-0 z-[9999] bg-white" : "fixed top-0 left-[-10000px] bg-white z-[-50]"} 
          style={{ 
-           width: '210mm', 
-           minHeight: '297mm', // บังคับความสูงขั้นต่ำเท่า A4
-           height: isExporting ? 'auto' : '297mm',
+           width: '297mm', // A4 Landscape Width
+           minHeight: '210mm', // A4 Landscape Height
+           height: isExporting ? 'auto' : '210mm',
            padding: '10mm',
            fontFamily: "'Sarabun', sans-serif",
            color: '#000'
@@ -570,18 +568,18 @@ const handleExportPDF = () => {
           <div className="flex items-center gap-3">
             <img src="https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png" alt="Logo" className="w-16 h-16 object-contain" />
             <div>
-              <h1 className="text-xl font-bold text-black">รายงานสรุปสถานการณ์ประจำวัน</h1>
+              <h1 className="text-2xl font-bold text-black">รายงานสรุปสถานการณ์ประจำวัน</h1>
               <p className="text-sm text-gray-600">กองบังคับการตำรวจทางหลวง (Highway Police)</p>
             </div>
           </div>
           <div className="text-right">
              <p className="text-xs font-bold text-gray-500">ข้อมูล ณ วันที่</p>
-             <p className="text-lg font-bold text-black">{new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+             <p className="text-xl font-bold text-black">{new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
              <p className="text-[10px] text-gray-500">เงื่อนไข: {filters.year || 'ทุกปี'} | กก.{filters.unit_kk || 'ทั้งหมด'}</p>
           </div>
         </div>
 
-        {/* Stats Bar */}
+        {/* Stats Bar (Row) */}
         <div className="flex justify-between mb-4 gap-2">
            {[
              { t: 'จับกุมรวม', v: stats.totalCases, c: 'bg-blue-50' },
@@ -593,23 +591,25 @@ const handleExportPDF = () => {
            ].map((s, i) => (
              <div key={i} className={`flex-1 ${s.c} border border-gray-200 rounded px-2 py-2 text-center`}>
                <p className="text-[10px] text-gray-600 font-bold mb-1">{s.t}</p>
-               <p className="text-lg font-bold text-black leading-none">{s.v}</p>
+               <p className="text-xl font-bold text-black leading-none">{s.v}</p>
              </div>
            ))}
         </div>
 
-        {/* Map & Charts Area */}
-        <div className="flex gap-4 mb-4" style={{ height: '250px' }}>
-           {/* Map Left */}
-           <div className="w-1/2 border border-gray-300 rounded overflow-hidden relative bg-slate-50">
+        {/* Main Layout: Map | Charts | List */}
+        <div className="flex gap-4 mb-4" style={{ height: '100mm' }}>
+           
+           {/* Col 1: Map (35%) */}
+           <div className="w-[35%] border border-gray-300 rounded overflow-hidden relative bg-slate-50">
               <div className="absolute top-1 left-1 bg-white/90 px-2 py-0.5 text-[10px] font-bold border border-gray-300 z-10">แผนที่จุดเกิดเหตุ</div>
               <SimpleMapVisualization data={filteredData} onSelectCase={() => {}} isPrintMode={true} />
            </div>
-           {/* Charts Right */}
-           <div className="w-1/2 flex flex-col gap-2">
+
+           {/* Col 2: Charts (25%) */}
+           <div className="w-[25%] flex flex-col gap-2">
               <div className="flex-1 border border-gray-300 rounded p-2 flex flex-col items-center justify-center">
                  <p className="text-[10px] font-bold mb-1 w-full text-left">สัดส่วนคดี (Pie Chart)</p>
-                 <div className="w-full h-full flex items-center justify-center">
+                 <div className="w-full h-full flex items-center justify-center flex-col">
                    <div style={{ width: '100%', height: '80px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
@@ -619,8 +619,8 @@ const handleExportPDF = () => {
                         </PieChart>
                     </ResponsiveContainer>
                    </div>
-                   <div className="ml-2 text-[9px] w-24 space-y-0.5">
-                      {stats.typeChartData.slice(0,4).map((e,i) => (
+                   <div className="mt-1 text-[9px] w-full px-2 space-y-0.5">
+                      {stats.typeChartData.slice(0,3).map((e,i) => (
                         <div key={i} className="flex justify-between"><span>{e.name}</span><span className="font-bold">{e.value}</span></div>
                       ))}
                    </div>
@@ -628,10 +628,10 @@ const handleExportPDF = () => {
               </div>
               <div className="flex-1 border border-gray-300 rounded p-2">
                  <p className="text-[10px] font-bold mb-1">สถิติแยกหน่วย (Top 5)</p>
-                 <div className="space-y-1.5">
+                 <div className="space-y-1.5 mt-2">
                     {stats.unitChartData.slice(0,3).map((u, i) => (
                       <div key={i} className="flex items-center text-[9px]">
-                        <span className="w-10 font-bold text-gray-600 truncate">{u.name}</span>
+                        <span className="w-8 font-bold text-gray-600 truncate">{u.name}</span>
                         <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden mx-2">
                           <div className="h-full bg-blue-600" style={{ width: `${(u.value / stats.totalCases) * 100}%` }}></div>
                         </div>
@@ -641,36 +641,36 @@ const handleExportPDF = () => {
                  </div>
               </div>
            </div>
-        </div>
 
-        {/* Data Table */}
-        <div className="border border-gray-300 rounded overflow-hidden">
-          <div className="bg-gray-100 px-3 py-1.5 border-b border-gray-300 flex justify-between items-center">
-            <h3 className="text-xs font-bold text-black">รายการจับกุมล่าสุด (10 รายการ)</h3>
-            <span className="text-[9px] text-gray-500">*เอกสารนี้สร้างโดยระบบอัตโนมัติ</span>
-          </div>
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-2 py-1.5 text-[10px] font-bold text-black w-24">วัน/เวลา</th>
-                <th className="px-2 py-1.5 text-[10px] font-bold text-black w-20">หน่วย</th>
-                <th className="px-2 py-1.5 text-[10px] font-bold text-black">ข้อหา</th>
-                <th className="px-2 py-1.5 text-[10px] font-bold text-black w-24">ผู้ถูกจับ</th>
-                <th className="px-2 py-1.5 text-[10px] font-bold text-black w-24">สถานที่</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredData.slice(0, 10).map((item, idx) => (
-                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="px-2 py-1.5 text-[10px] align-top">{item.date_capture}<br/><span className="text-gray-500">{item.time_capture} น.</span></td>
-                  <td className="px-2 py-1.5 text-[10px] align-top">กก.{item.unit_kk} ส.ทล.{item.unit_s_tl}</td>
-                  <td className="px-2 py-1.5 text-[10px] align-top font-bold truncate max-w-[180px]">{item.charge}</td>
-                  <td className="px-2 py-1.5 text-[10px] align-top truncate max-w-[100px]">{item.suspect_name}</td>
-                  <td className="px-2 py-1.5 text-[10px] align-top truncate max-w-[100px]">{item.location}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+           {/* Col 3: Table (40%) */}
+           <div className="w-[40%] border border-gray-300 rounded overflow-hidden flex flex-col">
+              <div className="bg-gray-100 px-3 py-1.5 border-b border-gray-300 flex justify-between items-center shrink-0">
+                <h3 className="text-xs font-bold text-black">รายการจับกุมล่าสุด</h3>
+                <span className="text-[9px] text-gray-500">*10 รายการแรก</span>
+              </div>
+              <div className="flex-1 overflow-hidden relative">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-2 py-1 text-[9px] font-bold text-black w-16">วัน/เวลา</th>
+                      <th className="px-2 py-1 text-[9px] font-bold text-black w-14">หน่วย</th>
+                      <th className="px-2 py-1 text-[9px] font-bold text-black">ข้อหา</th>
+                      <th className="px-2 py-1 text-[9px] font-bold text-black w-16">สถานที่</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredData.slice(0, 12).map((item, idx) => (
+                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="px-2 py-1 text-[9px] align-top leading-tight">{item.date_capture}<br/><span className="text-gray-400">{item.time_capture}</span></td>
+                        <td className="px-2 py-1 text-[9px] align-top leading-tight">กก.{item.unit_kk}<br/>ส.ทล.{item.unit_s_tl}</td>
+                        <td className="px-2 py-1 text-[9px] align-top font-semibold truncate max-w-[100px] leading-tight">{item.charge}</td>
+                        <td className="px-2 py-1 text-[9px] align-top truncate max-w-[60px] leading-tight">{item.location}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+           </div>
         </div>
         
         {/* Footer Watermark */}
