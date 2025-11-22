@@ -243,11 +243,21 @@ export default function App() {
     html2pdf().set(opt).from(element).save();
   };
 
+ // --- ส่วนที่แก้ไข: Logic การสร้างตัวเลือกและกรองข้อมูล ---
+
   const filterOptions = useMemo(() => {
-    const topics = [...new Set(data.map(d => d.topic))].sort();
-    const charges = [...new Set(data.map(d => d.charge))].sort(); 
-    const years = [...new Set(data.map(d => d.date_capture?.split('/')[2]))].filter(Boolean).sort().reverse();
-    return { topics, charges, years };
+    // 1. แก้ไข: ดึง Unique Value จาก "item.topic" (หัวข้อ) แทน "item.charge"
+    // filter(Boolean) เพื่อตัดค่าว่างทิ้ง
+    const charges = [...new Set(data.map(d => d.topic))].filter(Boolean).sort(); 
+    
+    // 2. แก้ไข: ดึงปีจาก String โดยตรง (คาดว่าเป็น พ.ศ. จาก CSV) และใส่ filter(Boolean) กันค่าว่าง
+    const years = [...new Set(data.map(d => {
+      if (!d.date_capture) return null;
+      const parts = d.date_capture.split('/');
+      return parts.length === 3 ? parts[2] : null;
+    }))].filter(Boolean).sort().reverse();
+
+    return { charges, years }; // topics ไม่จำเป็นต้องใช้แล้วใน Dropdown นี้แต่เก็บไว้ก็ได้
   }, [data]);
 
   const filteredData = useMemo(() => {
@@ -255,26 +265,38 @@ export default function App() {
       const searchMatch = !filters.search || 
         (item.charge && item.charge.toLowerCase().includes(filters.search.toLowerCase())) ||
         (item.suspect_name && item.suspect_name.toLowerCase().includes(filters.search.toLowerCase())) ||
-        (item.location && item.location.toLowerCase().includes(filters.search.toLowerCase()));
+        (item.location && item.location.toLowerCase().includes(filters.search.toLowerCase())) ||
+        (item.topic && item.topic.toLowerCase().includes(filters.search.toLowerCase())); // เพิ่มการค้นหาจาก Topic ด้วย
 
       const kkMatch = !filters.unit_kk || String(item.unit_kk) === String(filters.unit_kk);
       const stlMatch = !filters.unit_s_tl || String(item.unit_s_tl) === String(filters.unit_s_tl);
-      const topicMatch = !filters.topic || item.topic === filters.topic;
-      const chargeMatch = !filters.charge || item.charge === filters.charge; 
+      
+      // 3. แก้ไข: เมื่อเลือกตัวกรอง "ข้อหา" ให้ไปเช็คกับ "item.topic" แทน
+      const chargeMatch = !filters.charge || item.topic === filters.charge; 
 
       const itemDate = parseThaiDate(item.date_capture);
-      let yearMatch = true; let monthMatch = true; let rangeMatch = true;
+      let yearMatch = true; 
+      let monthMatch = true; 
+      let rangeMatch = true;
 
       if (itemDate) {
+        // 4. แก้ไข: Logic การกรองปี เช็คจาก String โดยตรงเพื่อให้ตรงกับ Dropdown พ.ศ.
         if (filters.year) {
-           const itemYear = item.date_capture.split('/')[2] || itemDate.getFullYear().toString();
+           const itemYear = item.date_capture?.split('/')[2];
            yearMatch = itemYear === filters.year;
         }
+        
         if (filters.month) monthMatch = (itemDate.getMonth() + 1).toString() === filters.month;
         if (filters.startDate) rangeMatch = rangeMatch && itemDate >= new Date(filters.startDate);
         if (filters.endDate) rangeMatch = rangeMatch && itemDate <= new Date(filters.endDate);
       }
-      return searchMatch && kkMatch && stlMatch && topicMatch && chargeMatch && yearMatch && monthMatch && rangeMatch;
+      
+      // กรณีไม่มีวันที่ แต่มีการเลือก Filter ปี/เดือน ให้ถือว่าไม่ผ่าน
+      if (!itemDate && (filters.year || filters.month || filters.startDate || filters.endDate)) {
+        return false;
+      }
+
+      return searchMatch && kkMatch && stlMatch && chargeMatch && yearMatch && monthMatch && rangeMatch;
     });
   }, [filters, data]);
 
