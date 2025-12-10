@@ -5,7 +5,8 @@ import {
   LayoutDashboard, Table as TableIcon, Search, Filter, Siren, Users, 
   FileText, Calendar, ChevronRight, X, Menu, BarChart3, Map as MapIcon, 
   Building2, ChevronLeft, AlertTriangle, Truck, FileWarning, Download, 
-  Activity, Radar, MousePointerClick, RefreshCw, CalendarDays, Clock
+  Activity, Radar, MousePointerClick, RefreshCw, CalendarDays, Clock,
+  Tags // เพิ่ม Icon Tags
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
@@ -66,14 +67,12 @@ const getCrimeColor = (topic) => {
   return getConsistentColor(topic);
 };
 
-// ฟังก์ชันแปลงวันที่ (รองรับทั้ง - และ /)
 const parseDateRobust = (dateStr) => {
   if (!dateStr) return { dateObj: null, thaiYear: '' };
 
   let day, month, year;
   let isThaiYearInput = false;
 
-  // กรณี 1: ISO Format (2024-12-31)
   if (dateStr.includes('-')) {
     const parts = dateStr.split('-');
     if (parts.length === 3) {
@@ -81,9 +80,7 @@ const parseDateRobust = (dateStr) => {
       month = parseInt(parts[1], 10) - 1;
       day = parseInt(parts[2], 10);
     }
-  } 
-  // กรณี 2: Thai Format (31/12/2567)
-  else if (dateStr.includes('/')) {
+  } else if (dateStr.includes('/')) {
     const parts = dateStr.split('/');
     if (parts.length === 3) {
       day = parseInt(parts[0], 10);
@@ -96,9 +93,7 @@ const parseDateRobust = (dateStr) => {
     isThaiYearInput = year > 2400; 
     const adYear = isThaiYearInput ? year - 543 : year; 
     const dateObj = new Date(adYear, month, day);
-    // Set time to 00:00:00 for accurate comparison
     dateObj.setHours(0, 0, 0, 0); 
-    
     const thYear = isThaiYearInput ? year : year + 543; 
     return { dateObj, thaiYear: thYear.toString() };
   }
@@ -362,12 +357,20 @@ export default function App() {
     const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `police_report_${new Date().toISOString().slice(0,10)}.csv`; link.click();
   };
 
+  const filterOptions = useMemo(() => {
+    // ดึงรายชื่อหัวข้อคดีทั้งหมดมาเป็นตัวเลือก
+    const charges = [...new Set(data.map(d => d.topic))].filter(Boolean).sort(); 
+    return { charges };
+  }, [data]);
+
   const filteredData = useMemo(() => {
     return data.filter(item => {
       const searchMatch = !filters.search || (item.charge && item.charge.toLowerCase().includes(filters.search.toLowerCase())) || (item.suspect_name && item.suspect_name.toLowerCase().includes(filters.search.toLowerCase())) || (item.location && item.location.toLowerCase().includes(filters.search.toLowerCase())) || (item.topic && item.topic.toLowerCase().includes(filters.search.toLowerCase()));
       const kkMatch = !filters.unit_kk || String(item.unit_kk) === String(filters.unit_kk);
       const stlMatch = !filters.unit_s_tl || String(item.unit_s_tl) === String(filters.unit_s_tl);
-      const chargeMatch = !filters.charge || item.topic === filters.charge; 
+      
+      // 🔥 Logic กรองประเภทคดี (topic)
+      const topicMatch = !filters.topic || item.topic === filters.topic; 
       
       // 🔥 Date Range Filtering Logic
       let dateMatch = true;
@@ -382,7 +385,7 @@ export default function App() {
           if (filters.period !== 'all') dateMatch = false;
       }
 
-      return searchMatch && kkMatch && stlMatch && chargeMatch && dateMatch;
+      return searchMatch && kkMatch && stlMatch && topicMatch && dateMatch;
     });
   }, [filters, data]);
 
@@ -433,7 +436,7 @@ export default function App() {
       else if (name.includes("ส.ทล.")) handleFilterChange('unit_s_tl', name.replace("ส.ทล.", "").trim());
   };
 
-  const onPieClick = (data) => { if (data && data.name) handleFilterChange('charge', data.name); };
+  const onPieClick = (data) => { if (data && data.name) handleFilterChange('topic', data.name); };
 
   if (loading) return <div className="flex h-screen items-center justify-center bg-slate-900"><div className="animate-spin rounded-full h-12 w-12 border-b-4 border-yellow-400 mb-4"></div></div>;
 
@@ -499,9 +502,19 @@ export default function App() {
           <div className="bg-slate-800 border-b border-slate-700 p-4 animate-in slide-in-from-top-2 duration-200 shadow-xl z-20 relative">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
               <div className="sm:col-span-2 lg:col-span-2"><label className="block text-xs font-medium text-slate-400 mb-1">ค้นหา</label><input type="text" className="w-full pl-3 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" placeholder="ชื่อ/ข้อหา/สถานที่..." value={localSearch} onChange={(e) => setLocalSearch(e.target.value)} /></div>
+              
               <div><label className="block text-xs font-medium text-slate-400 mb-1">กก.</label><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.unit_kk} onChange={(e) => handleFilterChange('unit_kk', e.target.value)}><option value="">ทั้งหมด</option>{Object.keys(UNIT_HIERARCHY).map(kk => <option key={kk} value={kk}>กก.{kk}</option>)}</select></div>
               <div><label className="block text-xs font-medium text-slate-400 mb-1">ส.ทล.</label><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.unit_s_tl} onChange={(e) => handleFilterChange('unit_s_tl', e.target.value)} disabled={!filters.unit_kk}><option value="">{filters.unit_kk ? 'ทั้งหมด' : 'เลือก กก.'}</option>{filters.unit_kk && Array.from({ length: UNIT_HIERARCHY[filters.unit_kk] }, (_, i) => i + 1).map(num => <option key={num} value={num}>ส.ทล.{num}</option>)}</select></div>
               
+              {/* 🔥 NEW: CRIME TYPE DROPDOWN */}
+              <div className="sm:col-span-1">
+                  <label className="block text-xs font-medium text-slate-400 mb-1 flex items-center"><Tags className="w-3 h-3 mr-1"/>ประเภทคดี</label>
+                  <select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.topic} onChange={(e) => handleFilterChange('topic', e.target.value)}>
+                      <option value="">ทั้งหมด</option>
+                      {filterOptions.charges.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+              </div>
+
               {/* 🔥 NEW: DATE PERIOD SELECTOR */}
               <div className="sm:col-span-2 bg-blue-900/20 p-2 rounded-lg border border-blue-500/20">
                   <label className="block text-xs font-bold text-blue-400 mb-1 flex items-center"><Clock className="w-3 h-3 mr-1"/>ช่วงเวลา (Period)</label>
