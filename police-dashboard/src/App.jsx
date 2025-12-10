@@ -67,36 +67,67 @@ const getCrimeColor = (topic) => {
   return getConsistentColor(topic);
 };
 
+// ฟังก์ชันแปลงวันที่ (ฉบับอัปเกรด แก้ปัญหาไม่แสดงข้อมูล)
 const parseDateRobust = (dateStr) => {
   if (!dateStr) return { dateObj: null, thaiYear: '' };
 
+  // 1. ตัดเวลาทิ้งก่อน (เผื่อมาเป็น "2024-12-10 14:30:00")
+  const cleanDateStr = dateStr.trim().split(' ')[0];
+  
   let day, month, year;
-  let isThaiYearInput = false;
+  let parts = [];
+  let separator = '';
 
-  if (dateStr.includes('-')) {
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      year = parseInt(parts[0], 10);
-      month = parseInt(parts[1], 10) - 1;
-      day = parseInt(parts[2], 10);
-    }
-  } else if (dateStr.includes('/')) {
-    const parts = dateStr.split('/');
-    if (parts.length === 3) {
-      day = parseInt(parts[0], 10);
-      month = parseInt(parts[1], 10) - 1;
-      year = parseInt(parts[2], 10);
-    }
+  // 2. แยกชิ้นส่วนวันที่
+  if (cleanDateStr.includes('-')) {
+    parts = cleanDateStr.split('-');
+    separator = '-';
+  } else if (cleanDateStr.includes('/')) {
+    parts = cleanDateStr.split('/');
+    separator = '/';
+  } else {
+    return { dateObj: null, thaiYear: '' };
   }
 
-  if (year && !isNaN(month) && day) {
-    isThaiYearInput = year > 2400; 
+  if (parts.length !== 3) return { dateObj: null, thaiYear: '' };
+
+  // 3. หาว่าส่วนไหนคือ "ปี" (ตัวเลข 4 หลัก)
+  const v1 = parseInt(parts[0], 10);
+  const v2 = parseInt(parts[1], 10);
+  const v3 = parseInt(parts[2], 10);
+
+  if (v1 > 1000) { 
+    // รูปแบบ YYYY-MM-DD หรือ YYYY/MM/DD
+    year = v1;
+    month = v2 - 1; // JS เดือนเริ่มที่ 0
+    day = v3;
+  } else if (v3 > 1000) {
+    // รูปแบบ DD-MM-YYYY หรือ DD/MM/YYYY
+    day = v1;
+    month = v2 - 1;
+    year = v3;
+  } else {
+    // เดาไม่ได้ หรือปีแบบย่อ (ไม่รองรับ)
+    return { dateObj: null, thaiYear: '' };
+  }
+
+  // 4. สร้าง Date Object
+  if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+    const isThaiYearInput = year > 2400; // ถ้าปีเกิน 2400 แสดงว่าเป็น พ.ศ.
     const adYear = isThaiYearInput ? year - 543 : year; 
+    
     const dateObj = new Date(adYear, month, day);
+    // Set เวลาเป็น 00:00:00 เพื่อให้เปรียบเทียบแม่นยำ
     dateObj.setHours(0, 0, 0, 0); 
+    
+    // ตรวจสอบว่าเป็นวันที่ถูกต้องหรือไม่ (เช่น ไม่ใช่เดือน 13 หรือวันที่ 32)
+    if (isNaN(dateObj.getTime())) return { dateObj: null, thaiYear: '' };
+
     const thYear = isThaiYearInput ? year : year + 543; 
+    
     return { dateObj, thaiYear: thYear.toString() };
   }
+  
   return { dateObj: null, thaiYear: '' };
 };
 
