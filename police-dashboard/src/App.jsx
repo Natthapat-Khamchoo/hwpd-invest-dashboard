@@ -6,7 +6,7 @@ import {
   FileText, Calendar, ChevronRight, X, Menu, BarChart3, Map as MapIcon, 
   Building2, ChevronLeft, AlertTriangle, Truck, FileWarning, Download, 
   Activity, Radar, MousePointerClick, RefreshCw, CalendarDays, Clock,
-  Tags // เพิ่ม Icon Tags
+  Tags
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
@@ -19,21 +19,35 @@ const UNIT_HIERARCHY = { "1": 6, "2": 6, "3": 5, "4": 5, "5": 6, "6": 6, "7": 5,
 // 🎨 PALETTE & COLORS
 const FALLBACK_PALETTE = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#6366f1', '#84cc16'];
 const UNIT_COLORS_MAP = { "1": "#ef4444", "2": "#f97316", "3": "#eab308", "4": "#22c55e", "5": "#06b6d4", "6": "#3b82f6", "7": "#a855f7", "8": "#ec4899" };
+
+// 🎨 Keyword สำหรับเลือกสี (ใช้จับคู่กับชื่อกลุ่มที่แปลงแล้ว)
 const CRIME_KEYWORDS = [
   { keys: ["ยาเสพติด", "ยาบ้า", "ไอซ์"], color: "#ef4444" },
   { keys: ["อาวุธ", "ปืน", "ระเบิด"], color: "#f97316" },
   { keys: ["รถบรรทุก", "น้ำหนัก", "บรรทุก"], color: "#a855f7" },
   { keys: ["หมายจับ", "ตามหมาย"], color: "#3b82f6" },
   { keys: ["เมา", "แอลกอฮอล์"], color: "#eab308" },
-  { keys: ["จราจร", "ป้าย", "ใบขับขี่"], color: "#22c55e" },
+  { keys: ["จราจร", "ป้าย", "ใบขับขี่", "ความเร็ว"], color: "#22c55e" },
   { keys: ["ทางหลวง", "สอบสวน"], color: "#06b6d4" },
   { keys: ["ต่างด้าว", "หลบหนีเข้าเมือง"], color: "#ec4899" },
   { keys: ["ลักทรัพย์", "โจรกรรม"], color: "#64748b" }
 ];
 
+// 🗂️ CONFIG: การจัดกลุ่มชื่อคดี (Normalize Data)
+// ระบบจะเช็ค keywords ถ้าเจอคำไหน จะแปลงชื่อคดีเป็น 'name' ทันที
+const TOPIC_GROUPING = [
+  { name: "ยาเสพติด", keywords: ["ยาเสพติด", "ยาบ้า", "ไอซ์", "เมท", "ครอบครอง"] },
+  { name: "อาวุธปืน/วัตถุระเบิด", keywords: ["อาวุธ", "ปืน", "ระเบิด", "กระสุน"] },
+  { name: "รถบรรทุก/น้ำหนัก", keywords: ["รถบรรทุก", "น้ำหนัก", "บรรทุก"] },
+  { name: "บุคคลตามหมายจับ", keywords: ["หมายจับ", "ตามหมาย"] }, 
+  { name: "เมาแล้วขับ", keywords: ["เมา", "แอลกอฮอล์", "สุรา"] },
+  { name: "จราจร/ขนส่ง", keywords: ["จราจร", "ใบขับขี่", "ป้าย", "ความเร็ว", "ขนส่ง", "สวมทะเบียน"] },
+  { name: "ต่างด้าว/ตม.", keywords: ["ต่างด้าว", "หลบหนีเข้าเมือง", "passport", "พาสปอร์ต"] },
+  { name: "ช่วยเหลือประชาชน/ทางหลวง", keywords: ["ทางหลวง", "สอบสวน", "ช่วยเหลือ"] }
+];
+
 const LOGO_URL = "https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png";
 
-// 🔥 Constants สำหรับตัวเลือกช่วงเวลา
 const DATE_RANGES = [
   { label: 'วันนี้ (Today)', value: 'today' },
   { label: 'เมื่อวาน (Yesterday)', value: 'yesterday' },
@@ -67,67 +81,61 @@ const getCrimeColor = (topic) => {
   return getConsistentColor(topic);
 };
 
-// ฟังก์ชันแปลงวันที่ (ฉบับอัปเกรด แก้ปัญหาไม่แสดงข้อมูล)
+// 🔥 ฟังก์ชัน Normalize หัวข้อเรื่อง (แก้ปัญหาพิมพ์มาไม่เหมือนกัน)
+const normalizeTopic = (rawTopic) => {
+  if (!rawTopic) return "อื่นๆ";
+  const str = rawTopic.trim();
+  // วนลูปเช็ค Keyword จาก Config
+  for (const group of TOPIC_GROUPING) {
+    if (group.keywords.some(k => str.includes(k))) {
+      return group.name;
+    }
+  }
+  return str; // ถ้าไม่เข้ากลุ่มไหนเลย ให้ใช้ชื่อเดิม
+};
+
+// 🔥 ฟังก์ชันแปลงวันที่ (Robust Version)
 const parseDateRobust = (dateStr) => {
   if (!dateStr) return { dateObj: null, thaiYear: '' };
 
-  // 1. ตัดเวลาทิ้งก่อน (เผื่อมาเป็น "2024-12-10 14:30:00")
+  // ตัดเวลาทิ้ง (เผื่อมาเป็น 2024-12-10 14:30)
   const cleanDateStr = dateStr.trim().split(' ')[0];
   
   let day, month, year;
   let parts = [];
-  let separator = '';
 
-  // 2. แยกชิ้นส่วนวันที่
   if (cleanDateStr.includes('-')) {
-    parts = cleanDateStr.split('-');
-    separator = '-';
+    parts = cleanDateStr.split('-'); // YYYY-MM-DD
   } else if (cleanDateStr.includes('/')) {
-    parts = cleanDateStr.split('/');
-    separator = '/';
+    parts = cleanDateStr.split('/'); // DD/MM/YYYY
   } else {
     return { dateObj: null, thaiYear: '' };
   }
 
   if (parts.length !== 3) return { dateObj: null, thaiYear: '' };
 
-  // 3. หาว่าส่วนไหนคือ "ปี" (ตัวเลข 4 หลัก)
   const v1 = parseInt(parts[0], 10);
   const v2 = parseInt(parts[1], 10);
   const v3 = parseInt(parts[2], 10);
 
-  if (v1 > 1000) { 
-    // รูปแบบ YYYY-MM-DD หรือ YYYY/MM/DD
-    year = v1;
-    month = v2 - 1; // JS เดือนเริ่มที่ 0
-    day = v3;
-  } else if (v3 > 1000) {
-    // รูปแบบ DD-MM-YYYY หรือ DD/MM/YYYY
-    day = v1;
-    month = v2 - 1;
-    year = v3;
-  } else {
-    // เดาไม่ได้ หรือปีแบบย่อ (ไม่รองรับ)
-    return { dateObj: null, thaiYear: '' };
-  }
+  // เดาว่าอันไหนคือปี (เลขมากกว่า 1000)
+  if (v1 > 1000) { year = v1; month = v2 - 1; day = v3; } // YYYY-MM-DD
+  else if (v3 > 1000) { day = v1; month = v2 - 1; year = v3; } // DD-MM-YYYY
+  else return { dateObj: null, thaiYear: '' };
 
-  // 4. สร้าง Date Object
   if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
-    const isThaiYearInput = year > 2400; // ถ้าปีเกิน 2400 แสดงว่าเป็น พ.ศ.
+    const isThaiYearInput = year > 2400; 
     const adYear = isThaiYearInput ? year - 543 : year; 
     
     const dateObj = new Date(adYear, month, day);
-    // Set เวลาเป็น 00:00:00 เพื่อให้เปรียบเทียบแม่นยำ
-    dateObj.setHours(0, 0, 0, 0); 
+    dateObj.setHours(0, 0, 0, 0); // Reset เวลาเป็นเที่ยงคืนเป๊ะ
     
-    // ตรวจสอบว่าเป็นวันที่ถูกต้องหรือไม่ (เช่น ไม่ใช่เดือน 13 หรือวันที่ 32)
+    // เช็คว่าวันที่ถูกต้องจริงไหม
     if (isNaN(dateObj.getTime())) return { dateObj: null, thaiYear: '' };
 
     const thYear = isThaiYearInput ? year : year + 543; 
-    
     return { dateObj, thaiYear: thYear.toString() };
   }
-  
   return { dateObj: null, thaiYear: '' };
 };
 
@@ -256,7 +264,7 @@ export default function App() {
       rangeEnd: endOfToday, // Filter End Date (Object)
       unit_kk: '', 
       unit_s_tl: '', 
-      topic: '', 
+      topic: '', // Crime Type Filter
       charge: '' 
     };
   });
@@ -273,7 +281,7 @@ export default function App() {
     end.setHours(23,59,59,999);
 
     if (period === 'today') {
-        // Default: Start = 00:00 today, End = 23:59 today
+        // Default
     } else if (period === 'yesterday') {
         start.setDate(now.getDate() - 1);
         end.setDate(now.getDate() - 1);
@@ -287,7 +295,6 @@ export default function App() {
         start = null;
         end = null;
     } else if (period === 'custom') {
-        // Keep existing range or init today if null
         start = filters.rangeStart || start;
         end = filters.rangeEnd || end;
     }
@@ -326,12 +333,20 @@ export default function App() {
                 const rawDate = item['วันที่'] ? item['วันที่'].trim() : '';
                 const { dateObj, thaiYear } = parseDateRobust(rawDate);
                 
+                // ดึงหัวข้อดิบ และทำการ Normalize
+                const rawTopic = item['หัวข้อ']?.toString().trim() || '';
+                const normalizedTopic = normalizeTopic(rawTopic);
+
                 return {
                     id: index + 1,
                     timestamp: item['Timestamp'] || new Date().toISOString(),
                     unit_kk: item['กก.']?.toString().trim() || '',
                     unit_s_tl: item['ส.ทล.']?.toString().trim() || '',
-                    topic: item['หัวข้อ']?.toString().trim() || '',
+                    
+                    // ✅ ใช้ค่าที่แปลงกลุ่มแล้ว
+                    topic: normalizedTopic,
+                    original_topic: rawTopic, // เก็บค่าเดิมไว้ถ้าอยากดู
+
                     captured_by: item['จับโดย'] || '',
                     arrest_type: item['ประเภทการจับกุม'] || '',
                     date_capture: rawDate, 
@@ -389,7 +404,6 @@ export default function App() {
   };
 
   const filterOptions = useMemo(() => {
-    // ดึงรายชื่อหัวข้อคดีทั้งหมดมาเป็นตัวเลือก
     const charges = [...new Set(data.map(d => d.topic))].filter(Boolean).sort(); 
     return { charges };
   }, [data]);
