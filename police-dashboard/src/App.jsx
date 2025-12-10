@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Table as TableIcon, MapPin, Search, Filter, Siren, Users, 
   FileText, Calendar, ChevronRight, X, Menu, BarChart3, Map as MapIcon, 
   RotateCcw, Building2, ChevronLeft, ListFilter, Layers, Navigation, AlertTriangle,
-  Truck, FileWarning, Download, Activity, Radar, MousePointerClick
+  Truck, FileWarning, Download, Activity, Radar, MousePointerClick, RefreshCw
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
@@ -149,7 +149,6 @@ export default function App() {
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true); 
   const [showFilterPanel, setShowFilterPanel] = useState(false);
 
-  // Added startMonth, endMonth
   const [filters, setFilters] = useState({
     search: '', startDate: '', endDate: '', year: '', startMonth: '', endMonth: '',
     unit_kk: '', unit_s_tl: '', topic: '', charge: '' 
@@ -157,6 +156,7 @@ export default function App() {
   
   const [localSearch, setLocalSearch] = useState('');
 
+  // Debounce for search
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       setFilters(prev => ({ ...prev, search: localSearch }));
@@ -221,7 +221,6 @@ export default function App() {
       const itemDate = parseThaiDate(item.date_capture);
       let yearMatch = true; 
       let monthMatch = true;
-      let rangeMatch = true;
 
       // Year Logic
       if (filters.year) { 
@@ -229,32 +228,23 @@ export default function App() {
         yearMatch = itemYear === filters.year; 
       }
 
-      // Month Range Logic (Requires Year to be safe, or assumes valid Thai Date parsing)
+      // Month Range Logic (Robust)
       if (itemDate) {
-         if (filters.startMonth && filters.endMonth) {
-            const m = itemDate.getMonth() + 1;
-            const start = parseInt(filters.startMonth);
-            const end = parseInt(filters.endMonth);
-            // Simple range check
-            if (start <= end) {
-                monthMatch = m >= start && m <= end;
-            } else {
-                // Cross-year logic or invalid? Assuming normal range for now (e.g. 1-3)
-                monthMatch = false; 
+         if (filters.startMonth || filters.endMonth) {
+            const m = itemDate.getMonth() + 1; // 1-12
+            const start = filters.startMonth ? parseInt(filters.startMonth) : 1;
+            const end = filters.endMonth ? parseInt(filters.endMonth) : 12;
+            
+            if (m < start || m > end) {
+                monthMatch = false;
             }
-         } else if (filters.startMonth) {
-             // If only start selected
-             monthMatch = (itemDate.getMonth() + 1) >= parseInt(filters.startMonth);
          }
-         
-         // Specific Date Range
-         if (filters.startDate) rangeMatch = rangeMatch && itemDate >= new Date(filters.startDate); 
-         if (filters.endDate) rangeMatch = rangeMatch && itemDate <= new Date(filters.endDate); 
-      } else if (filters.startMonth || filters.startDate || filters.endDate) { 
-          return false; 
+      } else if (filters.startMonth || filters.endMonth) {
+          // If we have a filter but no valid date on item, exclude it
+          monthMatch = false;
       }
 
-      return searchMatch && kkMatch && stlMatch && chargeMatch && yearMatch && monthMatch && rangeMatch;
+      return searchMatch && kkMatch && stlMatch && chargeMatch && yearMatch && monthMatch;
     });
   }, [filters, data]);
 
@@ -284,21 +274,18 @@ export default function App() {
   const handleFilterChange = (key, value) => { if (key === 'unit_kk') setFilters(prev => ({ ...prev, [key]: value, unit_s_tl: '' })); else setFilters(prev => ({ ...prev, [key]: value })); };
   const clearFilters = () => { setFilters({ search: '', startDate: '', endDate: '', year: '', startMonth: '', endMonth: '', unit_kk: '', unit_s_tl: '', topic: '', charge: '' }); setLocalSearch(''); };
 
-  // --- Interactive Chart Handlers ---
+  // --- Interactive Chart Handlers (Fixed) ---
   const onUnitBarClick = (data) => {
       if (!data || !data.activePayload) return;
-      const name = data.activePayload[0].payload.name;
-      // Extract number from "กก.1" or "ส.ทล.2"
-      const parts = name.match(/(\d+)/);
-      if (parts) {
-          const id = parts[0];
-          if (!filters.unit_kk) {
-              // If viewing all KK, click goes to specific KK
-              handleFilterChange('unit_kk', id);
-          } else {
-              // If viewing specific KK, click goes to S.TL
-              handleFilterChange('unit_s_tl', id);
-          }
+      const { name } = data.activePayload[0].payload; // e.g., "กก.1", "ส.ทล.2"
+      
+      // Determine click context based on name prefix
+      if (name.includes("กก.")) {
+          const id = name.replace("กก.", "").trim();
+          handleFilterChange('unit_kk', id);
+      } else if (name.includes("ส.ทล.")) {
+          const id = name.replace("ส.ทล.", "").trim();
+          handleFilterChange('unit_s_tl', id);
       }
   };
 
@@ -358,6 +345,9 @@ export default function App() {
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="hidden md:flex text-xs text-slate-400 items-center mr-2 bg-slate-800 px-2 py-1 rounded border border-slate-700"><span className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>Live</div>
+            {/* Added: External Reset Button */}
+            <button onClick={clearFilters} className="bg-slate-700 hover:bg-red-500/80 hover:text-white text-slate-300 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center shadow-sm border border-slate-600 transition-all"><RefreshCw className="w-4 h-4 mr-1" /> ล้างค่า</button>
+            
             {activeTab === 'dashboard' && (<button onClick={handleExportPDF} className="bg-red-600/90 hover:bg-red-500 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center shadow-lg hover:shadow-red-500/20 transition-all border border-red-400/30"><FileText className="w-4 h-4 mr-1" /> PDF</button>)}
             <button onClick={handleExportCSV} className="bg-emerald-600/90 hover:bg-emerald-500 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center shadow-lg hover:shadow-emerald-500/20 transition-all border border-emerald-400/30"><Download className="w-4 h-4 mr-1" /> CSV</button>
             <button onClick={() => setShowFilterPanel(!showFilterPanel)} className={`flex items-center space-x-1 sm:space-x-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${showFilterPanel ? 'bg-yellow-500 text-slate-900 shadow-[0_0_10px_rgba(234,179,8,0.4)]' : 'bg-slate-800 text-slate-300 border border-slate-600 hover:bg-slate-700'}`}><Filter className="w-4 h-4" /><span className="hidden sm:inline">ตัวกรอง</span></button>
@@ -372,7 +362,7 @@ export default function App() {
               <div><label className="block text-xs font-medium text-slate-400 mb-1">ส.ทล.</label><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.unit_s_tl} onChange={(e) => handleFilterChange('unit_s_tl', e.target.value)} disabled={!filters.unit_kk}><option value="">{filters.unit_kk ? 'ทั้งหมด' : 'เลือก กก.'}</option>{filters.unit_kk && Array.from({ length: UNIT_HIERARCHY[filters.unit_kk] }, (_, i) => i + 1).map(num => <option key={num} value={num}>ส.ทล.{num}</option>)}</select></div>
               <div className="sm:col-span-1"><label className="block text-xs font-medium text-slate-400 mb-1">ปี</label><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.year} onChange={(e) => handleFilterChange('year', e.target.value)}><option value="">ทั้งหมด</option>{filterOptions.years.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
               
-              {/* Month Range Filter */}
+              {/* Month Range Filter Fix */}
               <div className="sm:col-span-1"><label className="block text-xs font-medium text-slate-400 mb-1">จากเดือน</label><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.startMonth} onChange={(e) => handleFilterChange('startMonth', e.target.value)}><option value="">เลือก</option>{THAI_MONTHS.map((m, idx) => <option key={idx} value={(idx + 1).toString()}>{m}</option>)}</select></div>
               <div className="sm:col-span-1"><label className="block text-xs font-medium text-slate-400 mb-1">ถึงเดือน</label><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.endMonth} onChange={(e) => handleFilterChange('endMonth', e.target.value)}><option value="">เลือก</option>{THAI_MONTHS.map((m, idx) => <option key={idx} value={(idx + 1).toString()}>{m}</option>)}</select></div>
               
