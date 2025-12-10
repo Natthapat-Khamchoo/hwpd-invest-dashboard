@@ -4,8 +4,8 @@ import html2pdf from 'html2pdf.js';
 import { 
   LayoutDashboard, Table as TableIcon, MapPin, Search, Filter, Siren, Users, 
   FileText, Calendar, ChevronRight, X, Menu, BarChart3, Map as MapIcon, 
-  RotateCcw, Building2, ChevronLeft, ListFilter, Layers, Navigation, AlertTriangle,
-  Truck, FileWarning, Download, Activity, Radar, MousePointerClick, RefreshCw, CalendarDays
+  Building2, ChevronLeft, AlertTriangle, Truck, FileWarning, Download, 
+  Activity, Radar, MousePointerClick, RefreshCw
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
@@ -15,39 +15,89 @@ import {
 // --- Configuration ---
 const UNIT_HIERARCHY = { "1": 6, "2": 6, "3": 5, "4": 5, "5": 6, "6": 6, "7": 5, "8": 4 };
 
-// 🎨 FIXED COLORS: UNIT (กก.)
-const UNIT_COLORS = { 
-  "1": "#ef4444", // Red-500
-  "2": "#f97316", // Orange-500
-  "3": "#eab308", // Yellow-500
-  "4": "#22c55e", // Green-500
-  "5": "#06b6d4", // Cyan-500
-  "6": "#3b82f6", // Blue-500
-  "7": "#a855f7", // Purple-500
-  "8": "#ec4899"  // Pink-500
+// 🎨 PALETTE: ชุดสีหลักสำหรับใช้กรณีที่ไม่เข้าเงื่อนไข (สีโทน Modern)
+const FALLBACK_PALETTE = [
+  '#3b82f6', // Blue
+  '#ef4444', // Red
+  '#10b981', // Emerald
+  '#f59e0b', // Amber
+  '#8b5cf6', // Violet
+  '#ec4899', // Pink
+  '#06b6d4', // Cyan
+  '#f97316', // Orange
+  '#6366f1', // Indigo
+  '#84cc16', // Lime
+];
+
+// 🎨 FIXED COLORS: UNIT (กก.) - ระบุสีตายตัว
+const UNIT_COLORS_MAP = { 
+  "1": "#ef4444", // กก.1 - แดง
+  "2": "#f97316", // กก.2 - ส้ม
+  "3": "#eab308", // กก.3 - เหลือง
+  "4": "#22c55e", // กก.4 - เขียว
+  "5": "#06b6d4", // กก.5 - ฟ้า
+  "6": "#3b82f6", // กก.6 - น้ำเงิน
+  "7": "#a855f7", // กก.7 - ม่วง
+  "8": "#ec4899"  // กก.8 - ชมพู
 };
 
-// 🎨 FIXED COLORS: CRIME TYPE (ประเภทคดี)
-// Map Keywords to Colors. Default fallback is Grey.
-const CRIME_COLORS_MAP = {
-  "ยาเสพติด": "#ef4444",   // Red
-  "อาวุธปืน": "#f97316",   // Orange
-  "รถบรรทุก": "#a855f7",   // Purple
-  "น้ำหนัก": "#a855f7",    // Purple (Related)
-  "หมายจับ": "#3b82f6",    // Blue
-  "เมาแล้วขับ": "#eab308", // Yellow
-  "จราจร": "#22c55e",      // Green
-  "ทางหลวง": "#06b6d4",    // Cyan
-  "ต่างด้าว": "#ec4899",   // Pink
-  "อื่นๆ": "#64748b"       // Slate
-};
-
-const DEFAULT_PALETTE = ['#00d2d3', '#ff9f43', '#54a0ff', '#ff6b6b', '#1dd1a1', '#f368e0', '#feca57'];
+// 🎨 FIXED COLORS: CRIME TYPE (ประเภทคดี) - จับคู่คำค้นหา
+const CRIME_KEYWORDS = [
+  { keys: ["ยาเสพติด", "ยาบ้า", "ไอซ์"], color: "#ef4444" }, // แดง
+  { keys: ["อาวุธ", "ปืน", "ระเบิด"], color: "#f97316" },     // ส้ม
+  { keys: ["รถบรรทุก", "น้ำหนัก", "บรรทุก"], color: "#a855f7" }, // ม่วง
+  { keys: ["หมายจับ", "ตามหมาย"], color: "#3b82f6" },         // น้ำเงิน
+  { keys: ["เมา", "แอลกอฮอล์"], color: "#eab308" },           // เหลือง
+  { keys: ["จราจร", "ป้าย", "ใบขับขี่"], color: "#22c55e" },    // เขียว
+  { keys: ["ทางหลวง", "สอบสวน"], color: "#06b6d4" },          // ฟ้า
+  { keys: ["ต่างด้าว", "หลบหนีเข้าเมือง"], color: "#ec4899" },   // ชมพู
+  { keys: ["ลักทรัพย์", "โจรกรรม"], color: "#64748b" }          // เทา
+];
 
 const THAI_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 const LOGO_URL = "https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png";
 
 // --- Helpers ---
+
+// 1. ฟังก์ชันสุ่มสีแบบคงที่ (Consistent Hashing) 
+// ใส่ string เดิม ได้สีเดิมเสมอ ไม่มั่วเมื่อ refresh
+const getConsistentColor = (str) => {
+  if (!str) return '#94a3b8';
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % FALLBACK_PALETTE.length;
+  return FALLBACK_PALETTE[index];
+};
+
+// 2. ปรับปรุง Logic การดึงสีหน่วยงาน
+const getUnitColor = (name) => {
+  // รองรับ format "กก.1", "1", "Unit 1"
+  const match = name.match(/(\d+)/); 
+  if (match) {
+     const num = match[0];
+     // ถ้ามีใน Map ให้ใช้ ถ้าไม่มีให้ใช้ฟังก์ชันสุ่มแบบคงที่
+     return UNIT_COLORS_MAP[num] || getConsistentColor(name);
+  }
+  return getConsistentColor(name);
+};
+
+// 3. ปรับปรุง Logic สีคดี (First Match wins)
+const getCrimeColor = (topic) => {
+  if (!topic) return '#94a3b8';
+  const lowerTopic = topic.toLowerCase();
+  
+  // วนลูปเช็ค Keyword
+  for (const group of CRIME_KEYWORDS) {
+    if (group.keys.some(k => lowerTopic.includes(k))) {
+      return group.color;
+    }
+  }
+  // ถ้าไม่เจอ Keyword ให้ใช้สีตามชื่อ (คงที่)
+  return getConsistentColor(topic);
+};
+
 const parseThaiDate = (dateStr) => {
   if (!dateStr) return null;
   const parts = dateStr.split('/');
@@ -59,39 +109,13 @@ const parseThaiDate = (dateStr) => {
   return new Date(year, month, day);
 };
 
-const getYearFromDate = (dateStr) => {
-  if (!dateStr) return null;
-  const cleanStr = dateStr.replace(/-/g, '/');
-  const parts = cleanStr.split('/');
-  if (parts.length < 3) return null;
-  let year = parts.find(p => p.trim().length === 4 && !isNaN(p));
-  if (!year) year = parts[parts.length - 1].trim().split(' ')[0]; 
-  if (year && year.length === 2) {
-    const yVal = parseInt(year, 10);
-    year = yVal > 40 ? `25${year}` : `20${year}`;
-  }
-  return year;
+const getYearFromDate = (dateObj) => {
+  if (!dateObj) return null;
+  const y = dateObj.getFullYear();
+  return y > 2400 ? (y - 543).toString() : (y + 543).toString(); // Return Thai Year
 };
 
-// Helper to get color for crime type
-const getCrimeColor = (topic) => {
-  if (!topic) return '#94a3b8';
-  const key = Object.keys(CRIME_COLORS_MAP).find(k => topic.includes(k));
-  return key ? CRIME_COLORS_MAP[key] : DEFAULT_PALETTE[Math.floor(Math.random() * DEFAULT_PALETTE.length)];
-};
-
-// Helper to get color for Unit
-const getUnitColor = (name) => {
-  // Extract number from "กก.1" or "ส.ทล.2" (Note: Logic mainly for KK)
-  if (name.includes("กก.")) {
-     const num = name.replace("กก.", "").trim();
-     return UNIT_COLORS[num] || '#64748b';
-  }
-  // For S.TL (Stations), we can map them to their parent KK color or use a default
-  return '#3b82f6'; // Default Blue for Stations
-};
-
-// --- Components ---
+// --- Sub-Components ---
 
 const StatCard = ({ title, value, icon: Icon, colorClass, delay }) => (
   <div className={`bg-slate-800/80 backdrop-blur-md p-4 sm:p-5 rounded-xl border border-slate-700/50 shadow-lg flex items-center space-x-4 hover:border-yellow-500/50 transition-all duration-300 group animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards`} style={{ animationDelay: `${delay}ms` }}>
@@ -125,9 +149,10 @@ const SimpleMapVisualization = ({ data, onSelectCase, isPrintMode = false }) => 
         {data.filter(d => d.lat && d.long).map((item) => {
           const lat = parseFloat(item.lat); const long = parseFloat(item.long);
           if(lat < MIN_LAT || lat > MAX_LAT || long < MIN_LONG || long > MAX_LONG) return null;
+          const uColor = getUnitColor(item.unit_kk);
           return (
             <div key={item.id} className="absolute rounded-full cursor-pointer hover:scale-150 transition-transform"
-              style={{ left: `${getX(long)}%`, top: `${getY(lat)}%`, width: '8px', height: '8px', backgroundColor: UNIT_COLORS[item.unit_kk] || '#cbd5e1', boxShadow: `0 0 8px ${UNIT_COLORS[item.unit_kk]}`, transform: 'translate(-50%, -50%)', zIndex: 10 }}
+              style={{ left: `${getX(long)}%`, top: `${getY(lat)}%`, width: '8px', height: '8px', backgroundColor: uColor, boxShadow: `0 0 8px ${uColor}`, transform: 'translate(-50%, -50%)', zIndex: 10 }}
               onMouseEnter={() => !isPrintMode && setHoveredItem(item)} onMouseLeave={() => setHoveredItem(null)} onClick={() => !isPrintMode && onSelectCase(item)}
             />
           );
@@ -166,7 +191,7 @@ const LeafletMap = ({ data, onSelectCase, onError }) => {
     const map = mapInstanceRef.current; const markersGroup = markersGroupRef.current; const L = window.L;
     markersGroup.clearLayers(); const validPoints = data.filter(d => d.lat && d.long);
     validPoints.forEach(item => {
-      const color = UNIT_COLORS[item.unit_kk] || '#ccc';
+      const color = getUnitColor(item.unit_kk);
       const marker = L.circleMarker([parseFloat(item.lat), parseFloat(item.long)], { radius: 6, fillColor: color, color: color, weight: 2, opacity: 0.8, fillOpacity: 0.4 });
       const popupContent = `<div style="color: #333; font-family: sans-serif;"><strong>${item.topic}</strong><br/>กก.${item.unit_kk} ส.ทล.${item.unit_s_tl}</div>`;
       marker.bindPopup(popupContent); marker.on('click', () => onSelectCase(item)); markersGroup.addLayer(marker);
@@ -194,10 +219,9 @@ export default function App() {
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true); 
   const [showFilterPanel, setShowFilterPanel] = useState(false);
 
-  // Added specificMonth
   const [filters, setFilters] = useState({
     search: '', startDate: '', endDate: '', year: '', 
-    specificMonth: '', startMonth: '', endMonth: '', // specificMonth has higher priority
+    specificMonth: '', startMonth: '', endMonth: '', 
     unit_kk: '', unit_s_tl: '', topic: '', charge: '' 
   });
   
@@ -216,9 +240,41 @@ export default function App() {
       Papa.parse(GOOGLE_SHEET_CSV_URL, {
         download: true, header: true,
         complete: (results) => {
-          const formattedData = results.data.filter(item => item['หัวข้อ'] && item['กก.']).map((item, index) => ({
-              id: index + 1, timestamp: item['Timestamp'] || new Date().toISOString(), unit_kk: item['กก.']?.toString() || '', unit_s_tl: item['ส.ทล.']?.toString() || '', topic: item['หัวข้อ'] || '', captured_by: item['จับโดย'] || '', arrest_type: item['ประเภทการจับกุม'] || '', date_capture: item['วันที่'] || '', time_capture: item['เวลา'] || '', arrest_team: item['เจ้าหน้าที่ชุดจับกุม'] || '', suspect_count: item['จำนวน'] || '1', suspect_name: item['ชื่อ'] || '-', nationality: item['สัญชาติ'] || 'ไทย', age: item['อายุ'] || '', address: item['ที่อยู่'] || 'ไม่ระบุ', charge: item['ข้อหา'] || '', location: item['สถานที่จับกุม'] || '', lat: item['ละติจูด'] && !isNaN(item['ละติจูด']) ? parseFloat(item['ละติจูด']).toFixed(4) : null, long: item['ลองจิจูด'] && !isNaN(item['ลองจิจูด']) ? parseFloat(item['ลองจิจูด']).toFixed(4) : null, seized_items: item['ของกลาง'] || '-', behavior: item['พฤติการณ์'] || '-', delivery: item['การดำเนินการส่งต่อ'] || ''
-            }));
+          // Clean & Normalize Data Here
+          const formattedData = results.data
+            .filter(item => item['หัวข้อ'] && item['กก.'])
+            .map((item, index) => {
+                const dateCapture = item['วันที่'] ? item['วันที่'].trim() : '';
+                const dateObj = parseThaiDate(dateCapture);
+                const yearStr = dateObj ? getYearFromDate(dateObj) : '';
+                
+                return {
+                    id: index + 1,
+                    timestamp: item['Timestamp'] || new Date().toISOString(),
+                    unit_kk: item['กก.']?.toString().trim() || '',
+                    unit_s_tl: item['ส.ทล.']?.toString().trim() || '',
+                    topic: item['หัวข้อ']?.toString().trim() || '',
+                    captured_by: item['จับโดย'] || '',
+                    arrest_type: item['ประเภทการจับกุม'] || '',
+                    date_capture: dateCapture,
+                    date_obj: dateObj, // เก็บ Date object เพื่อการ filter ที่เร็วขึ้น
+                    year: yearStr,     // เก็บปีไว้เลย
+                    time_capture: item['เวลา'] || '',
+                    arrest_team: item['เจ้าหน้าที่ชุดจับกุม'] || '',
+                    suspect_count: item['จำนวน'] || '1',
+                    suspect_name: item['ชื่อ'] || '-',
+                    nationality: item['สัญชาติ'] || 'ไทย',
+                    age: item['อายุ'] || '',
+                    address: item['ที่อยู่'] || 'ไม่ระบุ',
+                    charge: item['ข้อหา'] || '',
+                    location: item['สถานที่จับกุม'] || '',
+                    lat: item['ละติจูด'] && !isNaN(item['ละติจูด']) ? parseFloat(item['ละติจูด']).toFixed(4) : null,
+                    long: item['ลองจิจูด'] && !isNaN(item['ลองจิจูด']) ? parseFloat(item['ลองจิจูด']).toFixed(4) : null,
+                    seized_items: item['ของกลาง'] || '-',
+                    behavior: item['พฤติการณ์'] || '-',
+                    delivery: item['การดำเนินการส่งต่อ'] || ''
+                };
+            });
           setData(formattedData); setLoading(false); setLastUpdated(new Date());
         },
         error: (err) => { console.error(err); setLoading(false); }
@@ -253,7 +309,7 @@ export default function App() {
 
   const filterOptions = useMemo(() => {
     const charges = [...new Set(data.map(d => d.topic))].filter(Boolean).sort(); 
-    const years = [...new Set(data.map(d => getYearFromDate(d.date_capture)))].filter(Boolean).sort().reverse();
+    const years = [...new Set(data.map(d => d.year))].filter(Boolean).sort().reverse();
     return { charges, years };
   }, [data]);
 
@@ -264,37 +320,25 @@ export default function App() {
       const stlMatch = !filters.unit_s_tl || String(item.unit_s_tl) === String(filters.unit_s_tl);
       const chargeMatch = !filters.charge || item.topic === filters.charge; 
       
-      const itemDate = parseThaiDate(item.date_capture);
       let yearMatch = true; 
       let monthMatch = true;
 
-      // Year Logic
       if (filters.year) { 
-        const itemYear = getYearFromDate(item.date_capture); 
-        yearMatch = itemYear === filters.year; 
+        yearMatch = item.year === filters.year; 
       }
 
-      // Month Logic (Specific OR Range)
+      const itemDate = item.date_obj;
       if (itemDate) {
-         const m = itemDate.getMonth() + 1; // 1-12
-         
-         // Priority 1: Specific Month
+         const m = itemDate.getMonth() + 1; 
          if (filters.specificMonth) {
             monthMatch = m === parseInt(filters.specificMonth);
-         } 
-         // Priority 2: Range
-         else if (filters.startMonth || filters.endMonth) {
+         } else if (filters.startMonth || filters.endMonth) {
             const start = filters.startMonth ? parseInt(filters.startMonth) : 1;
             const end = filters.endMonth ? parseInt(filters.endMonth) : 12;
-            
-            // Handle cross-year logic if needed (but currently simple range)
-            if (m < start || m > end) {
-                monthMatch = false;
-            }
+            if (m < start || m > end) monthMatch = false;
          }
       } else if (filters.specificMonth || filters.startMonth || filters.endMonth) {
-          // If filtering by date but data has no date -> exclude
-          monthMatch = false;
+         monthMatch = false;
       }
 
       return searchMatch && kkMatch && stlMatch && chargeMatch && yearMatch && monthMatch;
@@ -325,11 +369,9 @@ export default function App() {
   }, [filteredData, filters.unit_kk]);
 
   const handleFilterChange = (key, value) => { 
-      // If specific month is selected, clear range
       if (key === 'specificMonth' && value !== '') {
          setFilters(prev => ({ ...prev, [key]: value, startMonth: '', endMonth: '' }));
       }
-      // If range is selected, clear specific month
       else if ((key === 'startMonth' || key === 'endMonth') && value !== '') {
          setFilters(prev => ({ ...prev, [key]: value, specificMonth: '' }));
       }
@@ -343,11 +385,9 @@ export default function App() {
 
   const clearFilters = () => { setFilters({ search: '', startDate: '', endDate: '', year: '', specificMonth: '', startMonth: '', endMonth: '', unit_kk: '', unit_s_tl: '', topic: '', charge: '' }); setLocalSearch(''); };
 
-  // --- Interactive Chart Handlers ---
   const onUnitBarClick = (data) => {
       if (!data || !data.activePayload) return;
       const { name } = data.activePayload[0].payload; 
-      
       if (name.includes("กก.")) {
           const id = name.replace("กก.", "").trim();
           handleFilterChange('unit_kk', id);
@@ -358,9 +398,7 @@ export default function App() {
   };
 
   const onPieClick = (data) => {
-      if (data && data.name) {
-          handleFilterChange('charge', data.name);
-      }
+      if (data && data.name) handleFilterChange('charge', data.name);
   };
 
 
@@ -430,7 +468,6 @@ export default function App() {
               <div><label className="block text-xs font-medium text-slate-400 mb-1">ส.ทล.</label><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.unit_s_tl} onChange={(e) => handleFilterChange('unit_s_tl', e.target.value)} disabled={!filters.unit_kk}><option value="">{filters.unit_kk ? 'ทั้งหมด' : 'เลือก กก.'}</option>{filters.unit_kk && Array.from({ length: UNIT_HIERARCHY[filters.unit_kk] }, (_, i) => i + 1).map(num => <option key={num} value={num}>ส.ทล.{num}</option>)}</select></div>
               <div className="sm:col-span-1"><label className="block text-xs font-medium text-slate-400 mb-1">ปี</label><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.year} onChange={(e) => handleFilterChange('year', e.target.value)}><option value="">ทั้งหมด</option>{filterOptions.years.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
               
-              {/* New: Specific Month Dropdown */}
               <div className="sm:col-span-1 bg-slate-700/30 p-1.5 rounded-lg border border-slate-700/50">
                   <label className="block text-xs font-bold text-yellow-400 mb-1">ระบุเดือน (เจาะจง)</label>
                   <select className="w-full pl-2 pr-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.specificMonth} onChange={(e) => handleFilterChange('specificMonth', e.target.value)}>
@@ -439,7 +476,6 @@ export default function App() {
                   </select>
               </div>
 
-              {/* Range Filter */}
               <div className="sm:col-span-1 border-l border-slate-700 pl-2">
                   <label className="block text-xs font-medium text-slate-400 mb-1">ตั้งแต่เดือน</label>
                   <select className="w-full pl-2 pr-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50" value={filters.startMonth} onChange={(e) => handleFilterChange('startMonth', e.target.value)} disabled={!!filters.specificMonth}>
@@ -540,7 +576,7 @@ export default function App() {
                         <tr key={item.id} className="hover:bg-slate-700/50 transition-colors group">
                           <td className="p-4 text-sm text-slate-300 whitespace-nowrap"><div className="font-medium text-white">{item.date_capture}</div><div className="text-xs text-slate-500">{item.time_capture} น.</div></td>
                           <td className="p-4 text-sm text-slate-300 whitespace-nowrap"><div className="font-medium text-white">กก.{item.unit_kk} บก.ทล.</div><div className="text-xs text-slate-500">ส.ทล.{item.unit_s_tl}</div></td>
-                          <td className="p-4 text-sm text-white font-medium max-w-xs truncate" title={item.charge}><div className="text-yellow-400 mb-1 text-xs uppercase tracking-wide">{item.topic}</div>{item.charge}</td>
+                          <td className="p-4 text-sm text-white font-medium max-w-xs truncate" title={item.charge}><div className="mb-1 text-xs uppercase tracking-wide inline-block px-1.5 py-0.5 rounded" style={{ backgroundColor: `${getCrimeColor(item.topic)}30`, color: getCrimeColor(item.topic) }}>{item.topic}</div><div>{item.charge}</div></td>
                           <td className="p-4 text-sm text-slate-300">{item.suspect_name !== '-' ? item.suspect_name : 'ไม่ระบุตัวตน'}</td>
                           <td className="p-4 text-sm text-slate-400 max-w-xs truncate" title={item.location}>{item.location}</td>
                           <td className="p-4 text-right"><button onClick={() => setSelectedCase(item)} className="p-2 text-slate-500 group-hover:text-yellow-400 hover:bg-slate-600 rounded-full transition-colors"><ChevronRight className="w-5 h-5" /></button></td>
@@ -573,7 +609,7 @@ export default function App() {
             <div className="p-6 space-y-6">
               <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-500/30"><h3 className="text-sm font-semibold text-blue-400 mb-2 uppercase tracking-wider">หน่วยงานรับผิดชอบ</h3><div className="grid grid-cols-2 gap-4"><div><p className="text-xs text-slate-400 mb-1">กองกำกับการ</p><p className="text-lg font-bold text-white flex items-center gap-2"><Building2 className="w-5 h-5 text-blue-500" />กก.{selectedCase.unit_kk} บก.ทล.</p></div><div><p className="text-xs text-slate-400 mb-1">สถานีตำรวจทางหลวง</p><p className="text-lg font-bold text-white">ส.ทล.{selectedCase.unit_s_tl}</p></div></div></div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div><h3 className="text-sm font-semibold text-slate-200 border-b border-slate-700 pb-2 mb-3 flex items-center"><Calendar className="w-4 h-4 mr-2 text-yellow-500" />ข้อมูลเหตุการณ์</h3><dl className="space-y-3 text-sm"><div><dt className="text-slate-500 text-xs">วัน/เวลา</dt><dd className="text-slate-200 font-medium">{selectedCase.date_capture} เวลา {selectedCase.time_capture} น.</dd></div><div><dt className="text-slate-500 text-xs">สถานที่</dt><dd className="text-slate-200">{selectedCase.location}</dd></div><div><dt className="text-slate-500 text-xs">หัวข้อเรื่อง</dt><dd className="text-slate-900 inline-block px-2 py-1 bg-yellow-400 rounded text-xs font-bold">{selectedCase.topic}</dd></div></dl></div>
+                <div><h3 className="text-sm font-semibold text-slate-200 border-b border-slate-700 pb-2 mb-3 flex items-center"><Calendar className="w-4 h-4 mr-2 text-yellow-500" />ข้อมูลเหตุการณ์</h3><dl className="space-y-3 text-sm"><div><dt className="text-slate-500 text-xs">วัน/เวลา</dt><dd className="text-slate-200 font-medium">{selectedCase.date_capture} เวลา {selectedCase.time_capture} น.</dd></div><div><dt className="text-slate-500 text-xs">สถานที่</dt><dd className="text-slate-200">{selectedCase.location}</dd></div><div><dt className="text-slate-500 text-xs">หัวข้อเรื่อง</dt><dd className="inline-block px-2 py-1 rounded text-xs font-bold text-white" style={{ backgroundColor: getCrimeColor(selectedCase.topic) }}>{selectedCase.topic}</dd></div></dl></div>
                 <div><h3 className="text-sm font-semibold text-slate-200 border-b border-slate-700 pb-2 mb-3 flex items-center"><Users className="w-4 h-4 mr-2 text-yellow-500" />ข้อมูลผู้ต้องหา</h3><dl className="space-y-3 text-sm"><div><dt className="text-slate-500 text-xs">ชื่อ-สกุล</dt><dd className="text-slate-200 font-medium">{selectedCase.suspect_name}</dd></div><div><dt className="text-slate-500 text-xs">ข้อหา</dt><dd className="text-slate-200">{selectedCase.charge}</dd></div></dl></div>
               </div>
             </div>
@@ -581,9 +617,7 @@ export default function App() {
         </div>
       )}
       
-      {/* ==================================================================================
-          OPTIMIZED PRINT VIEW (Redesigned Layout)
-          ================================================================================== */}
+      {/* PRINT VIEW (ใช้ฟังก์ชันสีใหม่) */}
       <div id="print-view" 
            style={{ 
              position: 'fixed', top: 0, left: 0, zIndex: -1, opacity: isExporting ? 1 : 0,
@@ -591,7 +625,6 @@ export default function App() {
              fontFamily: "'Sarabun', sans-serif", color: '#000', overflow: 'hidden'
            }}>
         
-        {/* PDF Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #1e293b', paddingBottom: '15px', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <img src={LOGO_URL} alt="Logo" style={{ width: '80px', height: '80px', objectFit: 'contain' }} />
@@ -609,7 +642,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Section 1: Big Stats (Grid Layout) */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '15px', marginBottom: '25px' }}>
              {[{ t: 'จับกุมรวม', v: stats.totalCases, c: '#eff6ff', ct: '#1d4ed8' }, { t: 'ยาเสพติด', v: stats.drugCases, c: '#fef2f2', ct: '#b91c1c' }, { t: 'อาวุธปืน', v: stats.weaponCases, c: '#fff7ed', ct: '#c2410c' }, { t: 'รถบรรทุก', v: stats.heavyTruckCases, c: '#faf5ff', ct: '#7e22ce' }, { t: 'หมายจับ', v: stats.warrantCases, c: '#eef2ff', ct: '#4338ca' }, { t: 'หน่วยงาน', v: stats.uniqueUnits, c: '#f0fdf4', ct: '#15803d' }].map((s, i) => (
                <div key={i} style={{ backgroundColor: s.c, padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
@@ -619,9 +651,7 @@ export default function App() {
              ))}
         </div>
 
-        {/* Section 2: Charts & Summary */}
         <div style={{ display: 'flex', gap: '25px', height: '350px', marginBottom: '20px' }}>
-            {/* Chart 1: Units */}
             <div style={{ flex: 1.5, border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px' }}>
                <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', fontWeight: 'bold', color: '#334155' }}>สถิติการจับกุมแยกตามหน่วย</h3>
                <div style={{ width: '100%', height: '280px' }}>
@@ -640,7 +670,6 @@ export default function App() {
                </div>
             </div>
 
-            {/* Chart 2: Crime Types */}
             <div style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column' }}>
                <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', fontWeight: 'bold', color: '#334155' }}>สัดส่วนคดี (Top 5)</h3>
                <div style={{ flex: 1, position: 'relative' }}>
@@ -666,31 +695,30 @@ export default function App() {
             </div>
         </div>
 
-        {/* Section 3: Recent List Table */}
         <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
            <div style={{ backgroundColor: '#f8fafc', padding: '10px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#334155' }}>รายการจับกุมล่าสุด (Recent Activities)</span>
-              <span style={{ fontSize: '12px', color: '#94a3b8' }}>*แสดง 15 รายการล่าสุด</span>
+             <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#334155' }}>รายการจับกุมล่าสุด (Recent Activities)</span>
+             <span style={{ fontSize: '12px', color: '#94a3b8' }}>*แสดง 15 รายการล่าสุด</span>
            </div>
            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#fff', color: '#64748b' }}>
-                  <th style={{ textAlign: 'left', padding: '10px 20px', borderBottom: '1px solid #f1f5f9', width: '15%' }}>วัน/เวลา</th>
-                  <th style={{ textAlign: 'left', padding: '10px', borderBottom: '1px solid #f1f5f9', width: '15%' }}>หน่วยงาน</th>
-                  <th style={{ textAlign: 'left', padding: '10px', borderBottom: '1px solid #f1f5f9', width: '35%' }}>ข้อหา</th>
-                  <th style={{ textAlign: 'left', padding: '10px', borderBottom: '1px solid #f1f5f9', width: '35%' }}>สถานที่</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredData.slice(0, 15).map((item, idx) => (
-                   <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#fff' : '#f8fafc' }}>
-                      <td style={{ padding: '8px 20px', borderBottom: '1px solid #f1f5f9' }}>{item.date_capture}<br/><span style={{fontSize:'10px', color:'#94a3b8'}}>{item.time_capture}</span></td>
-                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #f1f5f9' }}>กก.{item.unit_kk} ส.ทล.{item.unit_s_tl}</td>
-                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #f1f5f9', fontWeight: 'bold', color: '#334155' }}>{item.charge}</td>
-                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #f1f5f9', color: '#475569' }}>{item.location}</td>
-                   </tr>
-                ))}
-              </tbody>
+             <thead>
+               <tr style={{ backgroundColor: '#fff', color: '#64748b' }}>
+                 <th style={{ textAlign: 'left', padding: '10px 20px', borderBottom: '1px solid #f1f5f9', width: '15%' }}>วัน/เวลา</th>
+                 <th style={{ textAlign: 'left', padding: '10px', borderBottom: '1px solid #f1f5f9', width: '15%' }}>หน่วยงาน</th>
+                 <th style={{ textAlign: 'left', padding: '10px', borderBottom: '1px solid #f1f5f9', width: '35%' }}>ข้อหา</th>
+                 <th style={{ textAlign: 'left', padding: '10px', borderBottom: '1px solid #f1f5f9', width: '35%' }}>สถานที่</th>
+               </tr>
+             </thead>
+             <tbody>
+               {filteredData.slice(0, 15).map((item, idx) => (
+                  <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                     <td style={{ padding: '8px 20px', borderBottom: '1px solid #f1f5f9' }}>{item.date_capture}<br/><span style={{fontSize:'10px', color:'#94a3b8'}}>{item.time_capture}</span></td>
+                     <td style={{ padding: '8px 10px', borderBottom: '1px solid #f1f5f9' }}>กก.{item.unit_kk} ส.ทล.{item.unit_s_tl}</td>
+                     <td style={{ padding: '8px 10px', borderBottom: '1px solid #f1f5f9', fontWeight: 'bold', color: '#334155' }}>{item.charge}</td>
+                     <td style={{ padding: '8px 10px', borderBottom: '1px solid #f1f5f9', color: '#475569' }}>{item.location}</td>
+                  </tr>
+               ))}
+             </tbody>
            </table>
         </div>
         
