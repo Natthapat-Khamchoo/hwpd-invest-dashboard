@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Table as TableIcon, MapPin, Search, Filter, Siren, Users, 
   FileText, Calendar, ChevronRight, X, Menu, BarChart3, Map as MapIcon, 
   RotateCcw, Building2, ChevronLeft, ListFilter, Layers, Navigation, AlertTriangle,
-  Truck, FileWarning, Download, Activity, Radar, MousePointerClick, RefreshCw
+  Truck, FileWarning, Download, Activity, Radar, MousePointerClick, RefreshCw, CalendarDays
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
@@ -14,10 +14,37 @@ import {
 
 // --- Configuration ---
 const UNIT_HIERARCHY = { "1": 6, "2": 6, "3": 5, "4": 5, "5": 6, "6": 6, "7": 5, "8": 4 };
-const UNIT_COLORS = { "1": "#ff4d4d", "2": "#ff9f43", "3": "#feca57", "4": "#2ed573", "5": "#54a0ff", "6": "#5f27cd", "7": "#9b59b6", "8": "#ff9ff3" };
-const THAI_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-const COLORS = ['#00d2d3', '#ff9f43', '#54a0ff', '#ff6b6b', '#1dd1a1', '#f368e0', '#feca57'];
 
+// 🎨 FIXED COLORS: UNIT (กก.)
+const UNIT_COLORS = { 
+  "1": "#ef4444", // Red-500
+  "2": "#f97316", // Orange-500
+  "3": "#eab308", // Yellow-500
+  "4": "#22c55e", // Green-500
+  "5": "#06b6d4", // Cyan-500
+  "6": "#3b82f6", // Blue-500
+  "7": "#a855f7", // Purple-500
+  "8": "#ec4899"  // Pink-500
+};
+
+// 🎨 FIXED COLORS: CRIME TYPE (ประเภทคดี)
+// Map Keywords to Colors. Default fallback is Grey.
+const CRIME_COLORS_MAP = {
+  "ยาเสพติด": "#ef4444",   // Red
+  "อาวุธปืน": "#f97316",   // Orange
+  "รถบรรทุก": "#a855f7",   // Purple
+  "น้ำหนัก": "#a855f7",    // Purple (Related)
+  "หมายจับ": "#3b82f6",    // Blue
+  "เมาแล้วขับ": "#eab308", // Yellow
+  "จราจร": "#22c55e",      // Green
+  "ทางหลวง": "#06b6d4",    // Cyan
+  "ต่างด้าว": "#ec4899",   // Pink
+  "อื่นๆ": "#64748b"       // Slate
+};
+
+const DEFAULT_PALETTE = ['#00d2d3', '#ff9f43', '#54a0ff', '#ff6b6b', '#1dd1a1', '#f368e0', '#feca57'];
+
+const THAI_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 const LOGO_URL = "https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png";
 
 // --- Helpers ---
@@ -44,6 +71,24 @@ const getYearFromDate = (dateStr) => {
     year = yVal > 40 ? `25${year}` : `20${year}`;
   }
   return year;
+};
+
+// Helper to get color for crime type
+const getCrimeColor = (topic) => {
+  if (!topic) return '#94a3b8';
+  const key = Object.keys(CRIME_COLORS_MAP).find(k => topic.includes(k));
+  return key ? CRIME_COLORS_MAP[key] : DEFAULT_PALETTE[Math.floor(Math.random() * DEFAULT_PALETTE.length)];
+};
+
+// Helper to get color for Unit
+const getUnitColor = (name) => {
+  // Extract number from "กก.1" or "ส.ทล.2" (Note: Logic mainly for KK)
+  if (name.includes("กก.")) {
+     const num = name.replace("กก.", "").trim();
+     return UNIT_COLORS[num] || '#64748b';
+  }
+  // For S.TL (Stations), we can map them to their parent KK color or use a default
+  return '#3b82f6'; // Default Blue for Stations
 };
 
 // --- Components ---
@@ -149,14 +194,15 @@ export default function App() {
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true); 
   const [showFilterPanel, setShowFilterPanel] = useState(false);
 
+  // Added specificMonth
   const [filters, setFilters] = useState({
-    search: '', startDate: '', endDate: '', year: '', startMonth: '', endMonth: '',
+    search: '', startDate: '', endDate: '', year: '', 
+    specificMonth: '', startMonth: '', endMonth: '', // specificMonth has higher priority
     unit_kk: '', unit_s_tl: '', topic: '', charge: '' 
   });
   
   const [localSearch, setLocalSearch] = useState('');
 
-  // Debounce for search
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       setFilters(prev => ({ ...prev, search: localSearch }));
@@ -228,19 +274,26 @@ export default function App() {
         yearMatch = itemYear === filters.year; 
       }
 
-      // Month Range Logic (Robust)
+      // Month Logic (Specific OR Range)
       if (itemDate) {
-         if (filters.startMonth || filters.endMonth) {
-            const m = itemDate.getMonth() + 1; // 1-12
+         const m = itemDate.getMonth() + 1; // 1-12
+         
+         // Priority 1: Specific Month
+         if (filters.specificMonth) {
+            monthMatch = m === parseInt(filters.specificMonth);
+         } 
+         // Priority 2: Range
+         else if (filters.startMonth || filters.endMonth) {
             const start = filters.startMonth ? parseInt(filters.startMonth) : 1;
             const end = filters.endMonth ? parseInt(filters.endMonth) : 12;
             
+            // Handle cross-year logic if needed (but currently simple range)
             if (m < start || m > end) {
                 monthMatch = false;
             }
          }
-      } else if (filters.startMonth || filters.endMonth) {
-          // If we have a filter but no valid date on item, exclude it
+      } else if (filters.specificMonth || filters.startMonth || filters.endMonth) {
+          // If filtering by date but data has no date -> exclude
           monthMatch = false;
       }
 
@@ -271,15 +324,30 @@ export default function App() {
     return { totalCases, drugCases, weaponCases, heavyTruckCases, warrantCases, uniqueUnits, unitChartData, typeChartData, unitChartTitle };
   }, [filteredData, filters.unit_kk]);
 
-  const handleFilterChange = (key, value) => { if (key === 'unit_kk') setFilters(prev => ({ ...prev, [key]: value, unit_s_tl: '' })); else setFilters(prev => ({ ...prev, [key]: value })); };
-  const clearFilters = () => { setFilters({ search: '', startDate: '', endDate: '', year: '', startMonth: '', endMonth: '', unit_kk: '', unit_s_tl: '', topic: '', charge: '' }); setLocalSearch(''); };
+  const handleFilterChange = (key, value) => { 
+      // If specific month is selected, clear range
+      if (key === 'specificMonth' && value !== '') {
+         setFilters(prev => ({ ...prev, [key]: value, startMonth: '', endMonth: '' }));
+      }
+      // If range is selected, clear specific month
+      else if ((key === 'startMonth' || key === 'endMonth') && value !== '') {
+         setFilters(prev => ({ ...prev, [key]: value, specificMonth: '' }));
+      }
+      else if (key === 'unit_kk') {
+         setFilters(prev => ({ ...prev, [key]: value, unit_s_tl: '' })); 
+      }
+      else {
+         setFilters(prev => ({ ...prev, [key]: value }));
+      }
+  };
 
-  // --- Interactive Chart Handlers (Fixed) ---
+  const clearFilters = () => { setFilters({ search: '', startDate: '', endDate: '', year: '', specificMonth: '', startMonth: '', endMonth: '', unit_kk: '', unit_s_tl: '', topic: '', charge: '' }); setLocalSearch(''); };
+
+  // --- Interactive Chart Handlers ---
   const onUnitBarClick = (data) => {
       if (!data || !data.activePayload) return;
-      const { name } = data.activePayload[0].payload; // e.g., "กก.1", "ส.ทล.2"
+      const { name } = data.activePayload[0].payload; 
       
-      // Determine click context based on name prefix
       if (name.includes("กก.")) {
           const id = name.replace("กก.", "").trim();
           handleFilterChange('unit_kk', id);
@@ -345,7 +413,7 @@ export default function App() {
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="hidden md:flex text-xs text-slate-400 items-center mr-2 bg-slate-800 px-2 py-1 rounded border border-slate-700"><span className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>Live</div>
-            {/* Added: External Reset Button */}
+            
             <button onClick={clearFilters} className="bg-slate-700 hover:bg-red-500/80 hover:text-white text-slate-300 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center shadow-sm border border-slate-600 transition-all"><RefreshCw className="w-4 h-4 mr-1" /> ล้างค่า</button>
             
             {activeTab === 'dashboard' && (<button onClick={handleExportPDF} className="bg-red-600/90 hover:bg-red-500 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center shadow-lg hover:shadow-red-500/20 transition-all border border-red-400/30"><FileText className="w-4 h-4 mr-1" /> PDF</button>)}
@@ -362,11 +430,30 @@ export default function App() {
               <div><label className="block text-xs font-medium text-slate-400 mb-1">ส.ทล.</label><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.unit_s_tl} onChange={(e) => handleFilterChange('unit_s_tl', e.target.value)} disabled={!filters.unit_kk}><option value="">{filters.unit_kk ? 'ทั้งหมด' : 'เลือก กก.'}</option>{filters.unit_kk && Array.from({ length: UNIT_HIERARCHY[filters.unit_kk] }, (_, i) => i + 1).map(num => <option key={num} value={num}>ส.ทล.{num}</option>)}</select></div>
               <div className="sm:col-span-1"><label className="block text-xs font-medium text-slate-400 mb-1">ปี</label><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.year} onChange={(e) => handleFilterChange('year', e.target.value)}><option value="">ทั้งหมด</option>{filterOptions.years.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
               
-              {/* Month Range Filter Fix */}
-              <div className="sm:col-span-1"><label className="block text-xs font-medium text-slate-400 mb-1">จากเดือน</label><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.startMonth} onChange={(e) => handleFilterChange('startMonth', e.target.value)}><option value="">เลือก</option>{THAI_MONTHS.map((m, idx) => <option key={idx} value={(idx + 1).toString()}>{m}</option>)}</select></div>
-              <div className="sm:col-span-1"><label className="block text-xs font-medium text-slate-400 mb-1">ถึงเดือน</label><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.endMonth} onChange={(e) => handleFilterChange('endMonth', e.target.value)}><option value="">เลือก</option>{THAI_MONTHS.map((m, idx) => <option key={idx} value={(idx + 1).toString()}>{m}</option>)}</select></div>
-              
-              <div className="flex items-end justify-end pt-3 mt-2"><button onClick={clearFilters} className="px-4 py-2 bg-slate-700 text-slate-300 border border-slate-600 rounded-lg hover:bg-slate-600 text-sm font-medium flex items-center"><RotateCcw className="w-4 h-4 mr-2" />ล้างค่า</button></div>
+              {/* New: Specific Month Dropdown */}
+              <div className="sm:col-span-1 bg-slate-700/30 p-1.5 rounded-lg border border-slate-700/50">
+                  <label className="block text-xs font-bold text-yellow-400 mb-1">ระบุเดือน (เจาะจง)</label>
+                  <select className="w-full pl-2 pr-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.specificMonth} onChange={(e) => handleFilterChange('specificMonth', e.target.value)}>
+                      <option value="">-- ไม่ระบุ --</option>
+                      {THAI_MONTHS.map((m, idx) => <option key={idx} value={(idx + 1).toString()}>{m}</option>)}
+                  </select>
+              </div>
+
+              {/* Range Filter */}
+              <div className="sm:col-span-1 border-l border-slate-700 pl-2">
+                  <label className="block text-xs font-medium text-slate-400 mb-1">ตั้งแต่เดือน</label>
+                  <select className="w-full pl-2 pr-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50" value={filters.startMonth} onChange={(e) => handleFilterChange('startMonth', e.target.value)} disabled={!!filters.specificMonth}>
+                      <option value="">-- เริ่ม --</option>
+                      {THAI_MONTHS.map((m, idx) => <option key={idx} value={(idx + 1).toString()}>{m}</option>)}
+                  </select>
+              </div>
+              <div className="sm:col-span-1">
+                  <label className="block text-xs font-medium text-slate-400 mb-1">ถึงเดือน</label>
+                  <select className="w-full pl-2 pr-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50" value={filters.endMonth} onChange={(e) => handleFilterChange('endMonth', e.target.value)} disabled={!!filters.specificMonth}>
+                      <option value="">-- สิ้นสุด --</option>
+                      {THAI_MONTHS.map((m, idx) => <option key={idx} value={(idx + 1).toString()}>{m}</option>)}
+                  </select>
+              </div>
             </div>
           </div>
         )}
@@ -397,9 +484,9 @@ export default function App() {
                           <XAxis dataKey="name" interval={0} angle={-45} textAnchor="end" height={60} tick={{fontSize: 10, fill: '#94a3b8'}} axisLine={{ stroke: '#475569' }} tickLine={false} />
                           <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} allowDecimals={false} />
                           <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', color: '#fff' }} />
-                          <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={50}>
+                          <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={50}>
                              {stats.unitChartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="hover:opacity-80 transition-opacity" />
+                                <Cell key={`cell-${index}`} fill={getUnitColor(entry.name)} className="hover:opacity-80 transition-opacity" />
                              ))}
                           </Bar>
                         </BarChart>
@@ -419,7 +506,7 @@ export default function App() {
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie data={stats.typeChartData} cx="50%" cy="50%" innerRadius="55%" outerRadius="80%" paddingAngle={4} dataKey="value" stroke="none" onClick={onPieClick}>
-                              {stats.typeChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="hover:opacity-80 transition-opacity" />)}
+                              {stats.typeChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={getCrimeColor(entry.name)} className="hover:opacity-80 transition-opacity" />)}
                             </Pie>
                             <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', color: '#fff' }} />
                           </PieChart>
@@ -428,7 +515,7 @@ export default function App() {
                       <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-4">
                           {stats.typeChartData.map((entry, index) => (
                               <div key={index} className="flex items-center text-[10px] sm:text-xs text-slate-300 bg-slate-900/50 px-2 py-1 rounded-full border border-slate-700">
-                                  <div className="w-2 h-2 rounded-full mr-2 flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                                  <div className="w-2 h-2 rounded-full mr-2 flex-shrink-0" style={{ backgroundColor: getCrimeColor(entry.name) }}></div>
                                   <span className="truncate max-w-[100px]">{entry.name}</span>
                                   <span className="font-bold ml-1 text-white">({entry.value})</span>
                               </div>
@@ -517,7 +604,7 @@ export default function App() {
             <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }}>Report Date</div>
             <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1e293b' }}>{new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
             <div style={{ fontSize: '14px', color: '#64748b', marginTop: '5px' }}>
-               {filters.year ? `ปี ${filters.year}` : 'ทุกปี'} | {filters.startMonth ? `เดือน ${filters.startMonth}-${filters.endMonth}` : 'ทุกเดือน'}
+               {filters.year ? `ปี ${filters.year}` : 'ทุกปี'} | {filters.specificMonth ? `เดือน ${THAI_MONTHS[parseInt(filters.specificMonth)-1]}` : (filters.startMonth ? `เดือน ${THAI_MONTHS[parseInt(filters.startMonth)-1]}-${THAI_MONTHS[parseInt(filters.endMonth)-1]}` : 'ทุกเดือน')}
             </div>
           </div>
         </div>
@@ -542,8 +629,11 @@ export default function App() {
                     <BarChart data={stats.unitChartData.slice(0, 10)}>
                        <XAxis dataKey="name" interval={0} fontSize={10} angle={-30} textAnchor="end" />
                        <YAxis fontSize={10} />
-                       <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40}>
+                       <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={40}>
                          <LabelList dataKey="value" position="top" fontSize={10} fill="#64748b" />
+                         {stats.unitChartData.slice(0, 10).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={getUnitColor(entry.name)} />
+                         ))}
                        </Bar>
                     </BarChart>
                  </ResponsiveContainer>
@@ -557,7 +647,7 @@ export default function App() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={stats.typeChartData} cx="50%" cy="50%" outerRadius={80} dataKey="value">
-                        {stats.typeChartData.map((entry, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
+                        {stats.typeChartData.map((entry, index) => <Cell key={index} fill={getCrimeColor(entry.name)} />)}
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
@@ -566,7 +656,7 @@ export default function App() {
                  {stats.typeChartData.slice(0, 5).map((e, i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px dashed #f1f5f9', padding: '4px 0' }}>
                        <span style={{ display: 'flex', alignItems: 'center' }}>
-                          <span style={{ width: '8px', height: '8px', backgroundColor: COLORS[i % COLORS.length], borderRadius: '50%', marginRight: '8px' }}></span>
+                          <span style={{ width: '8px', height: '8px', backgroundColor: getCrimeColor(e.name), borderRadius: '50%', marginRight: '8px' }}></span>
                           {e.name}
                        </span>
                        <span style={{ fontWeight: 'bold' }}>{e.value}</span>
