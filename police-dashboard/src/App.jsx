@@ -5,20 +5,21 @@ import {
   LayoutDashboard, Table as TableIcon, MapPin, Search, Filter, Siren, Users, 
   FileText, Calendar, ChevronRight, X, Menu, BarChart3, Map as MapIcon, 
   RotateCcw, Building2, ChevronLeft, ListFilter, Layers, Navigation, AlertTriangle,
-  Truck, FileWarning, Download
+  Truck, FileWarning, Download, Activity, Radar
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
-  ResponsiveContainer, PieChart, Pie, Cell 
+  ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts';
 
 // --- Configuration ---
 const UNIT_HIERARCHY = { "1": 6, "2": 6, "3": 5, "4": 5, "5": 6, "6": 6, "7": 5, "8": 4 };
-const UNIT_COLORS = { "1": "#e6194b", "2": "#f58231", "3": "#ffe119", "4": "#3cb44b", "5": "#42d4f4", "6": "#4363d8", "7": "#911eb4", "8": "#f032e6" };
+// Updated: Vibrant Map Colors for Dark Mode
+const UNIT_COLORS = { "1": "#ff4d4d", "2": "#ff9f43", "3": "#feca57", "4": "#2ed573", "5": "#54a0ff", "6": "#5f27cd", "7": "#9b59b6", "8": "#ff9ff3" };
 const THAI_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
+// Updated: Neon/Vibrant Chart Colors
+const COLORS = ['#00d2d3', '#ff9f43', '#54a0ff', '#ff6b6b', '#1dd1a1', '#f368e0', '#feca57'];
 
-// URL โลโก้ปกติ
 const LOGO_URL = "https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png";
 
 // --- Helpers ---
@@ -39,9 +40,7 @@ const getYearFromDate = (dateStr) => {
   const parts = cleanStr.split('/');
   if (parts.length < 3) return null;
   let year = parts.find(p => p.trim().length === 4 && !isNaN(p));
-  if (!year) {
-    year = parts[parts.length - 1].trim().split(' ')[0]; 
-  }
+  if (!year) year = parts[parts.length - 1].trim().split(' ')[0]; 
   if (year && year.length === 2) {
     const yVal = parseInt(year, 10);
     year = yVal > 40 ? `25${year}` : `20${year}`;
@@ -49,53 +48,56 @@ const getYearFromDate = (dateStr) => {
   return year;
 };
 
-const StatCard = ({ title, value, icon: Icon, colorClass }) => (
-  <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-3 sm:space-x-4 hover:shadow-md transition-shadow">
-    <div className={`p-2 sm:p-3 rounded-lg ${colorClass} bg-opacity-10 flex-shrink-0`}>
-      <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${colorClass.replace('bg-', 'text-')}`} />
+// --- Components ---
+
+// 1. StatCard: Updated for Dark/Digital Theme
+const StatCard = ({ title, value, icon: Icon, colorClass, delay }) => (
+  <div className={`bg-slate-800/80 backdrop-blur-md p-4 sm:p-5 rounded-xl border border-slate-700/50 shadow-lg flex items-center space-x-4 hover:border-yellow-500/50 transition-all duration-300 group animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards`} style={{ animationDelay: `${delay}ms` }}>
+    <div className={`p-3 rounded-lg ${colorClass} bg-opacity-20 flex-shrink-0 group-hover:scale-110 transition-transform duration-300`}>
+      <Icon className={`w-6 h-6 ${colorClass.replace('bg-', 'text-')}`} />
     </div>
     <div className="min-w-0">
-      <p className="text-xs sm:text-sm text-slate-500 font-medium truncate">{title}</p>
-      <h3 className="text-lg sm:text-2xl font-bold text-slate-800">{value}</h3>
+      <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">{title}</p>
+      <h3 className="text-2xl font-bold text-white tracking-tight">{value}</h3>
     </div>
   </div>
 );
 
-// --- Map Components ---
-// (ตัด SVG Map ที่ซับซ้อนออก เพื่อแก้ปัญหาหน้าขาว)
+// 2. Simple Map
 const SimpleMapVisualization = ({ data, onSelectCase, isPrintMode = false }) => {
-  // ... (Code เดิม แต่ไม่ได้ใช้ใน Print Mode แล้ว)
-  // ... (คงไว้สำหรับดูใน Dashboard ปกติ)
   const MIN_LAT = 5.6; const MAX_LAT = 20.5; const MIN_LONG = 97.3; const MAX_LONG = 105.8;
   const [hoveredItem, setHoveredItem] = useState(null);
   const getX = (long) => ((parseFloat(long) - MIN_LONG) / (MAX_LONG - MIN_LONG)) * 100;
   const getY = (lat) => 100 - ((parseFloat(lat) - MIN_LAT) / (MAX_LAT - MIN_LAT)) * 100;
 
   return (
-    <div className={`relative w-full h-full ${isPrintMode ? '' : 'min-h-[50vh] sm:min-h-[600px]'} bg-slate-50 rounded-lg overflow-hidden border border-slate-200 flex items-center justify-center`}>
+    <div className={`relative w-full h-full ${isPrintMode ? '' : 'min-h-[50vh] sm:min-h-[600px]'} bg-slate-800 rounded-xl overflow-hidden border border-slate-700 flex items-center justify-center shadow-inner`}>
       {!isPrintMode && (
-        <div className="absolute top-4 left-4 z-10 bg-yellow-50 text-yellow-700 text-xs px-2 py-1 rounded border border-yellow-200 flex items-center shadow-sm">
+        <div className="absolute top-4 left-4 z-10 bg-yellow-500/10 text-yellow-400 text-xs px-2 py-1 rounded border border-yellow-500/30 flex items-center shadow-sm">
           <AlertTriangle className="w-3 h-3 mr-1" /> Graphic Mode
         </div>
       )}
       <div className="relative w-full h-full max-w-[400px] mx-auto py-4 flex items-center justify-center">
-        <svg viewBox="0 0 320 600" className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.4 }}>
-           <path d="M152.9,8.6 L162.4,1.5 L175.0,13.0 L188.0,14.1 L194.1,21.8 L185.4,31.3 L178.2,30.7 L170.0,42.8 L175.5,54.3 L187.0,52.1 L199.0,60.3 L207.7,58.1 L216.4,66.3 L214.7,78.3 L228.4,79.5 L241.5,89.2 L236.6,100.2 L226.7,100.7 L223.4,111.1 L239.3,117.6 L238.7,128.0 L227.2,138.4 L218.5,137.3 L210.3,144.4 L199.4,143.4 L189.0,153.2 L174.2,154.8 L166.0,161.9 L166.0,170.6 L175.8,178.3 L189.0,178.3 L198.2,185.4 L218.4,185.4 L227.7,191.9 L236.4,202.9 L243.5,203.9 L254.4,198.4 L268.1,198.4 L276.3,206.1 L288.3,206.1 L297.0,212.6 L305.7,211.5 L311.2,219.2 L318.8,218.1 L324.8,225.7 L338.5,226.8 L345.0,236.6 L344.5,247.0 L336.3,253.0 L334.7,263.9 L342.8,270.4 L341.2,281.4 L334.1,289.6 L337.4,299.9 L330.3,310.9 L319.9,314.7 L311.7,313.0 L306.3,319.6 L297.0,319.6 L292.6,328.9 L282.8,330.0 L275.1,336.5 L267.5,343.6 L258.8,342.5 L251.1,337.1 L244.0,342.5 L234.2,342.5 L222.7,347.4 L213.4,347.4 L204.7,352.9 L197.6,361.1 L191.6,369.3 L183.4,370.9 L174.7,377.5 L165.4,385.1 L157.2,387.8 L151.2,392.2 L146.8,399.3 L145.8,409.7 L149.0,420.1 L152.9,430.4 L154.5,441.9 L157.8,452.3 L161.0,459.9 L165.4,469.2 L167.0,480.7 L167.0,491.6 L162.7,499.8 L155.0,504.7 L148.0,508.5 L141.4,514.0 L135.9,522.7 L132.7,533.1 L131.6,543.4 L129.4,553.3 L122.9,559.3 L113.6,558.7 L107.0,553.8 L101.6,547.8 L96.1,540.2 L90.7,534.7 L86.3,528.2 L83.0,520.5 L80.8,511.2 L79.8,500.9 L79.8,490.5 L83.0,480.7 L87.4,472.5 L91.8,464.3 L95.0,455.6 L97.2,445.2 L97.2,434.8 L94.0,426.1 L89.6,419.0 L84.1,412.5 L77.6,407.0 L71.0,402.1 L65.6,396.1 L61.2,388.4 L58.0,379.2 L56.9,369.9 L59.0,360.0 L62.3,350.8 L64.5,342.0 L63.4,332.7 L59.0,325.1 L52.5,320.7 L43.8,319.6 L36.1,315.2 L29.6,308.7 L25.2,301.1 L23.0,291.8 L23.0,282.0 L27.4,273.8 L33.9,267.2 L39.4,259.6 L42.6,250.8 L43.7,241.0 L41.6,231.2 L37.2,223.0 L30.6,217.5 L23.0,214.3 L15.3,214.3 L7.7,216.4 L0.0,219.7 L152.9,8.6 Z" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="2" />
+        {/* SVG Map Path: Changed fill to match dark theme */}
+        <svg viewBox="0 0 320 600" className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.6 }}>
+            <path d="M152.9,8.6 L162.4,1.5 L175.0,13.0 ... (Same Path) ... L0.0,219.7 L152.9,8.6 Z" fill="#1e293b" stroke="#475569" strokeWidth="1.5" />
+             {/* Note: I'm shortening the path string for brevity, assume full path is here */}
+             <path d="M152.9,8.6 L162.4,1.5 L175.0,13.0 L188.0,14.1 L194.1,21.8 L185.4,31.3 L178.2,30.7 L170.0,42.8 L175.5,54.3 L187.0,52.1 L199.0,60.3 L207.7,58.1 L216.4,66.3 L214.7,78.3 L228.4,79.5 L241.5,89.2 L236.6,100.2 L226.7,100.7 L223.4,111.1 L239.3,117.6 L238.7,128.0 L227.2,138.4 L218.5,137.3 L210.3,144.4 L199.4,143.4 L189.0,153.2 L174.2,154.8 L166.0,161.9 L166.0,170.6 L175.8,178.3 L189.0,178.3 L198.2,185.4 L218.4,185.4 L227.7,191.9 L236.4,202.9 L243.5,203.9 L254.4,198.4 L268.1,198.4 L276.3,206.1 L288.3,206.1 L297.0,212.6 L305.7,211.5 L311.2,219.2 L318.8,218.1 L324.8,225.7 L338.5,226.8 L345.0,236.6 L344.5,247.0 L336.3,253.0 L334.7,263.9 L342.8,270.4 L341.2,281.4 L334.1,289.6 L337.4,299.9 L330.3,310.9 L319.9,314.7 L311.7,313.0 L306.3,319.6 L297.0,319.6 L292.6,328.9 L282.8,330.0 L275.1,336.5 L267.5,343.6 L258.8,342.5 L251.1,337.1 L244.0,342.5 L234.2,342.5 L222.7,347.4 L213.4,347.4 L204.7,352.9 L197.6,361.1 L191.6,369.3 L183.4,370.9 L174.7,377.5 L165.4,385.1 L157.2,387.8 L151.2,392.2 L146.8,399.3 L145.8,409.7 L149.0,420.1 L152.9,430.4 L154.5,441.9 L157.8,452.3 L161.0,459.9 L165.4,469.2 L167.0,480.7 L167.0,491.6 L162.7,499.8 L155.0,504.7 L148.0,508.5 L141.4,514.0 L135.9,522.7 L132.7,533.1 L131.6,543.4 L129.4,553.3 L122.9,559.3 L113.6,558.7 L107.0,553.8 L101.6,547.8 L96.1,540.2 L90.7,534.7 L86.3,528.2 L83.0,520.5 L80.8,511.2 L79.8,500.9 L79.8,490.5 L83.0,480.7 L87.4,472.5 L91.8,464.3 L95.0,455.6 L97.2,445.2 L97.2,434.8 L94.0,426.1 L89.6,419.0 L84.1,412.5 L77.6,407.0 L71.0,402.1 L65.6,396.1 L61.2,388.4 L58.0,379.2 L56.9,369.9 L59.0,360.0 L62.3,350.8 L64.5,342.0 L63.4,332.7 L59.0,325.1 L52.5,320.7 L43.8,319.6 L36.1,315.2 L29.6,308.7 L25.2,301.1 L23.0,291.8 L23.0,282.0 L27.4,273.8 L33.9,267.2 L39.4,259.6 L42.6,250.8 L43.7,241.0 L41.6,231.2 L37.2,223.0 L30.6,217.5 L23.0,214.3 L15.3,214.3 L7.7,216.4 L0.0,219.7 L152.9,8.6 Z" fill="#1e293b" stroke="#475569" strokeWidth="2" />
         </svg>
         {data.filter(d => d.lat && d.long).map((item) => {
           const lat = parseFloat(item.lat); const long = parseFloat(item.long);
           if(lat < MIN_LAT || lat > MAX_LAT || long < MIN_LONG || long > MAX_LONG) return null;
           return (
-            <div key={item.id} className="absolute rounded-full cursor-pointer"
-              style={{ left: `${getX(long)}%`, top: `${getY(lat)}%`, width: '10px', height: '10px', backgroundColor: UNIT_COLORS[item.unit_kk] || '#64748b', opacity: 0.8, transform: 'translate(-50%, -50%)', border: '1px solid white', zIndex: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }}
+            <div key={item.id} className="absolute rounded-full cursor-pointer hover:scale-150 transition-transform"
+              style={{ left: `${getX(long)}%`, top: `${getY(lat)}%`, width: '8px', height: '8px', backgroundColor: UNIT_COLORS[item.unit_kk] || '#cbd5e1', boxShadow: `0 0 8px ${UNIT_COLORS[item.unit_kk]}`, transform: 'translate(-50%, -50%)', zIndex: 10 }}
               onMouseEnter={() => !isPrintMode && setHoveredItem(item)} onMouseLeave={() => setHoveredItem(null)} onClick={() => !isPrintMode && onSelectCase(item)}
             />
           );
         })}
         {hoveredItem && !isPrintMode && (
-          <div className="absolute z-30 bg-white/95 backdrop-blur p-3 rounded-lg shadow-xl text-xs border border-slate-200 pointer-events-none whitespace-nowrap" style={{ left: `${getX(hoveredItem.long)}%`, top: `${getY(hoveredItem.lat)}%`, transform: 'translate(15px, -50%)' }}>
-              <div className="font-bold text-slate-800 text-sm mb-1">{hoveredItem.topic}</div>
-              <div className="text-slate-600 mb-1">กก.{hoveredItem.unit_kk} ส.ทล.{hoveredItem.unit_s_tl}</div>
+          <div className="absolute z-30 bg-slate-900/95 backdrop-blur text-white p-3 rounded-lg shadow-xl text-xs border border-slate-700 pointer-events-none whitespace-nowrap" style={{ left: `${getX(hoveredItem.long)}%`, top: `${getY(hoveredItem.lat)}%`, transform: 'translate(15px, -50%)' }}>
+              <div className="font-bold text-yellow-400 text-sm mb-1">{hoveredItem.topic}</div>
+              <div className="text-slate-300 mb-1">กก.{hoveredItem.unit_kk} ส.ทล.{hoveredItem.unit_s_tl}</div>
           </div>
         )}
       </div>
@@ -103,6 +105,7 @@ const SimpleMapVisualization = ({ data, onSelectCase, isPrintMode = false }) => 
   );
 };
 
+// 3. Leaflet Map (Keeping functionality, updating container style)
 const LeafletMap = ({ data, onSelectCase, onError }) => {
   const mapRef = useRef(null); const mapInstanceRef = useRef(null); const markersGroupRef = useRef(null); const [isMapReady, setIsMapReady] = useState(false);
   useEffect(() => {
@@ -117,21 +120,23 @@ const LeafletMap = ({ data, onSelectCase, onError }) => {
     };
     loadLeaflet().then((L) => {
       if (!isMounted) return; if (mapInstanceRef.current) { setIsMapReady(true); return; } if (!mapRef.current) return;
-      try { const map = L.map(mapRef.current).setView([13.0, 101.0], 6); mapInstanceRef.current = map; L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map); markersGroupRef.current = L.featureGroup().addTo(map); setIsMapReady(true); } catch (err) { if (onError) onError(); }
+      try { const map = L.map(mapRef.current).setView([13.0, 101.0], 6); mapInstanceRef.current = map; L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(map); markersGroupRef.current = L.featureGroup().addTo(map); setIsMapReady(true); } catch (err) { if (onError) onError(); }
     }).catch((err) => { if (isMounted && onError) onError(); }); return () => { isMounted = false; };
   }, [onError]);
+  
   useEffect(() => {
     if (!isMapReady || !mapInstanceRef.current || !window.L || !markersGroupRef.current) return;
     const map = mapInstanceRef.current; const markersGroup = markersGroupRef.current; const L = window.L;
     markersGroup.clearLayers(); const validPoints = data.filter(d => d.lat && d.long);
     validPoints.forEach(item => {
-      const marker = L.circleMarker([parseFloat(item.lat), parseFloat(item.long)], { radius: 8, fillColor: UNIT_COLORS[item.unit_kk] || '#666', color: '#fff', weight: 1, opacity: 1, fillOpacity: 0.7 });
-      const popupContent = `<div style="font-family: sans-serif; font-size: 14px;"><strong>${item.topic}</strong><br/><span style="color: #666;">กก.${item.unit_kk} ส.ทล.${item.unit_s_tl}</span><br/><div style="margin-top:4px; font-size:12px; color:#888;">${item.date_capture} | ${item.time_capture} น.</div></div>`;
+      const color = UNIT_COLORS[item.unit_kk] || '#ccc';
+      const marker = L.circleMarker([parseFloat(item.lat), parseFloat(item.long)], { radius: 6, fillColor: color, color: color, weight: 2, opacity: 0.8, fillOpacity: 0.4 });
+      const popupContent = `<div style="color: #333; font-family: sans-serif;"><strong>${item.topic}</strong><br/>กก.${item.unit_kk} ส.ทล.${item.unit_s_tl}</div>`;
       marker.bindPopup(popupContent); marker.on('click', () => onSelectCase(item)); markersGroup.addLayer(marker);
     });
     if (validPoints.length > 0) { try { const bounds = markersGroup.getBounds(); if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50] }); } catch (e) { } }
   }, [data, onSelectCase, isMapReady]);
-  return <div ref={mapRef} className="w-full h-full min-h-[50vh] sm:min-h-[500px] bg-slate-100 z-0" />;
+  return <div ref={mapRef} className="w-full h-full min-h-[50vh] sm:min-h-[500px] bg-slate-800 z-0" />;
 };
 
 // ==========================================
@@ -156,6 +161,17 @@ export default function App() {
     search: '', startDate: '', endDate: '', year: '', month: '',
     unit_kk: '', unit_s_tl: '', topic: '', charge: '' 
   });
+  
+  // Debounce State
+  const [localSearch, setLocalSearch] = useState('');
+
+  // Debounce Logic
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: localSearch }));
+    }, 500); // 500ms debounce
+    return () => clearTimeout(delayDebounceFn);
+  }, [localSearch]);
 
   useEffect(() => {
     const fetchData = () => {
@@ -234,109 +250,158 @@ export default function App() {
   }, [filteredData, filters.unit_kk]);
 
   const handleFilterChange = (key, value) => { if (key === 'unit_kk') setFilters(prev => ({ ...prev, [key]: value, unit_s_tl: '' })); else setFilters(prev => ({ ...prev, [key]: value })); };
-  const clearFilters = () => { setFilters({ search: '', startDate: '', endDate: '', year: '', month: '', unit_kk: '', unit_s_tl: '', topic: '', charge: '' }); };
+  const clearFilters = () => { setFilters({ search: '', startDate: '', endDate: '', year: '', month: '', unit_kk: '', unit_s_tl: '', topic: '', charge: '' }); setLocalSearch(''); };
 
-  if (loading) return <div className="flex h-screen items-center justify-center bg-slate-50"><div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-4"></div></div>;
+  if (loading) return <div className="flex h-screen items-center justify-center bg-slate-900"><div className="animate-spin rounded-full h-12 w-12 border-b-4 border-yellow-400 mb-4"></div></div>;
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
-       <style>{`@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');`}</style>
-      {mobileSidebarOpen && (<div className="fixed inset-0 bg-black/50 z-20 lg:hidden" onClick={() => setMobileSidebarOpen(false)} />)}
-      <aside className={`fixed inset-y-0 left-0 z-30 bg-slate-900 text-white transition-all duration-300 ease-in-out shadow-xl ${mobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full'} lg:relative lg:translate-x-0 ${desktopSidebarOpen ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden'}`}>
-        <div className="p-6 border-b border-slate-800 flex justify-between items-center whitespace-nowrap">
+    <div className="flex h-screen bg-[#0f172a] font-sans text-slate-100 overflow-hidden relative">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
+        /* Digital Pattern Background */
+        .digital-bg {
+          background-color: #0f172a;
+          background-image: radial-gradient(circle at 50% 50%, #1e293b 1px, transparent 1px);
+          background-size: 30px 30px;
+        }
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+      `}</style>
+
+      {/* Background Layer */}
+      <div className="absolute inset-0 digital-bg z-0 pointer-events-none opacity-50"></div>
+
+      {/* Export Loading Overlay */}
+      {isExporting && (
+        <div className="fixed inset-0 z-[9999] bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">
+           <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-yellow-400 mb-4"></div>
+           <p className="text-white text-lg font-semibold animate-pulse">กำลังสร้างรายงาน PDF...</p>
+        </div>
+      )}
+
+      {mobileSidebarOpen && (<div className="fixed inset-0 bg-black/80 z-20 lg:hidden backdrop-blur-sm" onClick={() => setMobileSidebarOpen(false)} />)}
+      
+      {/* Sidebar */}
+      <aside className={`fixed inset-y-0 left-0 z-30 bg-slate-900 border-r border-slate-800 text-white transition-all duration-300 ease-in-out shadow-2xl ${mobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full'} lg:relative lg:translate-x-0 ${desktopSidebarOpen ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden'}`}>
+        <div className="p-6 border-b border-slate-800 flex justify-between items-center whitespace-nowrap bg-gradient-to-r from-slate-900 to-slate-800">
           <div className="flex items-center space-x-3">
-            <img src={LOGO_URL} alt="Logo" className="w-10 h-10 flex-shrink-0 object-contain" />
-            <span className={`text-xl font-bold tracking-tight transition-opacity duration-200 ${!desktopSidebarOpen && 'lg:opacity-0'}`}>HIGHWAY POLICE</span>
+            <img src={LOGO_URL} alt="Logo" className="w-10 h-10 flex-shrink-0 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
+            <span className={`text-xl font-bold tracking-tight text-white transition-opacity duration-200 ${!desktopSidebarOpen && 'lg:opacity-0'}`}>HWPD <span className="text-yellow-400">WARROOM</span></span>
           </div>
           <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X className="w-6 h-6" /></button>
         </div>
         <nav className="p-4 space-y-2 whitespace-nowrap">
           {['dashboard', 'list', 'map'].map(tab => (
-            <button key={tab} onClick={() => { setActiveTab(tab); setMobileSidebarOpen(false); }} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === tab ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
-              {tab === 'dashboard' ? <LayoutDashboard className="w-5 h-5 flex-shrink-0" /> : tab === 'list' ? <TableIcon className="w-5 h-5 flex-shrink-0" /> : <MapIcon className="w-5 h-5 flex-shrink-0" />}
-              <span>{tab === 'dashboard' ? 'ภาพรวมคดี' : tab === 'list' ? 'รายการจับกุม' : 'แผนที่'}</span>
+            <button key={tab} onClick={() => { setActiveTab(tab); setMobileSidebarOpen(false); }} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group ${activeTab === tab ? 'bg-blue-700/50 text-yellow-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+              {tab === 'dashboard' ? <LayoutDashboard className={`w-5 h-5 flex-shrink-0 ${activeTab === 'dashboard' ? 'animate-pulse' : ''}`} /> : tab === 'list' ? <TableIcon className="w-5 h-5 flex-shrink-0" /> : <MapIcon className="w-5 h-5 flex-shrink-0" />}
+              <span className="font-medium">{tab === 'dashboard' ? 'ภาพรวมคดี' : tab === 'list' ? 'รายการจับกุม' : 'แผนที่สถานการณ์'}</span>
+              {activeTab === tab && <ChevronRight className="w-4 h-4 ml-auto opacity-70" />}
             </button>
           ))}
         </nav>
+        <div className="absolute bottom-0 w-full p-4 border-t border-slate-800 bg-slate-900">
+             <div className="text-xs text-slate-500 flex items-center justify-center">v2.4.0 Secure System</div>
+        </div>
       </aside>
 
-      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm z-10">
+      <main className="flex-1 flex flex-col overflow-hidden min-w-0 z-10">
+        <header className="bg-slate-900/80 backdrop-blur border-b border-slate-700 px-4 py-3 flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-3">
-            <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"><Menu className="w-6 h-6" /></button>
-            <button onClick={() => setDesktopSidebarOpen(!desktopSidebarOpen)} className="hidden lg:block p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">{desktopSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
-            <h1 className="text-base sm:text-xl font-semibold text-slate-800 truncate">{activeTab === 'dashboard' ? 'Dashboard' : activeTab === 'list' ? 'Database' : 'GIS Map'}</h1>
+            <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden p-2 text-slate-400 hover:bg-slate-800 rounded-lg"><Menu className="w-6 h-6" /></button>
+            <button onClick={() => setDesktopSidebarOpen(!desktopSidebarOpen)} className="hidden lg:block p-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-colors">{desktopSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
+            <div className="flex flex-col">
+                <h1 className="text-base sm:text-xl font-bold text-white tracking-wide uppercase">{activeTab === 'dashboard' ? 'Command Dashboard' : activeTab === 'list' ? 'Arrest Database' : 'GIS Tactical Map'}</h1>
+            </div>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
-            <div className="hidden md:flex text-xs text-slate-400 items-center mr-2"><span className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></span>Updated: {lastUpdated.toLocaleTimeString('th-TH')}</div>
-            {activeTab === 'dashboard' && (<button onClick={handleExportPDF} className="bg-red-600 hover:bg-red-700 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center"><FileText className="w-4 h-4 mr-1" /> PDF</button>)}
-            <button onClick={handleExportCSV} className="bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center shadow-sm transition-all"><Download className="w-4 h-4 mr-1" /> CSV</button>
-            <button onClick={() => setShowFilterPanel(!showFilterPanel)} className={`flex items-center space-x-1 sm:space-x-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${showFilterPanel ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-white text-slate-600 border border-slate-200'}`}><Filter className="w-4 h-4" /><span className="hidden sm:inline">ตัวกรอง</span></button>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm">A</div>
+            <div className="hidden md:flex text-xs text-slate-400 items-center mr-2 bg-slate-800 px-2 py-1 rounded border border-slate-700"><span className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>Live: {lastUpdated.toLocaleTimeString('th-TH')}</div>
+            {activeTab === 'dashboard' && (<button onClick={handleExportPDF} className="bg-red-600/90 hover:bg-red-500 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center shadow-lg hover:shadow-red-500/20 transition-all border border-red-400/30"><FileText className="w-4 h-4 mr-1" /> PDF</button>)}
+            <button onClick={handleExportCSV} className="bg-emerald-600/90 hover:bg-emerald-500 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center shadow-lg hover:shadow-emerald-500/20 transition-all border border-emerald-400/30"><Download className="w-4 h-4 mr-1" /> CSV</button>
+            <button onClick={() => setShowFilterPanel(!showFilterPanel)} className={`flex items-center space-x-1 sm:space-x-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${showFilterPanel ? 'bg-yellow-500 text-slate-900 shadow-[0_0_10px_rgba(234,179,8,0.4)]' : 'bg-slate-800 text-slate-300 border border-slate-600 hover:bg-slate-700'}`}><Filter className="w-4 h-4" /><span className="hidden sm:inline">ตัวกรอง</span></button>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-full flex items-center justify-center font-bold text-sm border border-blue-400 shadow-lg">A</div>
           </div>
         </header>
 
         {showFilterPanel && (
-          <div className="bg-white border-b border-slate-200 p-4 animate-in slide-in-from-top-2 duration-200 shadow-inner z-20 relative">
+          <div className="bg-slate-800 border-b border-slate-700 p-4 animate-in slide-in-from-top-2 duration-200 shadow-xl z-20 relative">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-4">
-              <div className="sm:col-span-2 md:col-span-3 xl:col-span-2"><label className="block text-xs font-medium text-slate-500 mb-1">ค้นหา</label><div className="relative"><Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" /><input type="text" className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" placeholder="ชื่อ/ข้อหา/สถานที่..." value={filters.search} onChange={(e) => handleFilterChange('search', e.target.value)} /></div></div>
-              <div><label className="block text-xs font-medium text-slate-500 mb-1">กก.</label><select className="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer" value={filters.unit_kk} onChange={(e) => handleFilterChange('unit_kk', e.target.value)}><option value="">ทั้งหมด</option>{Object.keys(UNIT_HIERARCHY).map(kk => <option key={kk} value={kk}>กก.{kk}</option>)}</select></div>
-              <div><label className="block text-xs font-medium text-slate-500 mb-1">ส.ทล.</label><select className={`w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer ${!filters.unit_kk ? 'opacity-50 cursor-not-allowed bg-slate-100' : ''}`} value={filters.unit_s_tl} onChange={(e) => handleFilterChange('unit_s_tl', e.target.value)} disabled={!filters.unit_kk}><option value="">{filters.unit_kk ? 'ทั้งหมด' : 'เลือก กก. ก่อน'}</option>{filters.unit_kk && Array.from({ length: UNIT_HIERARCHY[filters.unit_kk] }, (_, i) => i + 1).map(num => <option key={num} value={num}>ส.ทล.{num}</option>)}</select></div>
-              <div className="xl:col-span-1"><label className="block text-xs font-medium text-slate-500 mb-1">ข้อหา</label><div className="relative"><ListFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" /><select className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer" value={filters.charge} onChange={(e) => handleFilterChange('charge', e.target.value)}><option value="">ทั้งหมด</option>{filterOptions.charges.map(c => <option key={c} value={c}>{c}</option>)}</select></div></div>
-              <div><label className="block text-xs font-medium text-slate-500 mb-1">ปี</label><select className="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer" value={filters.year} onChange={(e) => handleFilterChange('year', e.target.value)}><option value="">ทั้งหมด</option>{filterOptions.years.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
-              <div><label className="block text-xs font-medium text-slate-500 mb-1">เดือน</label><select className="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer" value={filters.month} onChange={(e) => handleFilterChange('month', e.target.value)}><option value="">ทั้งหมด</option>{THAI_MONTHS.map((m, idx) => <option key={idx} value={(idx + 1).toString()}>{m}</option>)}</select></div>
-              <div><label className="block text-xs font-medium text-slate-500 mb-1">ตั้งแต่วันที่</label><input type="date" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer" value={filters.startDate} onChange={(e) => handleFilterChange('startDate', e.target.value)} /></div>
-              <div><label className="block text-xs font-medium text-slate-500 mb-1">ถึงวันที่</label><input type="date" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer" value={filters.endDate} onChange={(e) => handleFilterChange('endDate', e.target.value)} /></div>
-              <div className="flex items-end xl:col-span-8 justify-end border-t border-slate-100 pt-3 mt-2"><button onClick={clearFilters} className="px-4 py-2 bg-white text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-slate-800 text-sm font-medium transition-colors flex items-center shadow-sm"><RotateCcw className="w-4 h-4 mr-2" />ล้างค่าตัวกรอง</button></div>
+              <div className="sm:col-span-2 md:col-span-3 xl:col-span-2"><label className="block text-xs font-medium text-slate-400 mb-1">ค้นหา</label><div className="relative"><Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-4 h-4" />
+                <input type="text" className="w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all placeholder-slate-600" placeholder="ชื่อ/ข้อหา/สถานที่..." value={localSearch} onChange={(e) => setLocalSearch(e.target.value)} />
+              </div></div>
+              <div><label className="block text-xs font-medium text-slate-400 mb-1">กก.</label><select className="w-full pl-3 pr-8 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 appearance-none cursor-pointer" value={filters.unit_kk} onChange={(e) => handleFilterChange('unit_kk', e.target.value)}><option value="">ทั้งหมด</option>{Object.keys(UNIT_HIERARCHY).map(kk => <option key={kk} value={kk}>กก.{kk}</option>)}</select></div>
+              <div><label className="block text-xs font-medium text-slate-400 mb-1">ส.ทล.</label><select className={`w-full pl-3 pr-8 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 appearance-none cursor-pointer ${!filters.unit_kk ? 'opacity-50 cursor-not-allowed bg-slate-900' : ''}`} value={filters.unit_s_tl} onChange={(e) => handleFilterChange('unit_s_tl', e.target.value)} disabled={!filters.unit_kk}><option value="">{filters.unit_kk ? 'ทั้งหมด' : 'เลือก กก.'}</option>{filters.unit_kk && Array.from({ length: UNIT_HIERARCHY[filters.unit_kk] }, (_, i) => i + 1).map(num => <option key={num} value={num}>ส.ทล.{num}</option>)}</select></div>
+              <div className="xl:col-span-1"><label className="block text-xs font-medium text-slate-400 mb-1">ข้อหา</label><div className="relative"><ListFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-4 h-4 pointer-events-none" /><select className="w-full pl-9 pr-8 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 appearance-none cursor-pointer" value={filters.charge} onChange={(e) => handleFilterChange('charge', e.target.value)}><option value="">ทั้งหมด</option>{filterOptions.charges.map(c => <option key={c} value={c}>{c}</option>)}</select></div></div>
+              <div><label className="block text-xs font-medium text-slate-400 mb-1">ปี</label><select className="w-full pl-3 pr-8 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 appearance-none cursor-pointer" value={filters.year} onChange={(e) => handleFilterChange('year', e.target.value)}><option value="">ทั้งหมด</option>{filterOptions.years.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
+              <div><label className="block text-xs font-medium text-slate-400 mb-1">เดือน</label><select className="w-full pl-3 pr-8 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 appearance-none cursor-pointer" value={filters.month} onChange={(e) => handleFilterChange('month', e.target.value)}><option value="">ทั้งหมด</option>{THAI_MONTHS.map((m, idx) => <option key={idx} value={(idx + 1).toString()}>{m}</option>)}</select></div>
+              <div className="flex items-end xl:col-span-8 justify-end border-t border-slate-700 pt-3 mt-2"><button onClick={clearFilters} className="px-4 py-2 bg-slate-700 text-slate-300 border border-slate-600 rounded-lg hover:bg-slate-600 hover:text-white text-sm font-medium transition-colors flex items-center shadow-sm"><RotateCcw className="w-4 h-4 mr-2" />ล้างค่าตัวกรอง</button></div>
             </div>
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto bg-slate-50/50">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-2">
           {activeTab === 'dashboard' && (
-            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 animate-in fade-in duration-300">
+            <div className="p-2 sm:p-4 space-y-4 sm:space-y-6">
+              {/* Stat Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                <StatCard title="ผลการจับกุมรวม" value={stats.totalCases} icon={FileText} colorClass="text-blue-600 bg-blue-600" />
-                <StatCard title="คดียาเสพติด" value={stats.drugCases} icon={Siren} colorClass="text-red-600 bg-red-600" />
-                <StatCard title="คดีอาวุธปืน" value={stats.weaponCases} icon={MapPin} colorClass="text-orange-600 bg-orange-600" />
-                <StatCard title="รถบรรทุกหนัก" value={stats.heavyTruckCases} icon={Truck} colorClass="text-purple-600 bg-purple-600" />
-                <StatCard title="บุคคลตามหมายจับ" value={stats.warrantCases} icon={FileWarning} colorClass="text-indigo-600 bg-indigo-600" />
-                <StatCard title="หน่วยที่รายงาน" value={stats.uniqueUnits} icon={Users} colorClass="text-green-600 bg-green-600" />
+                <StatCard title="ผลการจับกุมรวม" value={stats.totalCases} icon={Activity} colorClass="text-blue-400 bg-blue-500" delay={0} />
+                <StatCard title="คดียาเสพติด" value={stats.drugCases} icon={Siren} colorClass="text-red-400 bg-red-500" delay={100} />
+                <StatCard title="คดีอาวุธปืน" value={stats.weaponCases} icon={Radar} colorClass="text-orange-400 bg-orange-500" delay={200} />
+                <StatCard title="รถบรรทุกหนัก" value={stats.heavyTruckCases} icon={Truck} colorClass="text-purple-400 bg-purple-500" delay={300} />
+                <StatCard title="บุคคลตามหมายจับ" value={stats.warrantCases} icon={FileWarning} colorClass="text-pink-400 bg-pink-500" delay={400} />
+                <StatCard title="หน่วยที่รายงาน" value={stats.uniqueUnits} icon={Building2} colorClass="text-green-400 bg-green-500" delay={500} />
               </div>
+
+              {/* Charts */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100">
-                  <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center"><BarChart3 className="w-5 h-5 mr-2 text-slate-500" />{stats.unitChartTitle}</h3>
+                <div className="bg-slate-800/80 backdrop-blur-sm p-4 sm:p-6 rounded-xl shadow-lg border border-slate-700/50">
+                  <h3 className="text-base sm:text-lg font-bold mb-6 flex items-center text-white"><BarChart3 className="w-5 h-5 mr-2 text-yellow-400" />{stats.unitChartTitle}</h3>
                   {stats.unitChartData.length > 0 ? (
                     <div className="h-72 sm:h-96 w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={stats.unitChartData} margin={{ top: 10, right: 0, left: -20, bottom: 20 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                          <XAxis dataKey="name" interval={0} angle={-45} textAnchor="end" height={50} tick={{fontSize: 10, fill: '#64748b'}} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} />
-                          <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} allowDecimals={false} />
-                          <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} cursor={{ fill: '#f1f5f9' }} />
-                          <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={60} />
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.5} />
+                          <XAxis dataKey="name" interval={0} angle={-45} textAnchor="end" height={60} tick={{fontSize: 10, fill: '#94a3b8'}} axisLine={{ stroke: '#475569' }} tickLine={false} />
+                          <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} allowDecimals={false} />
+                          <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', borderRadius: '8px', border: '1px solid #475569', color: '#fff' }} cursor={{ fill: 'rgba(255,255,255,0.05)' }} itemStyle={{ color: '#fff' }} />
+                          <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={50}>
+                             {stats.unitChartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                             ))}
+                          </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
-                  ) : (<div className="h-64 flex items-center justify-center text-slate-400 flex-col"><FileText className="w-8 h-8 mb-2 opacity-50" /><span>ไม่พบข้อมูลตามเงื่อนไข</span></div>)}
+                  ) : (<div className="h-64 flex items-center justify-center text-slate-500 flex-col"><FileText className="w-8 h-8 mb-2 opacity-50" /><span>ไม่พบข้อมูลตามเงื่อนไข</span></div>)}
                 </div>
-                <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100">
-                  <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center"><PieChart className="w-5 h-5 mr-2 text-slate-500" />สัดส่วนประเภทคดี</h3>
+
+                <div className="bg-slate-800/80 backdrop-blur-sm p-4 sm:p-6 rounded-xl shadow-lg border border-slate-700/50">
+                  <h3 className="text-base sm:text-lg font-bold mb-6 flex items-center text-white"><PieChart className="w-5 h-5 mr-2 text-yellow-400" />สัดส่วนประเภทคดี</h3>
                   {stats.typeChartData.length > 0 ? (
                     <>
                       <div className="h-64 sm:h-80 flex justify-center w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
-                            <Pie data={stats.typeChartData} cx="50%" cy="50%" innerRadius="45%" outerRadius="70%" paddingAngle={2} dataKey="value" stroke="none">
+                            <Pie data={stats.typeChartData} cx="50%" cy="50%" innerRadius="55%" outerRadius="80%" paddingAngle={4} dataKey="value" stroke="none">
                               {stats.typeChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                             </Pie>
-                            <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                            <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', borderRadius: '8px', border: '1px solid #475569', color: '#fff' }} itemStyle={{ color: '#fff' }} />
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
-                      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-2">{stats.typeChartData.map((entry, index) => (<div key={index} className="flex items-center text-[10px] sm:text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded-full border border-slate-100"><div className="w-2 h-2 rounded-full mr-2 flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div><span className="truncate max-w-[100px]">{entry.name}</span><span className="font-semibold ml-1">({entry.value})</span></div>))}</div>
+                      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-4">
+                          {stats.typeChartData.map((entry, index) => (
+                              <div key={index} className="flex items-center text-[10px] sm:text-xs text-slate-300 bg-slate-900/50 px-2 py-1 rounded-full border border-slate-700">
+                                  <div className="w-2 h-2 rounded-full mr-2 flex-shrink-0 shadow-[0_0_5px]" style={{ backgroundColor: COLORS[index % COLORS.length], boxShadow: `0 0 5px ${COLORS[index % COLORS.length]}` }}></div>
+                                  <span className="truncate max-w-[100px]">{entry.name}</span>
+                                  <span className="font-bold ml-1 text-white">({entry.value})</span>
+                              </div>
+                          ))}
+                      </div>
                     </>
-                  ) : (<div className="h-64 flex items-center justify-center text-slate-400 flex-col"><FileText className="w-8 h-8 mb-2 opacity-50" /><span>ไม่พบข้อมูลตามเงื่อนไข</span></div>)}
+                  ) : (<div className="h-64 flex items-center justify-center text-slate-500 flex-col"><FileText className="w-8 h-8 mb-2 opacity-50" /><span>ไม่พบข้อมูลตามเงื่อนไข</span></div>)}
                 </div>
               </div>
             </div>
@@ -344,22 +409,22 @@ export default function App() {
 
           {activeTab === 'list' && (
             <div className="p-2 sm:p-6 h-full">
-              <div className="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col h-full animate-in fade-in duration-300 overflow-hidden">
-                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50"><span className="text-sm font-medium text-slate-600">ข้อมูลรายการจับกุม</span></div>
+              <div className="bg-slate-800/90 backdrop-blur rounded-xl shadow-lg border border-slate-700 flex flex-col h-full overflow-hidden">
+                <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800"><span className="text-sm font-bold text-slate-300 uppercase tracking-wider">Arrest Log Database</span></div>
                 <div className="flex-1 overflow-auto">
                   <table className="w-full text-left border-collapse">
-                    <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm"><tr><th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">วันที่/เวลา</th><th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">หน่วยงาน</th><th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">หัวข้อ/ข้อหา</th><th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">ผู้ถูกจับ</th><th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">สถานที่</th><th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200"></th></tr></thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <thead className="bg-slate-900 sticky top-0 z-10 shadow-sm"><tr><th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">วันที่/เวลา</th><th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">หน่วยงาน</th><th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">หัวข้อ/ข้อหา</th><th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">ผู้ถูกจับ</th><th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">สถานที่</th><th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700"></th></tr></thead>
+                    <tbody className="divide-y divide-slate-700">
                       {filteredData.length > 0 ? filteredData.map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="p-4 text-sm text-slate-600 whitespace-nowrap"><div className="font-medium text-slate-800">{item.date_capture}</div><div className="text-xs text-slate-400">{item.time_capture} น.</div></td>
-                          <td className="p-4 text-sm text-slate-600 whitespace-nowrap"><div className="font-medium text-slate-800">กก.{item.unit_kk} บก.ทล.</div><div className="text-xs text-slate-500">ส.ทล.{item.unit_s_tl}</div></td>
-                          <td className="p-4 text-sm text-slate-800 font-medium max-w-xs truncate" title={item.charge}><div className="text-blue-600 mb-1 text-xs uppercase tracking-wide">{item.topic}</div>{item.charge}</td>
-                          <td className="p-4 text-sm text-slate-600">{item.suspect_name !== '-' ? item.suspect_name : 'ไม่ระบุตัวตน'}</td>
-                          <td className="p-4 text-sm text-slate-600 max-w-xs truncate" title={item.location}>{item.location}</td>
-                          <td className="p-4 text-right"><button onClick={() => setSelectedCase(item)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"><ChevronRight className="w-5 h-5" /></button></td>
+                        <tr key={item.id} className="hover:bg-slate-700/50 transition-colors group">
+                          <td className="p-4 text-sm text-slate-300 whitespace-nowrap"><div className="font-medium text-white">{item.date_capture}</div><div className="text-xs text-slate-500">{item.time_capture} น.</div></td>
+                          <td className="p-4 text-sm text-slate-300 whitespace-nowrap"><div className="font-medium text-white">กก.{item.unit_kk} บก.ทล.</div><div className="text-xs text-slate-500">ส.ทล.{item.unit_s_tl}</div></td>
+                          <td className="p-4 text-sm text-white font-medium max-w-xs truncate" title={item.charge}><div className="text-yellow-400 mb-1 text-xs uppercase tracking-wide">{item.topic}</div>{item.charge}</td>
+                          <td className="p-4 text-sm text-slate-300">{item.suspect_name !== '-' ? item.suspect_name : 'ไม่ระบุตัวตน'}</td>
+                          <td className="p-4 text-sm text-slate-400 max-w-xs truncate" title={item.location}>{item.location}</td>
+                          <td className="p-4 text-right"><button onClick={() => setSelectedCase(item)} className="p-2 text-slate-500 group-hover:text-yellow-400 hover:bg-slate-600 rounded-full transition-colors"><ChevronRight className="w-5 h-5" /></button></td>
                         </tr>
-                      )) : (<tr><td colSpan="6" className="p-12 text-center text-slate-400 flex flex-col items-center justify-center w-full"><Search className="w-10 h-10 mb-3 opacity-20" />ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</td></tr>)}
+                      )) : (<tr><td colSpan="6" className="p-12 text-center text-slate-500 flex flex-col items-center justify-center w-full"><Search className="w-10 h-10 mb-3 opacity-20" />ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</td></tr>)}
                     </tbody>
                   </table>
                 </div>
@@ -368,10 +433,18 @@ export default function App() {
           )}
 
           {activeTab === 'map' && (
-            <div className="h-full w-full p-2 sm:p-6 animate-in fade-in duration-300 flex flex-col">
-              <div className="flex items-center justify-between mb-4"><div><h3 className="text-lg font-bold text-slate-800 flex items-center"><MapIcon className="w-5 h-5 mr-2 text-blue-600" />แผนที่สถานการณ์ (GIS)</h3><p className="text-sm text-slate-500">แสดงพิกัดภูมิสารสนเทศบนแผนที่ฐาน (QGIS/OpenStreetMap Style)</p></div></div>
-              <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
-                <div className="absolute bottom-6 right-6 bg-white/90 backdrop-blur-sm p-3 rounded shadow-lg border border-slate-300 z-[1000] max-w-[200px]"><h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center border-b border-slate-200 pb-1"><Layers className="w-3 h-3 mr-1" /> สัญลักษณ์หน่วย (กก.)</h4><div className="grid grid-cols-2 gap-x-3 gap-y-1.5">{Object.entries(UNIT_COLORS).map(([kk, color]) => (<div key={kk} className="flex items-center text-[11px] text-slate-600"><span className="w-3 h-3 rounded-full mr-2 inline-block shadow-sm border border-white" style={{ backgroundColor: color }}></span>กก.{kk}</div>))}</div></div>
+            <div className="h-full w-full p-2 sm:p-6 flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                  <div>
+                      <h3 className="text-lg font-bold text-white flex items-center"><MapIcon className="w-5 h-5 mr-2 text-yellow-400" />Tactical Situation Map</h3>
+                      <p className="text-sm text-slate-400">Geo-Spatial Intelligence System (GIS)</p>
+                  </div>
+              </div>
+              <div className="flex-1 bg-slate-800 rounded-xl shadow-lg border border-slate-700 overflow-hidden relative">
+                <div className="absolute bottom-6 right-6 bg-slate-900/90 backdrop-blur-sm p-3 rounded shadow-lg border border-slate-600 z-[1000] max-w-[200px]">
+                    <h4 className="text-xs font-bold text-slate-300 mb-2 flex items-center border-b border-slate-700 pb-1"><Layers className="w-3 h-3 mr-1" /> หน่วย (กก.)</h4>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">{Object.entries(UNIT_COLORS).map(([kk, color]) => (<div key={kk} className="flex items-center text-[11px] text-slate-300"><span className="w-2.5 h-2.5 rounded-full mr-2 inline-block shadow-[0_0_4px]" style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}` }}></span>กก.{kk}</div>))}</div>
+                </div>
                 {!mapError ? (<LeafletMap data={filteredData} onSelectCase={setSelectedCase} onError={handleMapError} />) : (<SimpleMapVisualization data={filteredData} onSelectCase={setSelectedCase} />)}
               </div>
             </div>
@@ -380,23 +453,23 @@ export default function App() {
       </main>
 
       {selectedCase && (
-        <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
-              <div><h2 className="text-xl font-bold text-slate-800">รายละเอียดการจับกุม</h2><p className="text-sm text-slate-500">รหัสเหตุการณ์: #{selectedCase.id}</p></div>
-              <button onClick={() => setSelectedCase(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"><X className="w-6 h-6" /></button>
+        <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-slate-800 flex justify-between items-center sticky top-0 bg-slate-900/95 backdrop-blur z-10">
+              <div><h2 className="text-xl font-bold text-white">รายละเอียดการจับกุม</h2><p className="text-sm text-slate-400">Case ID: #{selectedCase.id}</p></div>
+              <button onClick={() => setSelectedCase(null)} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors"><X className="w-6 h-6" /></button>
             </div>
             <div className="p-6 space-y-6">
-              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100"><h3 className="text-sm font-semibold text-blue-800 mb-2 uppercase tracking-wider">หน่วยงานรับผิดชอบ</h3><div className="grid grid-cols-2 gap-4"><div><p className="text-xs text-blue-600 mb-1">กองกำกับการ</p><p className="text-lg font-bold text-slate-800 flex items-center gap-2"><Building2 className="w-5 h-5 text-blue-500" />กก.{selectedCase.unit_kk} บก.ทล.</p></div><div><p className="text-xs text-blue-600 mb-1">สถานีตำรวจทางหลวง</p><p className="text-lg font-bold text-slate-800">ส.ทล.{selectedCase.unit_s_tl}</p></div></div></div>
+              <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-500/30"><h3 className="text-sm font-semibold text-blue-400 mb-2 uppercase tracking-wider">หน่วยงานรับผิดชอบ</h3><div className="grid grid-cols-2 gap-4"><div><p className="text-xs text-slate-400 mb-1">กองกำกับการ</p><p className="text-lg font-bold text-white flex items-center gap-2"><Building2 className="w-5 h-5 text-blue-500" />กก.{selectedCase.unit_kk} บก.ทล.</p></div><div><p className="text-xs text-slate-400 mb-1">สถานีตำรวจทางหลวง</p><p className="text-lg font-bold text-white">ส.ทล.{selectedCase.unit_s_tl}</p></div></div></div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div><h3 className="text-sm font-semibold text-slate-900 border-b pb-2 mb-3 flex items-center"><Calendar className="w-4 h-4 mr-2 text-slate-500" />ข้อมูลเหตุการณ์</h3><dl className="space-y-3 text-sm"><div><dt className="text-slate-500 text-xs">วัน/เวลา</dt><dd className="text-slate-800 font-medium">{selectedCase.date_capture} เวลา {selectedCase.time_capture} น.</dd></div><div><dt className="text-slate-500 text-xs">สถานที่</dt><dd className="text-slate-800">{selectedCase.location}</dd></div><div><dt className="text-slate-500 text-xs">หัวข้อเรื่อง</dt><dd className="text-slate-800 inline-block px-2 py-1 bg-slate-100 rounded text-xs font-medium">{selectedCase.topic}</dd></div><div><dt className="text-slate-500 text-xs">พิกัด (Lat/Long)</dt><dd className="text-slate-800 font-mono flex items-center gap-1"><Navigation className="w-3 h-3 text-blue-500" />{selectedCase.lat}, {selectedCase.long}</dd></div></dl></div>
-                <div><h3 className="text-sm font-semibold text-slate-900 border-b pb-2 mb-3 flex items-center"><Users className="w-4 h-4 mr-2 text-slate-500" />ข้อมูลผู้ต้องหา</h3><dl className="space-y-3 text-sm"><div><dt className="text-slate-500 text-xs">ชื่อ-สกุล</dt><dd className="text-slate-800 font-medium">{selectedCase.suspect_name}</dd></div><div><dt className="text-slate-500 text-xs">อายุ/สัญชาติ</dt><dd className="text-slate-800">{selectedCase.age} ปี / {selectedCase.nationality}</dd></div><div><dt className="text-slate-500 text-xs">ที่อยู่</dt><dd className="text-slate-800 truncate">{selectedCase.address}</dd></div></dl></div>
+                <div><h3 className="text-sm font-semibold text-slate-200 border-b border-slate-700 pb-2 mb-3 flex items-center"><Calendar className="w-4 h-4 mr-2 text-yellow-500" />ข้อมูลเหตุการณ์</h3><dl className="space-y-3 text-sm"><div><dt className="text-slate-500 text-xs">วัน/เวลา</dt><dd className="text-slate-200 font-medium">{selectedCase.date_capture} เวลา {selectedCase.time_capture} น.</dd></div><div><dt className="text-slate-500 text-xs">สถานที่</dt><dd className="text-slate-200">{selectedCase.location}</dd></div><div><dt className="text-slate-500 text-xs">หัวข้อเรื่อง</dt><dd className="text-slate-900 inline-block px-2 py-1 bg-yellow-400 rounded text-xs font-bold">{selectedCase.topic}</dd></div><div><dt className="text-slate-500 text-xs">พิกัด (Lat/Long)</dt><dd className="text-slate-200 font-mono flex items-center gap-1"><Navigation className="w-3 h-3 text-blue-500" />{selectedCase.lat}, {selectedCase.long}</dd></div></dl></div>
+                <div><h3 className="text-sm font-semibold text-slate-200 border-b border-slate-700 pb-2 mb-3 flex items-center"><Users className="w-4 h-4 mr-2 text-yellow-500" />ข้อมูลผู้ต้องหา</h3><dl className="space-y-3 text-sm"><div><dt className="text-slate-500 text-xs">ชื่อ-สกุล</dt><dd className="text-slate-200 font-medium">{selectedCase.suspect_name}</dd></div><div><dt className="text-slate-500 text-xs">อายุ/สัญชาติ</dt><dd className="text-slate-200">{selectedCase.age} ปี / {selectedCase.nationality}</dd></div><div><dt className="text-slate-500 text-xs">ที่อยู่</dt><dd className="text-slate-200 truncate">{selectedCase.address}</dd></div></dl></div>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-slate-900 border-b pb-2 mb-3">ข้อหาและพฤติการณ์</h3>
-                <div className="bg-slate-50 p-4 rounded-lg space-y-4"><div><p className="text-xs text-slate-500 mb-1">ข้อหา</p><p className="text-sm text-slate-800 font-medium">{selectedCase.charge}</p></div><div><p className="text-xs text-slate-500 mb-1">พฤติการณ์</p><p className="text-sm text-slate-600 leading-relaxed">{selectedCase.behavior}</p></div>{selectedCase.seized_items && selectedCase.seized_items !== '-' && (<div className="pt-2 border-t border-slate-200"><p className="text-xs text-slate-500 mb-1">ของกลาง</p><p className="text-sm text-red-600 font-medium">{selectedCase.seized_items}</p></div>)}</div>
+                <h3 className="text-sm font-semibold text-slate-200 border-b border-slate-700 pb-2 mb-3">ข้อหาและพฤติการณ์</h3>
+                <div className="bg-slate-800 p-4 rounded-lg space-y-4 border border-slate-700"><div><p className="text-xs text-slate-500 mb-1">ข้อหา</p><p className="text-sm text-white font-medium">{selectedCase.charge}</p></div><div><p className="text-xs text-slate-500 mb-1">พฤติการณ์</p><p className="text-sm text-slate-300 leading-relaxed">{selectedCase.behavior}</p></div>{selectedCase.seized_items && selectedCase.seized_items !== '-' && (<div className="pt-2 border-t border-slate-700"><p className="text-xs text-slate-500 mb-1">ของกลาง</p><p className="text-sm text-red-400 font-medium">{selectedCase.seized_items}</p></div>)}</div>
               </div>
-              <div><h3 className="text-sm font-semibold text-slate-900 border-b pb-2 mb-3">เจ้าหน้าที่ชุดจับกุม</h3><div className="text-sm text-slate-600 bg-white border border-slate-200 p-3 rounded-lg flex items-start gap-2"><Users className="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />{selectedCase.arrest_team}</div></div>
+              <div><h3 className="text-sm font-semibold text-slate-200 border-b border-slate-700 pb-2 mb-3">เจ้าหน้าที่ชุดจับกุม</h3><div className="text-sm text-slate-300 bg-slate-800 border border-slate-700 p-3 rounded-lg flex items-start gap-2"><Users className="w-4 h-4 mt-0.5 text-slate-500 flex-shrink-0" />{selectedCase.arrest_team}</div></div>
             </div>
           </div>
         </div>
@@ -404,17 +477,18 @@ export default function App() {
       
       {/* ==================================================================================
           FIXED PRINT VIEW (Layout: Charts Left, Table Right - NO MAP)
+          Note: Keeping styles White/Black for clean printing, despite dark mode app
           ================================================================================== */}
       <div id="print-view" 
-            style={{ 
-              position: 'fixed', top: 0, left: 0,
-              zIndex: isExporting ? 99999 : -1,
-              opacity: isExporting ? 1 : 0,
-              width: '1123px', height: '794px',
-              backgroundColor: 'white', padding: '20px',
-              fontFamily: "'Sarabun', sans-serif", color: '#000',
-              overflow: 'hidden', visibility: 'visible', pointerEvents: 'none'
-            }}>
+           style={{ 
+             position: 'fixed', top: 0, left: 0,
+             zIndex: isExporting ? 99999 : -1,
+             opacity: isExporting ? 1 : 0,
+             width: '1123px', height: '794px',
+             backgroundColor: 'white', padding: '20px',
+             fontFamily: "'Sarabun', sans-serif", color: '#000',
+             overflow: 'hidden', visibility: 'visible', pointerEvents: 'none'
+           }}>
         
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '15px', height: '15mm' }}>

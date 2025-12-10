@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "html2pdf.js": "^0.12.1",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.556.0",
+    "papaparse": "^5.5.3",
+    "recharts": "^3.5.1"
+  }
+}
