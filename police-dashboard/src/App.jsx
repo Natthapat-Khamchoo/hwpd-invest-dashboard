@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import Papa from 'papaparse';
 import html2pdf from 'html2pdf.js';
 import { 
-  LayoutDashboard, Table as TableIcon, Search, Filter, Siren, Users, 
+  LayoutDashboard, Table as TableIcon, MapPin, Search, Filter, Siren, Users, 
   FileText, Calendar, ChevronRight, X, Menu, BarChart3, Map as MapIcon, 
   Building2, ChevronLeft, AlertTriangle, Truck, FileWarning, Download, 
   Activity, Radar, MousePointerClick, RefreshCw
@@ -15,44 +15,86 @@ import {
 // --- Configuration ---
 const UNIT_HIERARCHY = { "1": 6, "2": 6, "3": 5, "4": 5, "5": 6, "6": 6, "7": 5, "8": 4 };
 
-// 🎨 PALETTE & COLORS
-const FALLBACK_PALETTE = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#6366f1', '#84cc16'];
-const UNIT_COLORS_MAP = { "1": "#ef4444", "2": "#f97316", "3": "#eab308", "4": "#22c55e", "5": "#06b6d4", "6": "#3b82f6", "7": "#a855f7", "8": "#ec4899" };
+// 🎨 PALETTE: ชุดสีหลักสำหรับใช้กรณีที่ไม่เข้าเงื่อนไข (สีโทน Modern)
+const FALLBACK_PALETTE = [
+  '#3b82f6', // Blue
+  '#ef4444', // Red
+  '#10b981', // Emerald
+  '#f59e0b', // Amber
+  '#8b5cf6', // Violet
+  '#ec4899', // Pink
+  '#06b6d4', // Cyan
+  '#f97316', // Orange
+  '#6366f1', // Indigo
+  '#84cc16', // Lime
+];
+
+// 🎨 FIXED COLORS: UNIT (กก.) - ระบุสีตายตัว
+const UNIT_COLORS_MAP = { 
+  "1": "#ef4444", // กก.1 - แดง
+  "2": "#f97316", // กก.2 - ส้ม
+  "3": "#eab308", // กก.3 - เหลือง
+  "4": "#22c55e", // กก.4 - เขียว
+  "5": "#06b6d4", // กก.5 - ฟ้า
+  "6": "#3b82f6", // กก.6 - น้ำเงิน
+  "7": "#a855f7", // กก.7 - ม่วง
+  "8": "#ec4899"  // กก.8 - ชมพู
+};
+
+// 🎨 FIXED COLORS: CRIME TYPE (ประเภทคดี) - จับคู่คำค้นหา
 const CRIME_KEYWORDS = [
-  { keys: ["ยาเสพติด", "ยาบ้า", "ไอซ์"], color: "#ef4444" },
-  { keys: ["อาวุธ", "ปืน", "ระเบิด"], color: "#f97316" },
-  { keys: ["รถบรรทุก", "น้ำหนัก", "บรรทุก"], color: "#a855f7" },
-  { keys: ["หมายจับ", "ตามหมาย"], color: "#3b82f6" },
-  { keys: ["เมา", "แอลกอฮอล์"], color: "#eab308" },
-  { keys: ["จราจร", "ป้าย", "ใบขับขี่"], color: "#22c55e" },
-  { keys: ["ทางหลวง", "สอบสวน"], color: "#06b6d4" },
-  { keys: ["ต่างด้าว", "หลบหนีเข้าเมือง"], color: "#ec4899" },
-  { keys: ["ลักทรัพย์", "โจรกรรม"], color: "#64748b" }
+  { keys: ["ยาเสพติด", "ยาบ้า", "ไอซ์"], color: "#ef4444" }, // แดง
+  { keys: ["อาวุธ", "ปืน", "ระเบิด"], color: "#f97316" },     // ส้ม
+  { keys: ["รถบรรทุก", "น้ำหนัก", "บรรทุก"], color: "#a855f7" }, // ม่วง
+  { keys: ["หมายจับ", "ตามหมาย"], color: "#3b82f6" },         // น้ำเงิน
+  { keys: ["เมา", "แอลกอฮอล์"], color: "#eab308" },           // เหลือง
+  { keys: ["จราจร", "ป้าย", "ใบขับขี่"], color: "#22c55e" },    // เขียว
+  { keys: ["ทางหลวง", "สอบสวน"], color: "#06b6d4" },          // ฟ้า
+  { keys: ["ต่างด้าว", "หลบหนีเข้าเมือง"], color: "#ec4899" },   // ชมพู
+  { keys: ["ลักทรัพย์", "โจรกรรม"], color: "#64748b" }          // เทา
 ];
 
 const THAI_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 const LOGO_URL = "https://hwpd.cib.go.th/backend/uploads/logo500_0d7ce0273a.png";
 
 // --- Helpers ---
+
+// 1. ฟังก์ชันสุ่มสีแบบคงที่ (Consistent Hashing) 
+// ใส่ string เดิม ได้สีเดิมเสมอ ไม่มั่วเมื่อ refresh
 const getConsistentColor = (str) => {
   if (!str) return '#94a3b8';
   let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  return FALLBACK_PALETTE[Math.abs(hash) % FALLBACK_PALETTE.length];
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % FALLBACK_PALETTE.length;
+  return FALLBACK_PALETTE[index];
 };
 
+// 2. ปรับปรุง Logic การดึงสีหน่วยงาน
 const getUnitColor = (name) => {
+  // รองรับ format "กก.1", "1", "Unit 1"
   const match = name.match(/(\d+)/); 
-  if (match) return UNIT_COLORS_MAP[match[0]] || getConsistentColor(name);
+  if (match) {
+     const num = match[0];
+     // ถ้ามีใน Map ให้ใช้ ถ้าไม่มีให้ใช้ฟังก์ชันสุ่มแบบคงที่
+     return UNIT_COLORS_MAP[num] || getConsistentColor(name);
+  }
   return getConsistentColor(name);
 };
 
+// 3. ปรับปรุง Logic สีคดี (First Match wins)
 const getCrimeColor = (topic) => {
   if (!topic) return '#94a3b8';
   const lowerTopic = topic.toLowerCase();
+  
+  // วนลูปเช็ค Keyword
   for (const group of CRIME_KEYWORDS) {
-    if (group.keys.some(k => lowerTopic.includes(k))) return group.color;
+    if (group.keys.some(k => lowerTopic.includes(k))) {
+      return group.color;
+    }
   }
+  // ถ้าไม่เจอ Keyword ให้ใช้สีตามชื่อ (คงที่)
   return getConsistentColor(topic);
 };
 
@@ -70,10 +112,11 @@ const parseThaiDate = (dateStr) => {
 const getYearFromDate = (dateObj) => {
   if (!dateObj) return null;
   const y = dateObj.getFullYear();
-  return y > 2400 ? (y - 543).toString() : (y + 543).toString();
+  return y > 2400 ? (y - 543).toString() : (y + 543).toString(); // Return Thai Year
 };
 
 // --- Sub-Components ---
+
 const StatCard = ({ title, value, icon: Icon, colorClass, delay }) => (
   <div className={`bg-slate-800/80 backdrop-blur-md p-4 sm:p-5 rounded-xl border border-slate-700/50 shadow-lg flex items-center space-x-4 hover:border-yellow-500/50 transition-all duration-300 group animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards`} style={{ animationDelay: `${delay}ms` }}>
     <div className={`p-3 rounded-lg ${colorClass} bg-opacity-20 flex-shrink-0 group-hover:scale-110 transition-transform duration-300`}>
@@ -165,6 +208,7 @@ const LeafletMap = ({ data, onSelectCase, onError }) => {
 export default function App() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedCase, setSelectedCase] = useState(null);
   const [mapError, setMapError] = useState(false); 
@@ -196,12 +240,14 @@ export default function App() {
       Papa.parse(GOOGLE_SHEET_CSV_URL, {
         download: true, header: true,
         complete: (results) => {
+          // Clean & Normalize Data Here
           const formattedData = results.data
             .filter(item => item['หัวข้อ'] && item['กก.'])
             .map((item, index) => {
                 const dateCapture = item['วันที่'] ? item['วันที่'].trim() : '';
                 const dateObj = parseThaiDate(dateCapture);
                 const yearStr = dateObj ? getYearFromDate(dateObj) : '';
+                
                 return {
                     id: index + 1,
                     timestamp: item['Timestamp'] || new Date().toISOString(),
@@ -211,8 +257,8 @@ export default function App() {
                     captured_by: item['จับโดย'] || '',
                     arrest_type: item['ประเภทการจับกุม'] || '',
                     date_capture: dateCapture,
-                    date_obj: dateObj,
-                    year: yearStr,
+                    date_obj: dateObj, // เก็บ Date object เพื่อการ filter ที่เร็วขึ้น
+                    year: yearStr,     // เก็บปีไว้เลย
                     time_capture: item['เวลา'] || '',
                     arrest_team: item['เจ้าหน้าที่ชุดจับกุม'] || '',
                     suspect_count: item['จำนวน'] || '1',
@@ -229,7 +275,7 @@ export default function App() {
                     delivery: item['การดำเนินการส่งต่อ'] || ''
                 };
             });
-          setData(formattedData); setLoading(false);
+          setData(formattedData); setLoading(false); setLastUpdated(new Date());
         },
         error: (err) => { console.error(err); setLoading(false); }
       });
@@ -237,31 +283,42 @@ export default function App() {
     fetchData(); const intervalId = setInterval(fetchData, 300000); return () => clearInterval(intervalId);
   }, []);
 
-  // 🖨️ PDF EXPORT FUNCTION (UPDATED)
   const handleExportPDF = () => {
-    window.scrollTo(0, 0); // เลื่อนจอไปบนสุด
-    setIsExporting(true); // เปิดโหมด Export (Overlay เด้งขึ้นมา)
+    // 1. เลื่อน Scroll ไปบนสุดเพื่อป้องกันภาพขาด
+    window.scrollTo(0, 0);
+    setIsExporting(true);
 
+    // รอสักนิดให้ State อัปเดตและ Recharts วาดเสร็จ (โดยไม่มี Animation)
     setTimeout(() => {
       const element = document.getElementById('print-view');
       const opt = {
-        margin: 0,
+        margin: 0, // ตั้งขอบเป็น 0
         filename: `รายงานสรุป_${new Date().toISOString().slice(0,10)}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
+        // แก้ไข html2canvas settings
         html2canvas: { 
             scale: 2, 
             useCORS: true, 
-            scrollY: 0, // ป้องกันภาพขาด
-            windowWidth: 1123, 
+            scrollY: 0, 
+            scrollX: 0,
+            windowWidth: 1123, // บังคับความกว้างหน้าต่างให้เท่า A4 แนวนอน
             windowHeight: 794
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
       };
 
-      html2pdf().set(opt).from(element).save()
-        .then(() => setIsExporting(false))
-        .catch(err => { console.error("PDF Failed:", err); setIsExporting(false); });
-    }, 1000); // รอ 1 วิ ให้ Render เสร็จ
+      html2pdf()
+        .set(opt)
+        .from(element)
+        .save()
+        .then(() => {
+           setIsExporting(false);
+        })
+        .catch(err => {
+           console.error("PDF Failed:", err);
+           setIsExporting(false);
+        });
+    }, 1000); // รอ 1 วินาทีเพื่อให้มั่นใจว่า Render เสร็จ
   };
 
   const handleExportCSV = () => {
@@ -289,7 +346,9 @@ export default function App() {
       let yearMatch = true; 
       let monthMatch = true;
 
-      if (filters.year) yearMatch = item.year === filters.year;
+      if (filters.year) { 
+        yearMatch = item.year === filters.year; 
+      }
 
       const itemDate = item.date_obj;
       if (itemDate) {
@@ -301,7 +360,9 @@ export default function App() {
             const end = filters.endMonth ? parseInt(filters.endMonth) : 12;
             if (m < start || m > end) monthMatch = false;
          }
-      } else if (filters.specificMonth || filters.startMonth || filters.endMonth) monthMatch = false;
+      } else if (filters.specificMonth || filters.startMonth || filters.endMonth) {
+         monthMatch = false;
+      }
 
       return searchMatch && kkMatch && stlMatch && chargeMatch && yearMatch && monthMatch;
     });
@@ -331,10 +392,18 @@ export default function App() {
   }, [filteredData, filters.unit_kk]);
 
   const handleFilterChange = (key, value) => { 
-      if (key === 'specificMonth' && value !== '') setFilters(prev => ({ ...prev, [key]: value, startMonth: '', endMonth: '' }));
-      else if ((key === 'startMonth' || key === 'endMonth') && value !== '') setFilters(prev => ({ ...prev, [key]: value, specificMonth: '' }));
-      else if (key === 'unit_kk') setFilters(prev => ({ ...prev, [key]: value, unit_s_tl: '' })); 
-      else setFilters(prev => ({ ...prev, [key]: value }));
+      if (key === 'specificMonth' && value !== '') {
+         setFilters(prev => ({ ...prev, [key]: value, startMonth: '', endMonth: '' }));
+      }
+      else if ((key === 'startMonth' || key === 'endMonth') && value !== '') {
+         setFilters(prev => ({ ...prev, [key]: value, specificMonth: '' }));
+      }
+      else if (key === 'unit_kk') {
+         setFilters(prev => ({ ...prev, [key]: value, unit_s_tl: '' })); 
+      }
+      else {
+         setFilters(prev => ({ ...prev, [key]: value }));
+      }
   };
 
   const clearFilters = () => { setFilters({ search: '', startDate: '', endDate: '', year: '', specificMonth: '', startMonth: '', endMonth: '', unit_kk: '', unit_s_tl: '', topic: '', charge: '' }); setLocalSearch(''); };
@@ -342,11 +411,19 @@ export default function App() {
   const onUnitBarClick = (data) => {
       if (!data || !data.activePayload) return;
       const { name } = data.activePayload[0].payload; 
-      if (name.includes("กก.")) handleFilterChange('unit_kk', name.replace("กก.", "").trim());
-      else if (name.includes("ส.ทล.")) handleFilterChange('unit_s_tl', name.replace("ส.ทล.", "").trim());
+      if (name.includes("กก.")) {
+          const id = name.replace("กก.", "").trim();
+          handleFilterChange('unit_kk', id);
+      } else if (name.includes("ส.ทล.")) {
+          const id = name.replace("ส.ทล.", "").trim();
+          handleFilterChange('unit_s_tl', id);
+      }
   };
 
-  const onPieClick = (data) => { if (data && data.name) handleFilterChange('charge', data.name); };
+  const onPieClick = (data) => {
+      if (data && data.name) handleFilterChange('charge', data.name);
+  };
+
 
   if (loading) return <div className="flex h-screen items-center justify-center bg-slate-900"><div className="animate-spin rounded-full h-12 w-12 border-b-4 border-yellow-400 mb-4"></div></div>;
 
@@ -357,13 +434,13 @@ export default function App() {
         .digital-bg { background-color: #0f172a; background-image: radial-gradient(circle at 50% 50%, #1e293b 1px, transparent 1px); background-size: 30px 30px; }
         ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #1e293b; } ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
       `}</style>
+
       <div className="absolute inset-0 digital-bg z-0 pointer-events-none opacity-50"></div>
 
       {isExporting && (
-        <div className="fixed inset-0 z-[9999] bg-black/90 flex flex-col items-center justify-center backdrop-blur-md">
+        <div className="fixed inset-0 z-[9999] bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">
            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-yellow-400 mb-4"></div>
            <p className="text-white text-lg font-semibold animate-pulse">กำลังจัดเตรียมเอกสาร PDF...</p>
-           <p className="text-slate-400 text-sm mt-2">กรุณารอสักครู่ (Please wait)</p>
         </div>
       )}
 
@@ -397,7 +474,9 @@ export default function App() {
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="hidden md:flex text-xs text-slate-400 items-center mr-2 bg-slate-800 px-2 py-1 rounded border border-slate-700"><span className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>Live</div>
+            
             <button onClick={clearFilters} className="bg-slate-700 hover:bg-red-500/80 hover:text-white text-slate-300 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center shadow-sm border border-slate-600 transition-all"><RefreshCw className="w-4 h-4 mr-1" /> ล้างค่า</button>
+            
             {activeTab === 'dashboard' && (<button onClick={handleExportPDF} className="bg-red-600/90 hover:bg-red-500 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center shadow-lg hover:shadow-red-500/20 transition-all border border-red-400/30"><FileText className="w-4 h-4 mr-1" /> PDF</button>)}
             <button onClick={handleExportCSV} className="bg-emerald-600/90 hover:bg-emerald-500 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center shadow-lg hover:shadow-emerald-500/20 transition-all border border-emerald-400/30"><Download className="w-4 h-4 mr-1" /> CSV</button>
             <button onClick={() => setShowFilterPanel(!showFilterPanel)} className={`flex items-center space-x-1 sm:space-x-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${showFilterPanel ? 'bg-yellow-500 text-slate-900 shadow-[0_0_10px_rgba(234,179,8,0.4)]' : 'bg-slate-800 text-slate-300 border border-slate-600 hover:bg-slate-700'}`}><Filter className="w-4 h-4" /><span className="hidden sm:inline">ตัวกรอง</span></button>
@@ -411,6 +490,7 @@ export default function App() {
               <div><label className="block text-xs font-medium text-slate-400 mb-1">กก.</label><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.unit_kk} onChange={(e) => handleFilterChange('unit_kk', e.target.value)}><option value="">ทั้งหมด</option>{Object.keys(UNIT_HIERARCHY).map(kk => <option key={kk} value={kk}>กก.{kk}</option>)}</select></div>
               <div><label className="block text-xs font-medium text-slate-400 mb-1">ส.ทล.</label><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.unit_s_tl} onChange={(e) => handleFilterChange('unit_s_tl', e.target.value)} disabled={!filters.unit_kk}><option value="">{filters.unit_kk ? 'ทั้งหมด' : 'เลือก กก.'}</option>{filters.unit_kk && Array.from({ length: UNIT_HIERARCHY[filters.unit_kk] }, (_, i) => i + 1).map(num => <option key={num} value={num}>ส.ทล.{num}</option>)}</select></div>
               <div className="sm:col-span-1"><label className="block text-xs font-medium text-slate-400 mb-1">ปี</label><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.year} onChange={(e) => handleFilterChange('year', e.target.value)}><option value="">ทั้งหมด</option>{filterOptions.years.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
+              
               <div className="sm:col-span-1 bg-slate-700/30 p-1.5 rounded-lg border border-slate-700/50">
                   <label className="block text-xs font-bold text-yellow-400 mb-1">ระบุเดือน (เจาะจง)</label>
                   <select className="w-full pl-2 pr-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" value={filters.specificMonth} onChange={(e) => handleFilterChange('specificMonth', e.target.value)}>
@@ -418,13 +498,20 @@ export default function App() {
                       {THAI_MONTHS.map((m, idx) => <option key={idx} value={(idx + 1).toString()}>{m}</option>)}
                   </select>
               </div>
+
               <div className="sm:col-span-1 border-l border-slate-700 pl-2">
                   <label className="block text-xs font-medium text-slate-400 mb-1">ตั้งแต่เดือน</label>
-                  <select className="w-full pl-2 pr-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50" value={filters.startMonth} onChange={(e) => handleFilterChange('startMonth', e.target.value)} disabled={!!filters.specificMonth}><option value="">-- เริ่ม --</option>{THAI_MONTHS.map((m, idx) => <option key={idx} value={(idx + 1).toString()}>{m}</option>)}</select>
+                  <select className="w-full pl-2 pr-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50" value={filters.startMonth} onChange={(e) => handleFilterChange('startMonth', e.target.value)} disabled={!!filters.specificMonth}>
+                      <option value="">-- เริ่ม --</option>
+                      {THAI_MONTHS.map((m, idx) => <option key={idx} value={(idx + 1).toString()}>{m}</option>)}
+                  </select>
               </div>
               <div className="sm:col-span-1">
                   <label className="block text-xs font-medium text-slate-400 mb-1">ถึงเดือน</label>
-                  <select className="w-full pl-2 pr-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50" value={filters.endMonth} onChange={(e) => handleFilterChange('endMonth', e.target.value)} disabled={!!filters.specificMonth}><option value="">-- สิ้นสุด --</option>{THAI_MONTHS.map((m, idx) => <option key={idx} value={(idx + 1).toString()}>{m}</option>)}</select>
+                  <select className="w-full pl-2 pr-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50" value={filters.endMonth} onChange={(e) => handleFilterChange('endMonth', e.target.value)} disabled={!!filters.specificMonth}>
+                      <option value="">-- สิ้นสุด --</option>
+                      {THAI_MONTHS.map((m, idx) => <option key={idx} value={(idx + 1).toString()}>{m}</option>)}
+                  </select>
               </div>
             </div>
           </div>
@@ -457,7 +544,9 @@ export default function App() {
                           <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} allowDecimals={false} />
                           <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', color: '#fff' }} />
                           <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={50}>
-                             {stats.unitChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={getUnitColor(entry.name)} className="hover:opacity-80 transition-opacity" />)}
+                             {stats.unitChartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={getUnitColor(entry.name)} className="hover:opacity-80 transition-opacity" />
+                             ))}
                           </Bar>
                         </BarChart>
                       </ResponsiveContainer>
@@ -551,12 +640,12 @@ export default function App() {
         </div>
       )}
       
-      {/* 🔴 PRINT VIEW (FIXED) 🔴 */}
+      {/* PRINT VIEW (ใช้ฟังก์ชันสีใหม่) */}
       <div id="print-view" 
            style={{ 
-             position: 'fixed', top: 0, left: isExporting ? 0 : '-9999px', zIndex: isExporting ? 9999 : -1,
+             position: 'fixed', top: 0, left: 0, zIndex: -1, opacity: isExporting ? 1 : 0,
              width: '1123px', height: '794px', backgroundColor: 'white', padding: '30px',
-             fontFamily: "'Sarabun', sans-serif", color: '#000', visibility: 'visible'
+             fontFamily: "'Sarabun', sans-serif", color: '#000', overflow: 'hidden'
            }}>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #1e293b', paddingBottom: '15px', marginBottom: '20px' }}>
@@ -593,9 +682,11 @@ export default function App() {
                     <BarChart data={stats.unitChartData.slice(0, 10)}>
                        <XAxis dataKey="name" interval={0} fontSize={10} angle={-30} textAnchor="end" />
                        <YAxis fontSize={10} />
-                       <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={40} isAnimationActive={false}>
+                       <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={40}>
                          <LabelList dataKey="value" position="top" fontSize={10} fill="#64748b" />
-                         {stats.unitChartData.slice(0, 10).map((entry, index) => <Cell key={`cell-${index}`} fill={getUnitColor(entry.name)} />)}
+                         {stats.unitChartData.slice(0, 10).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={getUnitColor(entry.name)} />
+                         ))}
                        </Bar>
                     </BarChart>
                  </ResponsiveContainer>
@@ -607,7 +698,7 @@ export default function App() {
                <div style={{ flex: 1, position: 'relative' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={stats.typeChartData} cx="50%" cy="50%" outerRadius={80} dataKey="value" isAnimationActive={false}>
+                      <Pie data={stats.typeChartData} cx="50%" cy="50%" outerRadius={80} dataKey="value">
                         {stats.typeChartData.map((entry, index) => <Cell key={index} fill={getCrimeColor(entry.name)} />)}
                       </Pie>
                     </PieChart>
