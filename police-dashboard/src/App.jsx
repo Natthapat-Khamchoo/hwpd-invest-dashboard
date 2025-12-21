@@ -145,33 +145,61 @@ const SimpleMapVisualization = ({ data, onSelectCase, isPrintMode = false }) => 
   )
 };
 
-// 🔥 FIX #2: High Performance Leaflet Map (Canvas Renderer)
+// 🔥 FIX #2: High Performance Leaflet Map (Canvas Renderer) + CSS Loading Fix
 const LeafletMap = ({ data, onSelectCase, onError }) => {
   const mapRef = useRef(null); 
   const mapInstanceRef = useRef(null); 
-  const markersLayerRef = useRef(null); // ใช้เก็บ LayerGroup
+  const markersLayerRef = useRef(null); 
   const [isMapReady, setIsMapReady] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
-    const loadLeaflet = async () => {
-      if (window.L && typeof window.L.map === 'function') return window.L;
-      // Load Leaflet CSS & JS dynamically
-      if (!document.querySelector('#leaflet-css')) { const link = document.createElement('link'); link.id = 'leaflet-css'; link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link); }
-      if (!document.querySelector('#leaflet-js')) { const script = document.createElement('script'); script.id = 'leaflet-js'; script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; script.async = true; document.head.appendChild(script); }
-      return new Promise((resolve, reject) => { const checkL = () => { if (window.L && typeof window.L.map === 'function') resolve(window.L); else setTimeout(checkL, 100); }; setTimeout(() => reject(new Error('Timeout')), 8000); checkL(); });
+    
+    const loadLeafletResources = async () => {
+      // 1. Load CSS
+      if (!document.querySelector('#leaflet-css')) { 
+        const link = document.createElement('link'); 
+        link.id = 'leaflet-css'; 
+        link.rel = 'stylesheet'; 
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; 
+        document.head.appendChild(link);
+        // รอให้ CSS โหลดเสร็จก่อนเล็กน้อย
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      // 2. Load JS
+      if (!window.L) {
+        if (!document.querySelector('#leaflet-js')) { 
+            const script = document.createElement('script'); 
+            script.id = 'leaflet-js'; 
+            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; 
+            script.async = true; 
+            document.head.appendChild(script); 
+        }
+        // รอจนกว่า window.L จะพร้อมใช้งาน
+        await new Promise((resolve, reject) => { 
+            let count = 0;
+            const checkL = () => { 
+                if (window.L && typeof window.L.map === 'function') resolve(window.L); 
+                else if (count > 100) reject(new Error('Timeout loading Leaflet')); // 10วิ
+                else { count++; setTimeout(checkL, 100); }
+            }; 
+            checkL(); 
+        });
+      }
+      return window.L;
     };
 
-    loadLeaflet().then((L) => {
+    loadLeafletResources().then((L) => {
       if (!isMounted) return; 
-      if (mapInstanceRef.current) { setIsMapReady(true); return; } 
+      if (mapInstanceRef.current) return; 
       if (!mapRef.current) return;
       
       try { 
         // Init Map
         const map = L.map(mapRef.current, {
-           preferCanvas: true // 🔥 สำคัญ: บอกให้ Map พยายามใช้ Canvas เป็นค่าเริ่มต้น
-        }).setView([13.0, 101.0], 6); 
+           preferCanvas: true 
+        }).setView([13.7563, 100.5018], 6); // ตั้งค่าเริ่มต้นที่ กรุงเทพฯ
         
         mapInstanceRef.current = map; 
         
@@ -180,12 +208,17 @@ const LeafletMap = ({ data, onSelectCase, onError }) => {
             maxZoom: 19
         }).addTo(map); 
 
-        // สร้าง Layer Group ไว้เก็บจุด
         markersLayerRef.current = L.layerGroup().addTo(map);
         
-        setIsMapReady(true); 
-      } catch (err) { if (onError) onError(); }
-    }).catch((err) => { if (isMounted && onError) onError(); }); 
+        // 🔥 FIX สำคัญ: สั่งให้ Map คำนวณขนาดพื้นที่ใหม่ หลังจาก CSS โหลดเสร็จ
+        setTimeout(() => {
+            map.invalidateSize();
+            setIsMapReady(true);
+        }, 500);
+
+      } catch (err) { console.error(err); if (onError) onError(); }
+    }).catch((err) => { console.error(err); if (isMounted && onError) onError(); }); 
+    
     return () => { isMounted = false; };
   }, [onError]);
   
@@ -200,32 +233,38 @@ const LeafletMap = ({ data, onSelectCase, onError }) => {
     // Clear old markers
     markersLayer.clearLayers(); 
 
-    const validPoints = data.filter(d => d.lat && d.long);
+    // กรองข้อมูลที่มีพิกัดถูกต้องเท่านั้น
+    const validPoints = data.filter(d => 
+        d.lat && d.long && 
+        !isNaN(parseFloat(d.lat)) && 
+        !isNaN(parseFloat(d.long))
+    );
     
-    // 🔥 สร้าง Canvas Renderer เพื่อประสิทธิภาพสูงสุด (รองรับได้หลักหมื่นจุด)
+    console.log(`Map: Plotting ${validPoints.length} points`); // 🛠 Debug ดูจำนวนจุดที่วาด
+
+    // ใช้ Canvas Renderer
     const myRenderer = L.canvas({ padding: 0.5 });
 
     validPoints.forEach(item => {
+      const lat = parseFloat(item.lat);
+      const long = parseFloat(item.long);
       const color = getUnitColor(item.unit_kk);
       
-      // ใช้ CircleMarker + Custom Renderer
-      const marker = L.circleMarker([parseFloat(item.lat), parseFloat(item.long)], {
-        renderer: myRenderer, // 🔥 Key Fix: บังคับใช้ Canvas
-        radius: 5,
+      const marker = L.circleMarker([lat, long], {
+        renderer: myRenderer,
+        radius: 6,           // เพิ่มขนาดเล็กน้อยให้เห็นชัดขึ้น
         fillColor: color,
         color: color,
         weight: 1,
-        opacity: 0.8,
-        fillOpacity: 0.6
+        opacity: 0.9,
+        fillOpacity: 0.7
       });
 
-      // Popup Content
       const popupContent = `
         <div style="color: #333; font-family: 'Sarabun', sans-serif; min-width: 150px;">
             <div style="font-weight: bold; margin-bottom: 4px; color: ${color};">${item.topic}</div>
             <div style="font-size: 12px; margin-bottom: 2px;">กก.${item.unit_kk} ส.ทล.${item.unit_s_tl}</div>
             <div style="font-size: 12px; color: #666;">${item.date_capture}</div>
-            <div style="font-size: 11px; color: #888; margin-top: 4px;">${item.location}</div>
         </div>
       `;
       
@@ -234,18 +273,19 @@ const LeafletMap = ({ data, onSelectCase, onError }) => {
       markersLayer.addLayer(marker);
     });
 
-    // Auto fit bounds (ถ้ามีข้อมูล)
     if (validPoints.length > 0) { 
         try { 
-            const group = L.featureGroup(validPoints.map(p => L.marker([p.lat, p.long]))); // สร้าง temp group เพื่อหา bounds เร็วๆ
-            const bounds = group.getBounds();
-            if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 }); 
-        } catch (e) { } 
+            const group = L.featureGroup(validPoints.map(p => L.marker([p.lat, p.long]))); 
+            map.fitBounds(group.getBounds(), { padding: [50, 50] }); 
+        } catch (e) { console.warn("FitBounds failed", e); } 
+    } else {
+        // ถ้าไม่มีข้อมูล ให้ Force Re-render อีกรอบเผื่อแผนที่ค้าง
+        map.invalidateSize();
     }
 
   }, [data, onSelectCase, isMapReady]);
 
-  return <div ref={mapRef} className="w-full h-full min-h-[50vh] sm:min-h-[500px] bg-slate-800 z-0" />;
+  return <div ref={mapRef} className="w-full h-full min-h-[50vh] sm:min-h-[500px] bg-slate-800 z-0 relative" />;
 };
 
 // ==========================================
