@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { StatCard, SplitStatCard } from './components/StatCard';
-import { UnitBarChart, CrimePieChart, MonthlyBarChart } from './components/Charts';
+import { UnitBarChart, ComparativeCrimeChart, MonthlyBarChart } from './components/Charts';
 import { LeafletMap } from './components/LeafletMap'; 
 import { 
   UNIT_HIERARCHY, DATE_RANGES, getCrimeColor, 
@@ -423,9 +423,9 @@ export default function App() {
                   title={stats.unitChartTitle} 
                   onBarClick={(data) => { if(data?.activePayload?.[0]?.payload.name.includes('กก.')) setFilters(prev => ({...prev, unit_kk: data.activePayload[0].payload.name.replace('กก.','')})) }} 
                 />
-                <CrimePieChart 
-                  data={stats.typeChartData} 
-                  onClick={(data) => { if(data?.name) handleCardClick(data.name); }} 
+                <ComparativeCrimeChart 
+                  rawData={data} 
+                  globalFilters={filters}
                 />
               </div>
 
