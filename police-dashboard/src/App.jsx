@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'; // เพิ่ม useRef
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import Papa from 'papaparse';
 import { 
   LayoutDashboard, Table as TableIcon, Search, Filter, Siren, Users, 
@@ -19,7 +19,6 @@ const MultiSelectDropdown = ({ options, selected, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef(null);
 
-  // Close when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
@@ -81,7 +80,6 @@ export default function App() {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [comparisonYear, setComparisonYear] = useState(new Date().getFullYear().toString());
 
-  // ✅ เปลี่ยน topic จาก string เป็น array []
   const [filters, setFilters] = useState(() => {
     const today = new Date(); today.setHours(0,0,0,0);
     const endOfToday = new Date(); endOfToday.setHours(23,59,59,999);
@@ -93,7 +91,6 @@ export default function App() {
   
   const [localSearch, setLocalSearch] = useState('');
 
-  // Handlers
   const handlePeriodChange = (period) => {
     const now = new Date();
     let start = new Date(); let end = new Date();
@@ -136,14 +133,10 @@ export default function App() {
     link.click();
   };
 
-  // ✅ New Handler: เมื่อกด Card ให้ Filter เฉพาะเรื่องนั้น
   const handleCardClick = (topicName) => {
-    // ถ้ากดซ้ำให้ยกเลิกการ Filter (Toggle) หรือจะให้เลือกใหม่เสมอ? 
-    // ในที่นี้เลือก: กดแล้วแสดงเฉพาะอันนั้น (Replace)
     setFilters(prev => {
-        // ถ้าเป็น Multi-select แล้วอยากให้กด Card แล้วเคลียร์อันอื่น ให้ทำแบบนี้:
         if (prev.topic.includes(topicName) && prev.topic.length === 1) {
-             return { ...prev, topic: [] }; // กดซ้ำเพื่อยกเลิก
+             return { ...prev, topic: [] }; 
         }
         return { ...prev, topic: [topicName] };
     });
@@ -156,6 +149,7 @@ export default function App() {
     return () => clearTimeout(delayDebounceFn);
   }, [localSearch]);
 
+  // --- Fetch Data ---
   useEffect(() => {
     const fetchData = () => {
       const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT7T6Y-YtzckfCVfL1revX_qX4J90QMF3oVZhI54bKwGxCcDS4h-YjlSHrAjZu3_X5Ie_ENzuAXhMN5/pub?output=csv';
@@ -168,14 +162,20 @@ export default function App() {
                 const rawDate = item['วันที่'] ? item['วันที่'].trim() : '';
                 const { dateObj, thaiYear } = parseDateRobust(rawDate);
                 const rawTopic = item['หัวข้อ']?.toString().trim() || '';
+                
+                // ✅ แก้ไขล่าสุด: อ่านค่าจาก Column "ประเภทการจับกุม" หรือ "ประเภทหมายจับ"
+                // เพื่อให้ครอบคลุมทั้งการนับ รถบรรทุก (Self/Joint) และ หมายจับ (Big Data)
+                const arrestVal = item['ประเภทการจับกุม'] || item['จับโดย'] || '';
+                const warrantVal = item['ประเภทการจับกุม'] || item['ประเภทหมายจับ'] || item['หมายเหตุ'] || '';
+
                 return {
                     id: index + 1,
                     unit_kk: item['กก.']?.toString().trim() || '',
                     unit_s_tl: item['ส.ทล.']?.toString().trim() || '',
                     topic: normalizeTopic(rawTopic),
                     original_topic: rawTopic, 
-                    arrest_type: item['ประเภทการจับกุม'] || item['จับโดย'] || '',       
-                    warrant_source: item['ประเภทหมายจับ'] || item['หมายเหตุ'] || '',   
+                    arrest_type: arrestVal,     // ใช้สำหรับแยก จับเอง/จับร่วม (รถบรรทุก)
+                    warrant_source: warrantVal, // ใช้สำหรับแยก Big Data (หมายจับ)
                     date_capture: rawDate, date_obj: dateObj, year: thaiYear,
                     time_capture: item['เวลา'] || '', suspect_name: item['ชื่อ'] || '-',
                     charge: item['ข้อหา'] || '', location: item['สถานที่จับกุม'] || '',
@@ -194,7 +194,6 @@ export default function App() {
   }, []);
 
   const filterOptions = useMemo(() => {
-     // หา Unique Topic ทั้งหมด
      const topics = [...new Set(data.map(d => d.topic))].filter(Boolean).sort();
      return { topics };
   }, [data]);
@@ -208,8 +207,6 @@ export default function App() {
       
       const kkMatch = !filters.unit_kk || String(item.unit_kk) === String(filters.unit_kk);
       const stlMatch = !filters.unit_s_tl || String(item.unit_s_tl) === String(filters.unit_s_tl);
-      
-      // ✅ Logic Multi-Select
       const topicMatch = filters.topic.length === 0 || filters.topic.includes(item.topic);
       
       let dateMatch = true;
@@ -232,27 +229,33 @@ export default function App() {
 
     const heavyTruckAll = filteredData.filter(d => d.topic === 'รถบรรทุก/น้ำหนัก');
     const heavyTruckCases = heavyTruckAll.length;
+    // ใช้ arrest_type เช็ค "ร่วม"
     const heavyTruckJoint = heavyTruckAll.filter(d => d.arrest_type && d.arrest_type.includes('ร่วม')).length;
     const heavyTruckSelf = heavyTruckCases - heavyTruckJoint;
 
+    // --- หมายจับ (Logic ใหม่) ---
     const warrantAll = filteredData.filter(d => d.topic === 'บุคคลตามหมายจับ');
     const warrantCases = warrantAll.length;
-    const warrantBigData = warrantAll.filter(d => d.warrant_source && d.warrant_source.toLowerCase().includes('big data')).length;
+    
+    // ✅ Logic Big Data: เช็คจาก warrant_source (ที่ดึงมาจาก 'ประเภทการจับกุม' แล้ว)
+    const warrantBigData = warrantAll.filter(d => {
+        if (!d.warrant_source) return false;
+        // ทำเป็นตัวเล็ก + ตัดช่องว่างทิ้ง + หาคำว่า bigdata หรือ big
+        const cleanSource = d.warrant_source.toString().toLowerCase().replace(/\s/g, ''); 
+        return cleanSource.includes('bigdata') || cleanSource.includes('big');
+    }).length;
+    
     const warrantGeneral = warrantCases - warrantBigData;
 
-    // --- Graph Logic ---
     let unitChartData = [];
     let unitChartTitle = "";
     
     if (filters.unit_kk) { 
         unitChartTitle = `สถิติ ส.ทล. (กก.${filters.unit_kk})`; 
         const unitData = filteredData.reduce((acc, curr) => { const key = `ส.ทล.${curr.unit_s_tl}`; acc[key] = (acc[key] || 0) + 1; return acc; }, {}); 
-        
-        // ✅ ปรับการเรียงลำดับ: ถ้าดูราย กก. ให้เรียงตามเลข ส.ทล. (1 -> N)
         unitChartData = Object.entries(unitData)
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => {
-                // ดึงตัวเลขออกจาก string เช่น "ส.ทล.1" -> 1
                 const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
                 const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
                 return numA - numB;
@@ -331,8 +334,6 @@ export default function App() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
               <div className="sm:col-span-2"><input type="text" className="w-full pl-3 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white" placeholder="ค้นหา ชื่อ/ข้อหา..." value={localSearch} onChange={(e) => setLocalSearch(e.target.value)} /></div>
               <div><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white" value={filters.unit_kk} onChange={(e) => setFilters(p => ({...p, unit_kk: e.target.value, unit_s_tl: ''}))}><option value="">ทุก กก.</option>{Object.keys(UNIT_HIERARCHY).map(kk => <option key={kk} value={kk}>กก.{kk}</option>)}</select></div>
-              
-              {/* ✅ Multi Select Filter */}
               <div>
                 <MultiSelectDropdown 
                   options={filterOptions.topics} 
@@ -340,7 +341,6 @@ export default function App() {
                   onChange={(newVal) => setFilters(prev => ({ ...prev, topic: newVal }))} 
                 />
               </div>
-
               <div><select className="w-full pl-2 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white" value={filters.period} onChange={(e) => handlePeriodChange(e.target.value)}>{DATE_RANGES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}</select></div>
               {filters.period === 'custom' && (<><input type="date" className="w-full bg-slate-900 border border-slate-700 rounded text-sm text-white p-2" value={formatDateForInput(filters.rangeStart)} onChange={(e) => handleCustomDateChange('start', e.target.value)} /><input type="date" className="w-full bg-slate-900 border border-slate-700 rounded text-sm text-white p-2" value={formatDateForInput(filters.rangeEnd)} onChange={(e) => handleCustomDateChange('end', e.target.value)} /></>)}
             </div>
@@ -348,23 +348,18 @@ export default function App() {
         )}
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-4">
-          
           {activeTab === 'dashboard' && (
             <div className="space-y-4 sm:space-y-6">
-              
-              {/* ✅ Layout Grid ปรับเป็น lg:grid-cols-3 เพื่อให้ 6 Card พอดีช่อง (3x2) */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                
                 <StatCard 
                     title="ผลการจับกุมรวม" 
                     value={stats.totalCases} 
                     icon={Activity} 
                     colorClass="text-blue-400 bg-blue-500" 
                     delay={0}
-                    onClick={() => setFilters(prev => ({...prev, topic: []}))} // กดรวม = ยกเลิก filter
+                    onClick={() => setFilters(prev => ({...prev, topic: []}))}
                     isActive={filters.topic.length === 0}
                 />
-                
                 <StatCard 
                     title="คดียาเสพติด" 
                     value={stats.drugCases} 
@@ -374,7 +369,6 @@ export default function App() {
                     onClick={() => handleCardClick('ยาเสพติด')}
                     isActive={filters.topic.includes('ยาเสพติด')}
                 />
-                
                 <StatCard 
                     title="คดีอาวุธปืน" 
                     value={stats.weaponCases} 
@@ -384,7 +378,6 @@ export default function App() {
                     onClick={() => handleCardClick('อาวุธปืน/วัตถุระเบิด')}
                     isActive={filters.topic.includes('อาวุธปืน/วัตถุระเบิด')}
                 />
-                
                 <SplitStatCard 
                     title="รถบรรทุก/น้ำหนัก" 
                     icon={Truck} 
@@ -399,7 +392,6 @@ export default function App() {
                     onClick={() => handleCardClick('รถบรรทุก/น้ำหนัก')}
                     isActive={filters.topic.includes('รถบรรทุก/น้ำหนัก')}
                 />
-
                 <SplitStatCard 
                     title="บุคคลตามหมายจับ" 
                     icon={FileWarning} 
@@ -414,7 +406,6 @@ export default function App() {
                     onClick={() => handleCardClick('บุคคลตามหมายจับ')}
                     isActive={filters.topic.includes('บุคคลตามหมายจับ')}
                 />
-
                 <StatCard 
                     title="คดีอื่นๆ" 
                     value={stats.otherCases} 
@@ -434,9 +425,7 @@ export default function App() {
                 />
                 <CrimePieChart 
                   data={stats.typeChartData} 
-                  onClick={(data) => { 
-                      if(data?.name) handleCardClick(data.name);
-                  }} 
+                  onClick={(data) => { if(data?.name) handleCardClick(data.name); }} 
                 />
               </div>
 
@@ -458,10 +447,7 @@ export default function App() {
                         <tr key={item.id} className="hover:bg-slate-700/50 transition-colors cursor-pointer" onClick={() => setSelectedCase(item)}>
                           <td className="p-4 text-sm text-slate-300 whitespace-nowrap"><div className="font-medium text-white">{item.date_capture}</div><div className="text-xs text-slate-500">{item.time_capture} น.</div></td>
                           <td className="p-4 text-sm text-slate-300 whitespace-nowrap"><div className="font-medium text-white">กก.{item.unit_kk}</div><div className="text-xs text-slate-500">ส.ทล.{item.unit_s_tl}</div></td>
-                          <td className="p-4 text-sm text-white max-w-xs truncate">
-                            <div className="text-yellow-400 text-xs mb-1">{item.topic}</div>
-                            {item.charge}
-                          </td>
+                          <td className="p-4 text-sm text-white max-w-xs truncate"><div className="text-yellow-400 text-xs mb-1">{item.topic}</div>{item.charge}</td>
                           <td className="p-4 text-sm text-slate-300">{item.suspect_name}</td>
                           <td className="p-4 text-sm text-slate-400 max-w-xs truncate">{item.location}</td>
                           <td className="p-4"><ChevronRight className="w-5 h-5 text-slate-500" /></td>
