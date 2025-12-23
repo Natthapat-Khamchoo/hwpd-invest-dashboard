@@ -3,7 +3,10 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
   ResponsiveContainer, PieChart, Pie, Cell, LabelList, Legend 
 } from 'recharts';
-import { BarChart3, PieChart as PieChartIcon, MousePointerClick, ArrowRightLeft } from 'lucide-react';
+import { 
+  BarChart3, PieChart as PieChartIcon, MousePointerClick, 
+  ArrowRightLeft, TrendingUp, TrendingDown, Minus 
+} from 'lucide-react';
 import { getUnitColor, getCrimeColor } from '../utils/helpers';
 
 // --------------------------------------------------------
@@ -43,7 +46,7 @@ export const UnitBarChart = ({ data, title, onBarClick }) => (
 );
 
 // --------------------------------------------------------
-// 2. กราฟวงกลม (CrimePieChart) - เก็บไว้เผื่อใช้
+// 2. กราฟวงกลม (CrimePieChart)
 // --------------------------------------------------------
 export const CrimePieChart = ({ data, onClick }) => (
   <div className="bg-slate-800/80 backdrop-blur-sm p-4 sm:p-6 rounded-xl shadow-lg border border-slate-700/50">
@@ -124,7 +127,7 @@ export const MonthlyBarChart = ({ data, year, onYearChange }) => (
 );
 
 // --------------------------------------------------------
-// 4. กราฟเปรียบเทียบผลการจับกุม (ComparativeCrimeChart)
+// 4. กราฟเปรียบเทียบผลการจับกุม พร้อม Summary Card (Updated)
 // --------------------------------------------------------
 export const ComparativeCrimeChart = ({ rawData, globalFilters }) => {
   const today = new Date();
@@ -139,15 +142,16 @@ export const ComparativeCrimeChart = ({ rawData, globalFilters }) => {
   const [dateRange1, setDateRange1] = useState({ start: formatDate(startPrev), end: formatDate(endPrev) });
   const [dateRange2, setDateRange2] = useState({ start: formatDate(startCurrent), end: formatDate(endCurrent) });
 
-  const chartData = useMemo(() => {
-    // 1. กรองข้อมูลตาม Unit (KK/STL) จาก Global Filter ก่อนเสมอ
+  // คำนวณข้อมูลกราฟและผลรวม (Totals) ใน useMemo เดียว
+  const { chartData, totals } = useMemo(() => {
+    // 1. กรองข้อมูลตาม Unit (KK/STL)
     const unitFiltered = rawData.filter(item => {
         const kkMatch = !globalFilters.unit_kk || String(item.unit_kk) === String(globalFilters.unit_kk);
         const stlMatch = !globalFilters.unit_s_tl || String(item.unit_s_tl) === String(globalFilters.unit_s_tl);
         return kkMatch && stlMatch;
     });
 
-    // 2. ฟังก์ชันนับจำนวนแยกตาม Topic ในช่วงวันที่กำหนด
+    // 2. ฟังก์ชันนับจำนวน
     const countByPeriod = (startStr, endStr) => {
         const start = new Date(startStr); start.setHours(0,0,0,0);
         const end = new Date(endStr); end.setHours(23,59,59,999);
@@ -165,15 +169,24 @@ export const ComparativeCrimeChart = ({ rawData, globalFilters }) => {
     const data1 = countByPeriod(dateRange1.start, dateRange1.end);
     const data2 = countByPeriod(dateRange2.start, dateRange2.end);
 
-    // 3. รวม Topic ทั้งหมดที่เกิดขึ้นในทั้ง 2 ช่วง
-    const allTopics = [...new Set([...Object.keys(data1), ...Object.keys(data2)])].sort();
+    // 3. คำนวณยอดรวม (Summary Totals)
+    const total1 = Object.values(data1).reduce((a, b) => a + b, 0);
+    const total2 = Object.values(data2).reduce((a, b) => a + b, 0);
+    const diff = total2 - total1;
+    const percentChange = total1 === 0 ? (total2 > 0 ? 100 : 0) : ((diff / total1) * 100);
 
     // 4. สร้าง Data สำหรับกราฟ
-    return allTopics.map(topic => ({
+    const allTopics = [...new Set([...Object.keys(data1), ...Object.keys(data2)])].sort();
+    const sortedData = allTopics.map(topic => ({
         name: topic,
         period1: data1[topic] || 0,
         period2: data2[topic] || 0,
-    })).sort((a, b) => (b.period1 + b.period2) - (a.period1 + a.period2)); 
+    })).sort((a, b) => (b.period1 + b.period2) - (a.period1 + a.period2));
+
+    return { 
+        chartData: sortedData, 
+        totals: { total1, total2, diff, percentChange } 
+    };
 
   }, [rawData, globalFilters.unit_kk, globalFilters.unit_s_tl, dateRange1, dateRange2]);
 
@@ -186,6 +199,7 @@ export const ComparativeCrimeChart = ({ rawData, globalFilters }) => {
         </h3>
       </div>
 
+      {/* Input เลือกวันที่ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
         <div className="flex flex-col space-y-2">
             <div className="flex items-center text-xs text-blue-400 font-bold uppercase">
@@ -214,35 +228,70 @@ export const ComparativeCrimeChart = ({ rawData, globalFilters }) => {
         </div>
       </div>
 
-      {chartData.length > 0 ? (
-        <div className="h-72 sm:h-80 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.3} />
-              <XAxis dataKey="name" interval={0} angle={-45} textAnchor="end" height={80} tick={{fontSize: 10, fill: '#94a3b8'}} axisLine={{ stroke: '#475569' }} tickLine={false} />
-              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} allowDecimals={false} />
-              <RechartsTooltip 
-                cursor={{ fill: 'rgba(255,255,255,0.05)' }} 
-                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', color: '#fff' }}
-                formatter={(value, name) => [value, name === 'period1' ? 'ช่วงเวลาที่ 1' : 'ช่วงเวลาที่ 2']}
-              />
-              <Legend wrapperStyle={{ paddingTop: '10px' }} formatter={(value) => <span className="text-slate-300 text-xs ml-1">{value === 'period1' ? 'ช่วงเวลาที่ 1' : 'ช่วงเวลาที่ 2'}</span>} />
-              
-              <Bar dataKey="period1" name="period1" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={30}>
-                 <LabelList dataKey="period1" position="top" fill="#93c5fd" fontSize={10} formatter={(val) => val > 0 ? val : ''} />
-              </Bar>
-              <Bar dataKey="period2" name="period2" fill="#eab308" radius={[4, 4, 0, 0]} maxBarSize={30}>
-                 <LabelList dataKey="period2" position="top" fill="#fde047" fontSize={10} formatter={(val) => val > 0 ? val : ''} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+      {/* Grid: ซ้าย=กราฟ, ขวา=Summary Card */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        
+        {/* กราฟ */}
+        <div className="flex-1 h-72 sm:h-80 w-full min-w-0">
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.3} />
+                <XAxis dataKey="name" interval={0} angle={-45} textAnchor="end" height={80} tick={{fontSize: 10, fill: '#94a3b8'}} axisLine={{ stroke: '#475569' }} tickLine={false} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} allowDecimals={false} />
+                <RechartsTooltip 
+                    cursor={{ fill: 'rgba(255,255,255,0.05)' }} 
+                    contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', color: '#fff' }}
+                    formatter={(value, name) => [value, name === 'period1' ? 'ช่วงเวลาที่ 1' : 'ช่วงเวลาที่ 2']}
+                />
+                <Legend wrapperStyle={{ paddingTop: '10px' }} formatter={(value) => <span className="text-slate-300 text-xs ml-1">{value === 'period1' ? 'ช่วงเวลาที่ 1' : 'ช่วงเวลาที่ 2'}</span>} />
+                
+                <Bar dataKey="period1" name="period1" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                    <LabelList dataKey="period1" position="top" fill="#93c5fd" fontSize={10} formatter={(val) => val > 0 ? val : ''} />
+                </Bar>
+                <Bar dataKey="period2" name="period2" fill="#eab308" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                    <LabelList dataKey="period2" position="top" fill="#fde047" fontSize={10} formatter={(val) => val > 0 ? val : ''} />
+                </Bar>
+                </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-slate-500 flex-col">
+               <BarChart3 className="w-8 h-8 mb-2 opacity-50" />
+               <span>ไม่พบข้อมูล</span>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="h-64 flex items-center justify-center text-slate-500 flex-col">
-           <BarChart3 className="w-8 h-8 mb-2 opacity-50" />
-           <span>ไม่พบข้อมูลในช่วงเวลาที่เลือก</span>
+
+        {/* ✅ Summary Card (อยู่ด้านขวา) */}
+        <div className="w-full lg:w-64 flex-shrink-0 bg-slate-900/60 p-5 rounded-xl border border-slate-700/50 flex flex-col justify-center shadow-inner">
+            <h4 className="text-sm font-semibold text-slate-300 mb-4 border-b border-slate-700 pb-2">สรุปผลการเปรียบเทียบ</h4>
+            
+            <div className="space-y-4">
+                <div>
+                    <p className="text-xs text-blue-400 mb-0.5">รวมช่วงเวลาที่ 1</p>
+                    <div className="text-xl font-bold text-white">{totals.total1} <span className="text-sm text-slate-500 font-normal">คดี</span></div>
+                </div>
+                <div>
+                    <p className="text-xs text-yellow-400 mb-0.5">รวมช่วงเวลาที่ 2</p>
+                    <div className="text-xl font-bold text-white">{totals.total2} <span className="text-sm text-slate-500 font-normal">คดี</span></div>
+                </div>
+                
+                <div className="pt-2 border-t border-slate-700/50">
+                    <p className="text-xs text-slate-400 mb-1">ความเปลี่ยนแปลง</p>
+                    <div className={`flex items-baseline space-x-2 ${totals.diff >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        <div className="text-3xl font-bold">
+                            {totals.diff > 0 ? '+' : ''}{totals.diff}
+                        </div>
+                        <div className="flex items-center text-sm font-medium bg-slate-800/50 px-2 py-0.5 rounded-md">
+                            {totals.diff > 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : totals.diff < 0 ? <TrendingDown className="w-4 h-4 mr-1" /> : <Minus className="w-4 h-4 mr-1" />}
+                            {Math.abs(totals.percentChange).toFixed(1)}%
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-      )}
+
+      </div>
     </div>
   );
 };
