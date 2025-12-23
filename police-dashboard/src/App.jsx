@@ -87,22 +87,20 @@ export default function App() {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [comparisonYear, setComparisonYear] = useState(new Date().getFullYear().toString());
 
-  // ✅ Filters State (เพิ่ม subFilter)
+  // Filters State
   const [filters, setFilters] = useState(() => {
     const today = new Date(); today.setHours(0,0,0,0);
     const endOfToday = new Date(); endOfToday.setHours(23,59,59,999);
     return { 
       search: '', period: 'today', rangeStart: today, rangeEnd: endOfToday, 
       unit_kk: '', unit_s_tl: '', topic: [], charge: '',
-      subFilter: null // null=all, 'self', 'joint', 'general', 'bigdata'
+      subFilter: null 
     };
   });
   
   const [localSearch, setLocalSearch] = useState('');
 
   // --- Handlers ---
-
-  // ✅ ฟังก์ชัน Reset Filters (เคลียร์ subFilter ด้วย)
   const resetFilters = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -167,11 +165,8 @@ export default function App() {
     link.click();
   };
 
-  // ✅ Updated Handle Card Click (รองรับ Sub-filter)
   const handleCardClick = (topicName, subType = null) => {
     setFilters(prev => {
-        // ถ้ากดซ้ำที่เดิม (เช่นกด 'self' ซ้ำ) อาจจะให้เคลียร์ หรือจะให้เลือกทับไปเลย
-        // ในที่นี้เลือกให้เป็นการเลือกทับ (Select) เสมอเพื่อความชัดเจน
         return { 
             ...prev, 
             topic: [topicName], 
@@ -199,12 +194,11 @@ export default function App() {
             .map((item, index) => {
                 const rawDate = item['วันที่'] ? item['วันที่'].trim() : '';
                 const { dateObj, thaiYear } = parseDateRobust(rawDate);
-                const rawTopic = item['หัวข้อ']?.toString().trim() || '';
+                const rawTopic = item['หัวข้อ']?.toString().trim() || ''; // ✅ ใช้ตัวนี้เป็นเกณฑ์หลัก
                 
-                // อ่านค่าสำหรับ Logic แยกย่อย
+                // อ่านค่าจากคอลัมน์ต่างๆ
                 const arrestVal = item['ประเภทการจับกุม'] || '';
-                const capturedByVal = item['จับโดย'] || ''; // ใช้แยกจับเอง/ร่วม
-                // รวมทุกคอลัมน์ที่เป็นไปได้สำหรับ Warrant Source / Big Data Check
+                const capturedByVal = item['จับโดย'] || ''; // ✅ ใช้สำหรับแยก จับเอง/ร่วม
                 const warrantVal = item['ประเภทการจับกุม'] || item['ประเภทหมายจับ'] || item['หมายเหตุ'] || item['ที่มาข้อมูล'] || '';
 
                 return {
@@ -238,7 +232,7 @@ export default function App() {
      return { topics };
   }, [data]);
 
-  // --- Filtering Logic (Updated with Sub-filter) ---
+  // --- Filtering Logic ---
   const filteredData = useMemo(() => {
     return data.filter(item => {
       const searchMatch = !filters.search || 
@@ -263,6 +257,7 @@ export default function App() {
       if (filters.subFilter) {
           // 1. Logic รถบรรทุก (Self vs Joint)
           if (filters.topic.includes('รถบรรทุก/น้ำหนัก')) {
+             // เช็คคำว่า "ร่วม" จาก field captured_by (ที่มาจาก Header 'จับโดย')
              const isJoint = item.captured_by && item.captured_by.includes('ร่วม');
              
              if (filters.subFilter === 'joint' && !isJoint) subMatch = false;
@@ -284,18 +279,16 @@ export default function App() {
 
   const stats = useMemo(() => {
     const totalCases = filteredData.length;
-    
-    // Note: การคำนวณ stats ด้านล่างนี้จะขึ้นอยู่กับ filteredData
-    // ดังนั้นถ้าเรากด filter "Self" -> "Joint" จะกลายเป็น 0 ใน Card
-    // ซึ่งถูกต้องตามหลัก Dashboard ที่ Card ควรแสดงผลสรุปของข้อมูลที่เห็นอยู่
-
     const drugCases = filteredData.filter(d => d.topic === 'ยาเสพติด').length;
     const weaponCases = filteredData.filter(d => d.topic === 'อาวุธปืน/วัตถุระเบิด').length;
     const otherCases = filteredData.filter(d => d.topic === 'อื่นๆ').length;
 
-    // --- รถบรรทุก ---
+    // ✅ Logic รถบรรทุก (แก้ไข)
+    // 1. กรองจาก topic (ที่มาจาก Header 'หัวข้อ')
     const heavyTruckAll = filteredData.filter(d => d.topic === 'รถบรรทุก/น้ำหนัก');
     const heavyTruckCases = heavyTruckAll.length;
+    
+    // 2. แยกจับร่วม โดยดูจาก captured_by (ที่มาจาก Header 'จับโดย')
     const heavyTruckJoint = heavyTruckAll.filter(d => d.captured_by && d.captured_by.includes('ร่วม')).length;
     const heavyTruckSelf = heavyTruckCases - heavyTruckJoint;
 
@@ -330,7 +323,6 @@ export default function App() {
         unitChartData = allKK.map(num => ({ name: `กก.${num}`, value: unitData[`กก.${num}`] || 0 }));
     }
     
-    // Monthly Data
     const monthsTH = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
     const yearlyData = data.filter(d => d.date_obj && d.date_obj.getFullYear() === parseInt(comparisonYear));
     const monthlyStats = Array(12).fill(0);
@@ -413,8 +405,6 @@ export default function App() {
           {activeTab === 'dashboard' && (
             <div className="space-y-4 sm:space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                
-                {/* --- 3 ใบแรก (เหมือนเดิม) --- */}
                 <StatCard 
                     title="ผลการจับกุมรวม" 
                     value={stats.totalCases} 
@@ -442,8 +432,6 @@ export default function App() {
                     onClick={() => handleCardClick('อาวุธปืน/วัตถุระเบิด')}
                     isActive={filters.topic.includes('อาวุธปืน/วัตถุระเบิด')}
                 />
-                
-                {/* --- รถบรรทุก: แยก 3 ปุ่ม (ทั้งหมด/จับเอง/ร่วม) --- */}
                 <SplitStatCard 
                     title="รถบรรทุก/น้ำหนัก" 
                     icon={Truck} 
@@ -474,8 +462,6 @@ export default function App() {
                         }
                     ]}
                 />
-
-                {/* --- หมายจับ: แยก 3 ปุ่ม (ทั้งหมด/ทั่วไป/BigData) --- */}
                 <SplitStatCard 
                     title="บุคคลตามหมายจับ" 
                     icon={FileWarning} 
@@ -506,7 +492,6 @@ export default function App() {
                         }
                     ]}
                 />
-
                 <StatCard 
                     title="คดีอื่นๆ" 
                     value={stats.otherCases} 
@@ -592,7 +577,6 @@ export default function App() {
                     <div><dt className="text-slate-500 text-xs">สถานที่</dt><dd className="text-slate-200">{selectedCase.location || 'ไม่ระบุ'}</dd></div>
                     <div><dt className="text-slate-500 text-xs">พิกัด</dt><dd className="text-slate-200 font-mono text-xs">{selectedCase.lat && selectedCase.long ? `${selectedCase.lat}, ${selectedCase.long}` : '-'}</dd></div>
                     <div><dt className="text-slate-500 text-xs">หัวข้อเรื่อง</dt><dd className="inline-block px-2 py-1 rounded text-xs font-bold text-white mt-1" style={{ backgroundColor: getCrimeColor(selectedCase.topic) }}>{selectedCase.topic}</dd></div>
-                    {/* แสดงรายละเอียดจับกุมเพิ่มเติม */}
                     {selectedCase.arrest_type && (<div><dt className="text-slate-500 text-xs mt-2">ประเภทการจับกุม</dt><dd className="text-emerald-400">{selectedCase.arrest_type}</dd></div>)}
                     {selectedCase.captured_by && (<div><dt className="text-slate-500 text-xs mt-2">จับโดย</dt><dd className="text-emerald-400">{selectedCase.captured_by}</dd></div>)}
                   </dl>
