@@ -165,41 +165,44 @@ export default function App() {
     link.click();
   };
 
-  // ✅ ฟังก์ชันสร้างรายงานและ Copy
+  // ✅ ฟังก์ชัน Copy Report (Updated: ปรับวันที่ตาม Filter)
   const handleCopyReport = () => {
     const today = new Date();
     const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
     const thDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear() + 543}`;
     
-    // กำหนดวันที่รายงาน (ถ้าเลือกเมื่อวาน ก็ให้โชว์วันที่เมื่อวาน)
-    let reportDateObj = new Date();
-    if (filters.period === 'yesterday') {
-        reportDateObj.setDate(reportDateObj.getDate() - 1);
-    }
-    const days = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
-    const reportDay = days[reportDateObj.getDay()];
-    const reportDateTh = `${reportDateObj.getDate()} ${months[reportDateObj.getMonth()]} ${reportDateObj.getFullYear() + 543}`;
+    // --- คำนวณวันที่สำหรับแสดงใน Header ---
+    let headerDateText = "";
+    
+    // ฟังก์ชันช่วยแปลงวันที่
+    const formatThDate = (date) => {
+        if(!date) return '-';
+        return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
+    };
 
-    // ตัวแปรนับยอด (Reset ใหม่สำหรับการทำรายงาน)
+    if (filters.period === 'today') {
+        headerDateText = `ประจำวันที่ ${formatThDate(new Date())}`;
+    } else if (filters.period === 'yesterday') {
+        const yest = new Date();
+        yest.setDate(yest.getDate() - 1);
+        headerDateText = `ประจำวันที่ ${formatThDate(yest)}`;
+    } else if (filters.rangeStart && filters.rangeEnd) {
+        // กรณีเลือกเป็นช่วง (7วัน, 30วัน, เดือนนี้, custom)
+        headerDateText = `ประจำห้วงวันที่ ${formatThDate(filters.rangeStart)} ถึง ${formatThDate(filters.rangeEnd)}`;
+    } else {
+        // กรณี All หรืออื่นๆ
+        headerDateText = `ข้อมูลทั้งหมด`;
+    }
+
+    // --- นับยอด ---
     const counts = {
-        trafficAct: 0, // พรบ.จราจร
-        carAct: 0,     // พรบ.รถยนต์
-        transportAct: 0, // พรบ.ขนส่ง
-        highwayAct: 0, // พรบ.ทางหลวง
-        weight: 0,     // น้ำหนักเกิน
-        checkWeight: 0, // ตรวจสอบน้ำหนัก (สมมติ)
-        checkSticker: 0, // ตรวจสอบสติกเกอร์ (สมมติ)
-        warrant: 0,    // หมายจับ
-        forgery: 0,    // ปลอมเอกสาร
-        drugs: 0,      // ยาเสพติด
-        guns: 0,       // อาวุธปืน
-        immigration: 0, // คนเข้าเมือง
-        others: 0      // อื่นๆ
+        trafficAct: 0, carAct: 0, transportAct: 0, highwayAct: 0, 
+        weight: 0, checkWeight: 0, checkSticker: 0, 
+        warrant: 0, forgery: 0, drugs: 0, guns: 0, immigration: 0, others: 0
     };
 
     filteredData.forEach(item => {
         const topic = item.topic;
-        // รวม text จากหัวข้อเดิม + ข้อหา เพื่อค้นหา keyword ให้แม่นยำ
         const textSearch = (item.charge + " " + item.original_topic).toLowerCase();
 
         if (topic === 'รถบรรทุก/น้ำหนัก') {
@@ -215,15 +218,13 @@ export default function App() {
         } else if (textSearch.includes('ปลอม')) {
             counts.forgery++;
         } else if (topic === 'จราจร/ขนส่ง' || topic === 'เมาแล้วขับ') {
-            // แยกย่อยกลุ่มจราจร
             if (textSearch.includes('รถยนต์') || textSearch.includes('ทะเบียน')) counts.carAct++;
             else if (textSearch.includes('ขนส่ง')) counts.transportAct++;
             else if (textSearch.includes('ทางหลวง')) counts.highwayAct++;
-            else counts.trafficAct++; // ที่เหลือลงจราจร
+            else counts.trafficAct++; 
         } else if (textSearch.includes('ทางหลวง')) {
             counts.highwayAct++;
         } else {
-            // ตรวจสอบ keyword ตรวจสอบ (ถ้ามีข้อมูลนี้ใน sheet)
             if (textSearch.includes('ตรวจสอบน้ำหนัก')) counts.checkWeight++;
             else if (textSearch.includes('สติกเกอร์') || textSearch.includes('สัญลักษณ์')) counts.checkSticker++;
             else counts.others++;
@@ -232,7 +233,7 @@ export default function App() {
 
     const reportText = `เรียน ผู้บังคับบัญชา
 
-       วันที่ ${thDate} ขออนุญาตส่งสรุปผลการปฏิบัติของ บก.ทล. ประจำวัน${reportDay} ที่ ${reportDateTh} ดังนี้
+       วันที่ ${thDate} ขออนุญาตส่งสรุปผลการปฏิบัติของ บก.ทล. ${headerDateText} ดังนี้
 🔹 ภายใต้การบังคับบัญชาของ 
 พล.ต.ต.พรศักดิ์ เลารุจิราลัย ผบก.ทล.
 
