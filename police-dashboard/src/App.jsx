@@ -3,7 +3,7 @@ import Papa from 'papaparse';
 import { 
   LayoutDashboard, Table as TableIcon, Search, Filter, Siren, Users, 
   FileText, Calendar, ChevronRight, X, Menu, BarChart3, Map as MapIcon, 
-  Building2, ChevronLeft, Truck, FileWarning, Activity, Radar, RefreshCw, Download, Check
+  Building2, ChevronLeft, Truck, FileWarning, Activity, Radar, RefreshCw, Download, Check, ClipboardCopy
 } from 'lucide-react';
 
 // Import Components
@@ -165,6 +165,107 @@ export default function App() {
     link.click();
   };
 
+  // ✅ ฟังก์ชันสร้างรายงานและ Copy
+  const handleCopyReport = () => {
+    const today = new Date();
+    const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    const thDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear() + 543}`;
+    
+    // กำหนดวันที่รายงาน (ถ้าเลือกเมื่อวาน ก็ให้โชว์วันที่เมื่อวาน)
+    let reportDateObj = new Date();
+    if (filters.period === 'yesterday') {
+        reportDateObj.setDate(reportDateObj.getDate() - 1);
+    }
+    const days = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+    const reportDay = days[reportDateObj.getDay()];
+    const reportDateTh = `${reportDateObj.getDate()} ${months[reportDateObj.getMonth()]} ${reportDateObj.getFullYear() + 543}`;
+
+    // ตัวแปรนับยอด (Reset ใหม่สำหรับการทำรายงาน)
+    const counts = {
+        trafficAct: 0, // พรบ.จราจร
+        carAct: 0,     // พรบ.รถยนต์
+        transportAct: 0, // พรบ.ขนส่ง
+        highwayAct: 0, // พรบ.ทางหลวง
+        weight: 0,     // น้ำหนักเกิน
+        checkWeight: 0, // ตรวจสอบน้ำหนัก (สมมติ)
+        checkSticker: 0, // ตรวจสอบสติกเกอร์ (สมมติ)
+        warrant: 0,    // หมายจับ
+        forgery: 0,    // ปลอมเอกสาร
+        drugs: 0,      // ยาเสพติด
+        guns: 0,       // อาวุธปืน
+        immigration: 0, // คนเข้าเมือง
+        others: 0      // อื่นๆ
+    };
+
+    filteredData.forEach(item => {
+        const topic = item.topic;
+        // รวม text จากหัวข้อเดิม + ข้อหา เพื่อค้นหา keyword ให้แม่นยำ
+        const textSearch = (item.charge + " " + item.original_topic).toLowerCase();
+
+        if (topic === 'รถบรรทุก/น้ำหนัก') {
+            counts.weight++;
+        } else if (topic === 'บุคคลตามหมายจับ') {
+            counts.warrant++;
+        } else if (topic === 'ยาเสพติด') {
+            counts.drugs++;
+        } else if (topic === 'อาวุธปืน/วัตถุระเบิด') {
+            counts.guns++;
+        } else if (topic === 'ต่างด้าว/ตม.') {
+            counts.immigration++;
+        } else if (textSearch.includes('ปลอม')) {
+            counts.forgery++;
+        } else if (topic === 'จราจร/ขนส่ง' || topic === 'เมาแล้วขับ') {
+            // แยกย่อยกลุ่มจราจร
+            if (textSearch.includes('รถยนต์') || textSearch.includes('ทะเบียน')) counts.carAct++;
+            else if (textSearch.includes('ขนส่ง')) counts.transportAct++;
+            else if (textSearch.includes('ทางหลวง')) counts.highwayAct++;
+            else counts.trafficAct++; // ที่เหลือลงจราจร
+        } else if (textSearch.includes('ทางหลวง')) {
+            counts.highwayAct++;
+        } else {
+            // ตรวจสอบ keyword ตรวจสอบ (ถ้ามีข้อมูลนี้ใน sheet)
+            if (textSearch.includes('ตรวจสอบน้ำหนัก')) counts.checkWeight++;
+            else if (textSearch.includes('สติกเกอร์') || textSearch.includes('สัญลักษณ์')) counts.checkSticker++;
+            else counts.others++;
+        }
+    });
+
+    const reportText = `เรียน ผู้บังคับบัญชา
+
+       วันที่ ${thDate} ขออนุญาตส่งสรุปผลการปฏิบัติของ บก.ทล. ประจำวัน${reportDay} ที่ ${reportDateTh} ดังนี้
+🔹 ภายใต้การบังคับบัญชาของ 
+พล.ต.ต.พรศักดิ์ เลารุจิราลัย ผบก.ทล.
+
+🔺 สถิติผลการจับกุมคดีจราจร
+- พ.ร.บ.จราจรฯ ${counts.trafficAct} ราย
+- พ.ร.บ.รถยนต์ฯ ${counts.carAct} ราย
+- พ.ร.บ.ขนส่งฯ ${counts.transportAct} ราย
+- พ.ร.บ.ทางหลวง(ทั่วไป) ${counts.highwayAct} ราย
+- จับกุมรถบรรทุกน้ำหนักเกินฯ ${counts.weight} ราย
+
+🔺ตรวจสอบ
+- ตรวจสอบน้ำหนักรถบรรทุก ${counts.checkWeight} ราย
+- ตรวจสอบรถใช้สติกเกอร์/สัญลักษณ์ ${counts.checkSticker} ราย
+
+🔺 สถิติจับกุมคดีอาญา
+📍ความผิดตามประมวลกฎหมายอาญา
+- หมายจับ ${counts.warrant} ราย
+- ปลอมและใช้เอกสารราชการปลอม ${counts.forgery} ราย
+📍ความผิดตาม พ.ร.บ.ต่างๆ
+- พ.ร.บ.ยาเสพติด ${counts.drugs} ราย
+- พ.ร.บ.อาวุธปืน ${counts.guns} ราย
+- พ.ร.บ.คนเข้าเมือง ${counts.immigration} ราย
+- อื่นๆ ${counts.others} ราย
+
+       จึงเรียนมาเพื่อโปรดทราบ`;
+
+    navigator.clipboard.writeText(reportText).then(() => {
+        alert("คัดลอกรายงานเรียบร้อยแล้ว");
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+    });
+  };
+
   const handleCardClick = (topicName, subType = null) => {
     setFilters(prev => {
         return { 
@@ -194,11 +295,10 @@ export default function App() {
             .map((item, index) => {
                 const rawDate = item['วันที่'] ? item['วันที่'].trim() : '';
                 const { dateObj, thaiYear } = parseDateRobust(rawDate);
-                const rawTopic = item['หัวข้อ']?.toString().trim() || ''; // ✅ ใช้ตัวนี้เป็นเกณฑ์หลัก
+                const rawTopic = item['หัวข้อ']?.toString().trim() || '';
                 
-                // อ่านค่าจากคอลัมน์ต่างๆ
                 const arrestVal = item['ประเภทการจับกุม'] || '';
-                const capturedByVal = item['จับโดย'] || ''; // ✅ ใช้สำหรับแยก จับเอง/ร่วม
+                const capturedByVal = item['จับโดย'] || ''; 
                 const warrantVal = item['ประเภทการจับกุม'] || item['ประเภทหมายจับ'] || item['หมายเหตุ'] || item['ที่มาข้อมูล'] || '';
 
                 return {
@@ -232,7 +332,6 @@ export default function App() {
      return { topics };
   }, [data]);
 
-  // --- Filtering Logic ---
   const filteredData = useMemo(() => {
     return data.filter(item => {
       const searchMatch = !filters.search || 
@@ -252,22 +351,16 @@ export default function App() {
           }
       } else { if (filters.period !== 'all') dateMatch = false; }
 
-      // ✅ Sub-Filter Logic
       let subMatch = true;
       if (filters.subFilter) {
-          // 1. Logic รถบรรทุก (Self vs Joint)
           if (filters.topic.includes('รถบรรทุก/น้ำหนัก')) {
-             // เช็คคำว่า "ร่วม" จาก field captured_by (ที่มาจาก Header 'จับโดย')
              const isJoint = item.captured_by && item.captured_by.includes('ร่วม');
-             
              if (filters.subFilter === 'joint' && !isJoint) subMatch = false;
              if (filters.subFilter === 'self' && isJoint) subMatch = false;
           }
-          // 2. Logic หมายจับ (General vs Big Data)
           if (filters.topic.includes('บุคคลตามหมายจับ')) {
              const cleanSource = item.warrant_source ? item.warrant_source.toString().toLowerCase().replace(/\s/g, '') : '';
              const isBigData = cleanSource.includes('bigdata') || cleanSource.includes('big');
-             
              if (filters.subFilter === 'bigdata' && !isBigData) subMatch = false;
              if (filters.subFilter === 'general' && isBigData) subMatch = false;
           }
@@ -283,16 +376,11 @@ export default function App() {
     const weaponCases = filteredData.filter(d => d.topic === 'อาวุธปืน/วัตถุระเบิด').length;
     const otherCases = filteredData.filter(d => d.topic === 'อื่นๆ').length;
 
-    // ✅ Logic รถบรรทุก (แก้ไข)
-    // 1. กรองจาก topic (ที่มาจาก Header 'หัวข้อ')
     const heavyTruckAll = filteredData.filter(d => d.topic === 'รถบรรทุก/น้ำหนัก');
     const heavyTruckCases = heavyTruckAll.length;
-    
-    // 2. แยกจับร่วม โดยดูจาก captured_by (ที่มาจาก Header 'จับโดย')
     const heavyTruckJoint = heavyTruckAll.filter(d => d.captured_by && d.captured_by.includes('ร่วม')).length;
     const heavyTruckSelf = heavyTruckCases - heavyTruckJoint;
 
-    // --- หมายจับ ---
     const warrantAll = filteredData.filter(d => d.topic === 'บุคคลตามหมายจับ');
     const warrantCases = warrantAll.length;
     const warrantBigData = warrantAll.filter(d => {
@@ -375,6 +463,11 @@ export default function App() {
             <h1 className="text-base sm:text-xl font-bold text-white tracking-wide uppercase">{activeTab}</h1>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
+             {/* ✅ ปุ่ม Copy Report */}
+             <button onClick={handleCopyReport} className="bg-blue-600 hover:bg-blue-500 text-white px-2 py-1.5 rounded-lg text-xs flex items-center transition-colors shadow-lg hover:shadow-blue-500/20">
+                <ClipboardCopy className="w-4 h-4 mr-1" /> Copy Report
+             </button>
+             
              <button onClick={resetFilters} className="bg-slate-700 hover:bg-red-500/80 hover:text-white text-slate-300 px-2 py-1.5 rounded-lg text-xs flex items-center transition-colors">
                 <RefreshCw className="w-4 h-4 mr-1" /> Reset
              </button>
@@ -577,6 +670,7 @@ export default function App() {
                     <div><dt className="text-slate-500 text-xs">สถานที่</dt><dd className="text-slate-200">{selectedCase.location || 'ไม่ระบุ'}</dd></div>
                     <div><dt className="text-slate-500 text-xs">พิกัด</dt><dd className="text-slate-200 font-mono text-xs">{selectedCase.lat && selectedCase.long ? `${selectedCase.lat}, ${selectedCase.long}` : '-'}</dd></div>
                     <div><dt className="text-slate-500 text-xs">หัวข้อเรื่อง</dt><dd className="inline-block px-2 py-1 rounded text-xs font-bold text-white mt-1" style={{ backgroundColor: getCrimeColor(selectedCase.topic) }}>{selectedCase.topic}</dd></div>
+                    {/* แสดงรายละเอียดจับกุมเพิ่มเติม */}
                     {selectedCase.arrest_type && (<div><dt className="text-slate-500 text-xs mt-2">ประเภทการจับกุม</dt><dd className="text-emerald-400">{selectedCase.arrest_type}</dd></div>)}
                     {selectedCase.captured_by && (<div><dt className="text-slate-500 text-xs mt-2">จับโดย</dt><dd className="text-emerald-400">{selectedCase.captured_by}</dd></div>)}
                   </dl>
