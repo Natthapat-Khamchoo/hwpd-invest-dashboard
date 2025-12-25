@@ -463,17 +463,31 @@ export default function App() {
             <button onClick={() => setDesktopSidebarOpen(!desktopSidebarOpen)} className="hidden lg:block p-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-colors">{desktopSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
             <h1 className="text-base sm:text-xl font-bold text-white tracking-wide uppercase">{activeTab}</h1>
           </div>
-          <div className="flex items-center space-x-2 sm:space-x-4">
-             {/* ✅ ปุ่ม Copy Report */}
-             <button onClick={handleCopyReport} className="bg-blue-600 hover:bg-blue-500 text-white px-2 py-1.5 rounded-lg text-xs flex items-center transition-colors shadow-lg hover:shadow-blue-500/20">
-                <ClipboardCopy className="w-4 h-4 mr-1" /> Copy Report
+          
+          <div className="flex items-center space-x-2 sm:space-x-3">
+             {/* ปุ่ม Copy Report: ซ่อนข้อความบนมือถือ */}
+             <button onClick={handleCopyReport} className="bg-blue-600 hover:bg-blue-500 text-white px-2 py-2 sm:py-1.5 sm:px-3 rounded-lg text-xs flex items-center transition-colors shadow-lg hover:shadow-blue-500/20" title="Copy Report">
+                <ClipboardCopy className="w-4 h-4 sm:mr-1" /> 
+                <span className="hidden sm:inline">Report</span>
              </button>
              
-             <button onClick={resetFilters} className="bg-slate-700 hover:bg-red-500/80 hover:text-white text-slate-300 px-2 py-1.5 rounded-lg text-xs flex items-center transition-colors">
-                <RefreshCw className="w-4 h-4 mr-1" /> Reset
+             {/* ปุ่ม Reset: ซ่อนข้อความบนมือถือ */}
+             <button onClick={resetFilters} className="bg-slate-700 hover:bg-red-500/80 hover:text-white text-slate-300 px-2 py-2 sm:py-1.5 sm:px-3 rounded-lg text-xs flex items-center transition-colors" title="Reset">
+                <RefreshCw className="w-4 h-4 sm:mr-1" /> 
+                <span className="hidden sm:inline">Reset</span>
              </button>
-             <button onClick={handleExportCSV} className="bg-emerald-600/90 hover:bg-emerald-500 text-white px-2 py-1.5 rounded-lg text-xs flex items-center"><Download className="w-4 h-4 mr-1" /> CSV</button>
-             <button onClick={() => setShowFilterPanel(!showFilterPanel)} className={`flex items-center space-x-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${showFilterPanel ? 'bg-yellow-500 text-slate-900' : 'bg-slate-800 text-slate-300 border border-slate-600'}`}><Filter className="w-4 h-4" /><span>Filters</span></button>
+
+             {/* ปุ่ม CSV: ซ่อนข้อความบนมือถือ */}
+             <button onClick={handleExportCSV} className="bg-emerald-600/90 hover:bg-emerald-500 text-white px-2 py-2 sm:py-1.5 sm:px-3 rounded-lg text-xs flex items-center" title="Export CSV">
+                <Download className="w-4 h-4 sm:mr-1" /> 
+                <span className="hidden sm:inline">CSV</span>
+             </button>
+
+             {/* ปุ่ม Filter: ซ่อนข้อความบนมือถือ */}
+             <button onClick={() => setShowFilterPanel(!showFilterPanel)} className={`flex items-center px-2 py-2 sm:py-1.5 sm:px-3 rounded-lg text-xs font-medium transition-all duration-200 ${showFilterPanel ? 'bg-yellow-500 text-slate-900' : 'bg-slate-800 text-slate-300 border border-slate-600'}`} title="Filters">
+                <Filter className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Filters</span>
+             </button>
           </div>
         </header>
 
