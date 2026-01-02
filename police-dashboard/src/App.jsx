@@ -373,7 +373,8 @@ export default function App() {
                 <UnitBarChart
                   data={stats.unitChartData}
                   title={stats.unitChartTitle}
-                  onBarClick={(data) => { if (data?.activePayload?.[0]?.payload.name.includes('กก.')) setFilters(prev => ({ ...prev, unit_kk: data.activePayload[0].payload.name.replace('กก.', '') })) }}
+                  onBarClick={(entry) => { if (entry && entry.name && entry.name.includes('กก.')) setFilters(prev => ({ ...prev, unit_kk: entry.name.replace('กก.', '') })) }}
+                  onBack={filters.unit_kk ? () => setFilters(prev => ({ ...prev, unit_kk: '' })) : null}
                 />
                 <ComparativeCrimeChart
                   rawData={data}

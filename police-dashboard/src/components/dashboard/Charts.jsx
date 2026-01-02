@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, LabelList, Legend
 } from 'recharts';
 import {
-  BarChart3, PieChart as PieChartIcon, MousePointerClick,
+  BarChart3, PieChart as PieChartIcon, MousePointerClick, ChevronLeft,
   ArrowRightLeft, TrendingUp, TrendingDown, Minus
 } from 'lucide-react';
 import { getUnitColor, getCrimeColor } from '../../utils/helpers';
@@ -12,25 +12,30 @@ import { getUnitColor, getCrimeColor } from '../../utils/helpers';
 // --------------------------------------------------------
 // 1. กราฟแท่งแสดงสถิติหน่วยงาน (UnitBarChart)
 // --------------------------------------------------------
-export const UnitBarChart = ({ data, title, onBarClick }) => (
+export const UnitBarChart = ({ data, title, onBarClick, onBack }) => (
   <div className="bg-slate-800/40 backdrop-blur-xl p-4 sm:p-6 rounded-xl shadow-lg border border-white/10 hover:border-white/20 transition-all duration-300">
     <div className="flex justify-between items-start mb-6">
       <h3 className="text-base sm:text-lg font-bold flex items-center text-white">
         <BarChart3 className="w-6 h-6 mr-2 text-yellow-400" />{title}
       </h3>
       <div className="text-xs text-yellow-500/80 flex items-center bg-yellow-500/10 px-2 py-1 rounded">
-        <MousePointerClick className="w-3 h-3 mr-1" /> กดกราฟเพื่อกรอง
+        {onBack && (
+          <button onClick={onBack} className="mr-2 flex items-center bg-slate-700 hover:bg-slate-600 text-white px-2 py-0.5 rounded transition-colors border border-slate-600">
+            <ChevronLeft className="w-3 h-3 mr-1" /> ย้อนกลับ
+          </button>
+        )}
+        <MousePointerClick className="w-3 h-3 mr-1" /> กดกราฟเพื่อดูรายละเอียด
       </div>
     </div>
     {data.length > 0 ? (
       <div className="h-72 sm:h-96 w-full cursor-pointer">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 20, right: 0, left: -20, bottom: 20 }} onClick={onBarClick}>
+          <BarChart data={data} margin={{ top: 20, right: 0, left: -20, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.5} />
             <XAxis dataKey="name" interval={0} angle={-45} textAnchor="end" height={60} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={{ stroke: '#475569' }} tickLine={false} />
             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} allowDecimals={false} />
             <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', color: '#fff' }} />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={50}>
+            <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={50} onClick={onBarClick} cursor="pointer">
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={getUnitColor(entry.name)} className="hover:opacity-80 transition-opacity" />
               ))}
