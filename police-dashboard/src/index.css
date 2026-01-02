@@ -1,3 +1,111 @@
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom Glass & Glow Utilities */
+@layer components {
+    .glass-panel {
+        @apply bg-slate-900/60 backdrop-blur-md border border-white/10 shadow-xl;
+    }
+
+    .glass-card {
+        @apply bg-slate-800/40 backdrop-blur-sm border border-white/5 shadow-lg transition-all duration-300 hover:bg-slate-800/60 hover:border-white/20 hover:shadow-blue-500/10 hover:-translate-y-1;
+    }
+
+    .neon-text {
+        filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
+    }
+
+    .glow-on-hover:hover {
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        @apply border-blue-400/50;
+    }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+/* Shimmer Animation */
+@keyframes shimmer {
+    0% {
+        transform: translateX(-150%) skewX(-15deg);
+    }
+
+    100% {
+        transform: translateX(150%) skewX(-15deg);
+    }
+}
+
+.shimmer-trigger {
+    @apply relative overflow-hidden;
+}
+
+.shimmer-trigger::after {
+    content: '';
+    @apply absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-15deg] translate-x-[-150%];
+}
+
+.shimmer-trigger:hover::after {
+    animation: shimmer 0.8s ease-in-out;
+}
+
+@layer base {
+    body {
+        @apply font-sans bg-hwpd-dark text-slate-100 overflow-hidden;
+    }
+}
+
+@layer utilities {
+    .digital-bg {
+        background-color: #0f172a;
+        background-image: radial-gradient(circle at 50% 50%, #1e293b 1px, transparent 1px);
+        background-size: 30px 30px;
+    }
+}
+
+/* Laser Beam Animations */
+@keyframes scan-vertical {
+    0% {
+        top: -50%;
+    }
+
+    100% {
+        top: 150%;
+    }
+}
+
+@keyframes scan-horizontal {
+    0% {
+        left: -50%;
+    }
+
+    100% {
+        left: 150%;
+    }
+}
+
+.animate-scan-v {
+    animation: scan-vertical 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-scan-h {
+    animation: scan-horizontal 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
