@@ -109,3 +109,101 @@
 .animate-scan-h {
     animation: scan-horizontal 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
+
+@keyframes siren-pulse-border {
+
+    0%,
+    100% {
+        border-color: rgba(59, 130, 246, 0.6);
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    }
+
+    50% {
+        border-color: rgba(239, 68, 68, 0.6);
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    }
+}
+
+@keyframes siren-text-glow {
+
+    0%,
+    100% {
+        text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+        color: #60a5fa;
+    }
+
+    50% {
+        text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+        color: #f87171;
+    }
+}
+
+@keyframes siren-bg-pulse {
+
+    0%,
+    100% {
+        background: radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.15), rgba(15, 23, 42, 1));
+    }
+
+    50% {
+        background: radial-gradient(circle at 50% 50%, rgba(220, 38, 38, 0.15), rgba(15, 23, 42, 1));
+    }
+}
+
+.animate-siren-border {
+    animation: siren-pulse-border 1.5s ease-in-out infinite;
+}
+
+.animate-siren-text {
+    animation: siren-text-glow 1.5s ease-in-out infinite;
+}
+
+.animate-siren-bg {
+    animation: siren-bg-pulse 2s ease-in-out infinite;
+}
+
+/* Razor Beam Grid */
+.razor-grid {
+    background-image:
+        linear-gradient(to right, rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+    background-size: 40px 40px;
+    transform: perspective(500px) rotateX(60deg);
+    transform-origin: center top;
+}
+
+@keyframes razor-scan {
+    0% {
+        background-position: 0 0;
+    }
+
+    100% {
+        background-position: 0 40px;
+    }
+}
+
+.animate-razor-grid {
+    animation: razor-scan 1s linear infinite;
+}
+
+@keyframes beam-sweep {
+
+    0%,
+    100% {
+        top: 0%;
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        top: 100%;
+        opacity: 0;
+    }
+}
+
+.animate-beam-sweep {
+    animation: beam-sweep 3s ease-in-out infinite;
+}
