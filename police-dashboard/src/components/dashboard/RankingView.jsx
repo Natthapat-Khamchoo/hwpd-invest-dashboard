@@ -42,13 +42,13 @@ const RankingCard = ({ title, icon: Icon, data, colorClass, isPremium = false, o
             <div className={`absolute -right-10 -top-10 w-40 h-40 ${colorClass} opacity-10 rounded-full blur-[60px] transition-opacity duration-700 ${isSelected ? 'opacity-30' : 'group-hover:opacity-20'}`}></div>
             {isPremium && <div className={`absolute inset-0 bg-gradient-to-b from-yellow-500/5 to-transparent transition-opacity duration-500 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}></div>}
 
-            <div className="p-3 sm:p-6 relative z-10 h-full flex flex-col">
+            <div className="p-2 sm:p-6 relative z-10 h-full flex flex-col">
                 <div className="flex items-center gap-4 mb-6">
                     <div className={`p-3 rounded-xl ${colorClass} bg-opacity-10 border border-white/10 shadow-lg transition-transform duration-300 ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`}>
                         <Icon className={`w-7 h-7 ${colorClass.replace('bg-', 'text-')} drop-shadow-md`} />
                     </div>
                     <div>
-                        <h3 className={`text-base sm:text-lg font-bold ${isPremium ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-500' : 'text-white'}`}>
+                        <h3 className={`text-sm sm:text-lg font-bold ${isPremium ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-500' : 'text-white'}`}>
                             {title}
                         </h3>
                         <p className="text-xs text-slate-400 flex items-center gap-1">
@@ -168,7 +168,7 @@ const RankingView = ({ unitRankings }) => {
                     <div className="inline-flex items-center justify-center p-3 rounded-full bg-gradient-to-t from-yellow-500/20 to-transparent border border-yellow-500/30 mb-2 shadow-[0_0_20px_rgba(234,179,8,0.2)]">
                         <Trophy className="w-10 h-10 text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]" />
                     </div>
-                    <h2 className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-yellow-100 to-yellow-500 drop-shadow-sm tracking-tight uppercase">
+                    <h2 className="text-xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-yellow-100 to-yellow-500 drop-shadow-sm tracking-tight uppercase">
                         HWPD Hall of Fame
                     </h2>
                     <p className="text-slate-400 text-sm font-medium tracking-wide">

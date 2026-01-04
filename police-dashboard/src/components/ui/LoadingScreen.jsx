@@ -60,7 +60,7 @@ const LoadingScreen = ({ onFinished }) => {
                     <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-500/10 to-red-500/10 animate-pulse blur-xl"></div>
 
                     {/* Logo Area */}
-                    <div className="relative w-24 h-24 sm:w-40 sm:h-40 flex items-center justify-center">
+                    <div className="relative w-20 h-20 sm:w-40 sm:h-40 flex items-center justify-center">
                         <img
                             src="https://cib.go.th/backend/uploads/medium_logo_cib_4_2x_9f2da10e9f_a7828c9ca0.png"
                             alt="CIB Logo"
@@ -79,10 +79,10 @@ const LoadingScreen = ({ onFinished }) => {
 
                 {/* Text Cluster */}
                 <div className="text-center space-y-4 mb-10 z-20">
-                    <h2 className="text-base sm:text-3xl font-black tracking-normal sm:tracking-[0.25em] animate-siren-text uppercase px-2">
+                    <h2 className="text-sm sm:text-3xl font-black tracking-normal sm:tracking-[0.25em] animate-siren-text uppercase px-2">
                         Investigation In Progress
                     </h2>
-                    <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-6 text-[10px] sm:text-xs font-mono tracking-widest">
+                    <div className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-6 text-[9px] sm:text-xs font-mono tracking-widest">
                         <span className="text-blue-400 flex items-center gap-2">
                             <span className="w-2 h-2 bg-blue-500 rounded-full animate-ping"></span>
                             ACCESSING DATABASE
