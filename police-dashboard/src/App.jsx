@@ -57,6 +57,10 @@ export default function App() {
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
 
+  // --- Report Preview State ---
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportText, setReportText] = useState("");
+
   // --- UI Handlers ---
   const handleExportCSV = () => {
     if (filteredData.length === 0) { alert('ไม่มีข้อมูลสำหรับ Export'); return; }
@@ -146,9 +150,6 @@ export default function App() {
 - พ.ร.บ.ทางหลวง(ทั่วไป) ${counts.highwayAct} ราย
 - จับกุมรถบรรทุกน้ำหนักเกินฯ ${counts.weight} ราย
 
-🔺ตรวจสอบ
-- ตรวจสอบน้ำหนักรถบรรทุก ${counts.checkWeight} ราย
-- ตรวจสอบรถใช้สติกเกอร์/สัญลักษณ์ ${counts.checkSticker} ราย
 
 🔺 สถิติจับกุมคดีอาญา
 📍ความผิดตามประมวลกฎหมายอาญา
@@ -162,11 +163,8 @@ export default function App() {
 
        จึงเรียนมาเพื่อโปรดทราบ`;
 
-    navigator.clipboard.writeText(reportText).then(() => {
-      alert("คัดลอกรายงานเรียบร้อยแล้ว");
-    }).catch(err => {
-      console.error('Failed to copy: ', err);
-    });
+    setReportText(reportText); // เก็บข้อความรายงาน
+    setShowReportModal(true); // เปิด Modal
   };
 
   const handleCardClick = (topicName, subType = null) => {
@@ -221,7 +219,7 @@ export default function App() {
 
       {mobileSidebarOpen && (<div className="fixed inset-0 bg-black/80 z-20 lg:hidden backdrop-blur-sm" onClick={() => setMobileSidebarOpen(false)} />)}
 
-      <aside className={`fixed inset-y-0 left-0 z-30 bg-slate-900/60 backdrop-blur-xl border-r border-white/5 text-white transition-all duration-300 ease-in-out shadow-2xl ${mobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full'} lg:relative lg:translate-x-0 ${desktopSidebarOpen ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-30 glass-liquid-bar border-y-0 border-l-0 border-r border-white/10 text-white transition-all duration-300 ease-in-out shadow-2xl ${mobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full'} lg:relative lg:translate-x-0 ${desktopSidebarOpen ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden'}`}>
         <div className="p-6 border-b border-white/5 flex justify-between items-center whitespace-nowrap bg-gradient-to-r from-white/5 to-transparent">
           <div className="flex items-center space-x-3">
             <span className={`text-xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 transition-opacity duration-200`}>HWPD <span className="text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]">WARROOM</span></span>
@@ -421,12 +419,51 @@ export default function App() {
         </div>
       </main>
 
+      {/* Report Preview Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="glass-liquid w-full max-w-2xl rounded-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-white/10 flex justify-between items-center">
+              <div><h2 className="text-xl font-bold text-white flex items-center gap-2"><ClipboardCopy className="w-5 h-5 text-blue-400" /> ตัวอย่างรายงาน</h2><p className="text-sm text-slate-400">ตรวจสอบความถูกต้องก่อนคัดลอก</p></div>
+              <button onClick={() => setShowReportModal(false)} className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-full transition-colors"><X className="w-6 h-6" /></button>
+            </div>
+
+            <div className="p-6">
+              <div className="bg-slate-900/50 rounded-xl border border-white/5 p-4 max-h-[60vh] overflow-y-auto">
+                <pre className="whitespace-pre-wrap font-sans text-sm text-slate-300 leading-relaxed">{reportText}</pre>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-white/10 flex justify-end gap-3 bg-slate-900/30">
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-sm font-medium"
+              >
+                ปิดหน้าต่าง
+              </button>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(reportText).then(() => {
+                    alert("คัดลอกรายงานเรียบร้อยแล้ว");
+                    setShowReportModal(false);
+                  });
+                }}
+                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-lg shadow-blue-500/20 transition-all hover:-translate-y-0.5"
+              >
+                <ClipboardCopy className="w-4 h-4 mr-2" />
+                คัดลอกรายงาน
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedCase && (
         <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-slate-800 flex justify-between items-center sticky top-0 bg-slate-900/95 backdrop-blur z-10">
+          <div className="glass-liquid w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 rounded-2xl">
+            <div className="p-6 border-b border-white/10 flex justify-between items-center sticky top-0 bg-slate-900/80 backdrop-blur z-10">
               <div><h2 className="text-xl font-bold text-white">รายละเอียดการจับกุม</h2><p className="text-sm text-slate-400">Case ID: #{selectedCase.id}</p></div>
-              <button onClick={() => setSelectedCase(null)} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full"><X className="w-6 h-6" /></button>
+              <button onClick={() => setSelectedCase(null)} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-full"><X className="w-6 h-6" /></button>
             </div>
             <div className="p-6 space-y-6">
               <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-500/30">

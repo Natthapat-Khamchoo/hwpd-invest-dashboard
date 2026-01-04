@@ -14,7 +14,7 @@ export const Header = ({
     setShowFilterPanel
 }) => {
     return (
-        <header className="sticky top-0 z-20 bg-slate-900/50 backdrop-blur-xl border-b border-white/5 px-4 py-3 flex items-center justify-between shadow-lg transition-all duration-300">
+        <header className="sticky top-0 z-20 glass-liquid-bar border-x-0 border-t-0 border-b border-white/10 px-4 py-3 flex items-center justify-between transition-all duration-300">
             <div className="flex items-center gap-3">
                 <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"><Menu className="w-6 h-6" /></button>
                 <button onClick={() => setDesktopSidebarOpen(!desktopSidebarOpen)} className="hidden lg:block p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">{desktopSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
@@ -52,8 +52,8 @@ export const Header = ({
                 <button
                     onClick={() => setShowFilterPanel(!showFilterPanel)}
                     className={`flex items-center px-2 py-2 sm:py-1.5 sm:px-3 rounded-lg text-xs font-medium transition-all duration-200 border ${showFilterPanel
-                            ? 'bg-yellow-500 text-slate-900 border-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.5)]'
-                            : 'bg-slate-800/80 text-slate-300 border-white/10 hover:bg-slate-700'
+                        ? 'bg-yellow-500 text-slate-900 border-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.5)]'
+                        : 'bg-slate-800/80 text-slate-300 border-white/10 hover:bg-slate-700'
                         }`}
                     title="Filters"
                 >

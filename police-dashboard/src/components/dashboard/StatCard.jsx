@@ -58,12 +58,12 @@ export const StatCard = ({ title, value, icon: Icon, colorClass, delay, onClick,
     <div
       onClick={onClick}
       className={`
-        relative overflow-hidden rounded-xl border flex items-center space-x-4 transition-all duration-300 group animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards
-        backdrop-blur-xl bg-slate-800/40 
+        relative overflow-hidden rounded-xl flex items-center space-x-4 transition-all duration-300 group animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards
+        glass-liquid
         ${onClick ? 'cursor-pointer hover:scale-[1.03] hover:-translate-y-1' : ''}
         ${isActive
           ? `${activeGlow[colorName] || activeGlow.blue} bg-slate-800/80 ring-1`
-          : `border-white/10 ${glowClasses[colorName] || glowClasses.blue}`
+          : `${glowClasses[colorName] || glowClasses.blue}`
         }
       `}
       style={{ animationDelay: `${delay}ms` }}
@@ -95,8 +95,8 @@ export const SplitStatCard = ({ title, icon: Icon, subValues, colorClass, delay 
   return (
     <div
       className={`
-        relative backdrop-blur-xl bg-slate-800/40 p-4 sm:p-5 rounded-xl border border-white/10 shadow-lg flex flex-col justify-between animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards
-        hover:border-${colorName}-400/30 transition-all duration-300 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]
+        relative glass-liquid p-4 sm:p-5 rounded-xl flex flex-col justify-between animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards
+        hover:border-${colorName}-400/30 transition-all duration-300
       `}
       style={{ animationDelay: `${delay}ms` }}
     >
