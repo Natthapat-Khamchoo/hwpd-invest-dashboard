@@ -42,7 +42,7 @@ const RankingCard = ({ title, icon: Icon, data, colorClass, isPremium = false, o
             <div className={`absolute -right-10 -top-10 w-40 h-40 ${colorClass} opacity-10 rounded-full blur-[60px] transition-opacity duration-700 ${isSelected ? 'opacity-30' : 'group-hover:opacity-20'}`}></div>
             {isPremium && <div className={`absolute inset-0 bg-gradient-to-b from-yellow-500/5 to-transparent transition-opacity duration-500 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}></div>}
 
-            <div className="p-6 relative z-10">
+            <div className="p-4 sm:p-6 relative z-10 h-full flex flex-col">
                 <div className="flex items-center gap-4 mb-6">
                     <div className={`p-3 rounded-xl ${colorClass} bg-opacity-10 border border-white/10 shadow-lg transition-transform duration-300 ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`}>
                         <Icon className={`w-7 h-7 ${colorClass.replace('bg-', 'text-')} drop-shadow-md`} />
@@ -89,7 +89,12 @@ const RankingCard = ({ title, icon: Icon, data, colorClass, isPremium = false, o
                             </div>
                         ))
                     ) : (
-                        <div className="text-center py-8 text-slate-500 text-sm">ไม่มีข้อมูลการจัดอันดับ</div>
+                        <div className="flex flex-col items-center justify-center h-40 text-slate-500">
+                            <div className="w-12 h-12 mb-2 rounded-full bg-slate-800/50 flex items-center justify-center border border-slate-700/50">
+                                <Sparkles className="w-6 h-6 text-slate-600" />
+                            </div>
+                            <span className="text-sm">ไม่มีข้อมูลการจัดอันดับ</span>
+                        </div>
                     )}
                 </div>
             </div>

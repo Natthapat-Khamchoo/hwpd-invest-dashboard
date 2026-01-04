@@ -79,15 +79,15 @@ const LoadingScreen = ({ onFinished }) => {
 
                 {/* Text Cluster */}
                 <div className="text-center space-y-4 mb-10 z-20">
-                    <h2 className="text-3xl font-black tracking-[0.25em] animate-siren-text uppercase">
+                    <h2 className="text-xl sm:text-3xl font-black tracking-widest sm:tracking-[0.25em] animate-siren-text uppercase px-4">
                         Investigation In Progress
                     </h2>
-                    <div className="flex items-center justify-center space-x-6 text-xs font-mono tracking-widest">
+                    <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-6 text-[10px] sm:text-xs font-mono tracking-widest">
                         <span className="text-blue-400 flex items-center gap-2">
                             <span className="w-2 h-2 bg-blue-500 rounded-full animate-ping"></span>
                             ACCESSING DATABASE
                         </span>
-                        <span className="text-slate-500">|</span>
+                        <span className="hidden sm:inline text-slate-500">|</span>
                         <span className="text-red-400 flex items-center gap-2">
                             DECRYPTING
                             <span className="w-2 h-2 bg-red-500 rounded-full animate-ping delay-75"></span>
@@ -96,7 +96,7 @@ const LoadingScreen = ({ onFinished }) => {
                 </div>
 
                 {/* Active Progress Bar */}
-                <div className="relative w-80 sm:w-96 h-2 bg-slate-800/50 rounded-full overflow-hidden border border-slate-700/50 backdrop-blur-sm">
+                <div className="relative w-64 sm:w-96 h-2 bg-slate-800/50 rounded-full overflow-hidden border border-slate-700/50 backdrop-blur-sm">
                     {/* Moving Gradient Bar */}
                     <div
                         className="h-full bg-gradient-to-r from-blue-600 via-purple-500 to-red-600 transition-all duration-100 ease-linear shadow-[0_0_15px_currentColor]"
@@ -108,7 +108,7 @@ const LoadingScreen = ({ onFinished }) => {
                 </div>
 
                 {/* Percentage & Status Code */}
-                <div className="mt-4 flex justify-between w-80 sm:w-96 font-mono text-xs">
+                <div className="mt-4 flex justify-between w-64 sm:w-96 font-mono text-[10px] sm:text-xs">
                     <span className="text-blue-500">SECURE: TLS_1.3</span>
                     <span className="text-white font-bold">{Math.round(progress)}%</span>
                     <span className="text-red-500">ID: XJ-992</span>
