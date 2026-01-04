@@ -80,7 +80,7 @@ export const StatCard = ({ title, value, icon: Icon, colorClass, delay, onClick,
 
       <div className="min-w-0 relative z-10">
         <p className="text-sm text-slate-400 font-medium uppercase tracking-wider group-hover:text-slate-300 transition-colors">{title}</p>
-        <h3 className={`text-3xl font-bold text-white tracking-tight ${isActive ? 'neon-text' : ''}`}>
+        <h3 className={`text-2xl sm:text-3xl font-bold text-white tracking-tight ${isActive ? 'neon-text' : ''}`}>
           <CountUp end={value} />
         </h3>
       </div>
@@ -112,7 +112,7 @@ export const SplitStatCard = ({ title, icon: Icon, subValues, colorClass, delay 
       </div>
 
       {/* 3 Clickable Slots */}
-      <div className="grid grid-cols-3 gap-2 text-center divide-x divide-white/10 relative z-10">
+      <div className="grid grid-cols-3 gap-1 sm:gap-2 text-center divide-x divide-white/10 relative z-10">
         {subValues.map((item, index) => (
           <div
             key={index}
@@ -129,7 +129,7 @@ export const SplitStatCard = ({ title, icon: Icon, subValues, colorClass, delay 
             `}
           >
             <p className={`text-[10px] mb-1 ${item.labelColor || 'text-slate-400'} group-hover/item:text-white transition-colors`}>{item.label}</p>
-            <h3 className={`text-lg font-bold ${item.valueColor || 'text-white'}`}>
+            <h3 className={`text-sm sm:text-lg font-bold ${item.valueColor || 'text-white'}`}>
               <CountUp end={item.value} />
             </h3>
           </div>

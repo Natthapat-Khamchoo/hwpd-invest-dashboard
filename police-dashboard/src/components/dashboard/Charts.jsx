@@ -12,14 +12,7 @@ import { getUnitColor, getCrimeColor } from '../../utils/helpers';
 // --- Shared Gradients & Filters Definition ---
 const ChartDefinitions = () => (
   <defs>
-    {/* Glow Filter */}
-    <filter id="neonGlow" height="300%" width="300%" x="-75%" y="-75%">
-      <feGaussianBlur stdDeviation="4" result="coloredBlur" />
-      <feMerge>
-        <feMergeNode in="coloredBlur" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
+    {/* REMOVED NEON GLOW FILTER FOR PERFORMANCE */}
 
     {/* Blue Gradient */}
     <linearGradient id="blueGradient" x1="0" y1="0" x2="0" y2="1">
@@ -69,7 +62,7 @@ export const UnitBarChart = ({ data, title, onBarClick, onBack }) => (
             <XAxis dataKey="name" interval={0} angle={-45} textAnchor="end" height={60} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={{ stroke: '#475569' }} tickLine={false} />
             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} allowDecimals={false} />
             <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: 'rgba(30, 41, 59, 0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} />
-            <Bar dataKey="value" radius={[6, 6, 2, 2]} maxBarSize={50} onClick={onBarClick} cursor="pointer" filter="url(#neonGlow)">
+            <Bar dataKey="value" radius={[6, 6, 2, 2]} maxBarSize={50} onClick={onBarClick} cursor="pointer">
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={getUnitColor(entry.name)} className="hover:opacity-80 transition-opacity" style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.3))' }} />
               ))}
@@ -151,7 +144,7 @@ export const MonthlyBarChart = ({ data, year, onYearChange }) => (
           <XAxis dataKey="name" axisLine={{ stroke: '#475569' }} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
           <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
           <RechartsTooltip contentStyle={{ backgroundColor: 'rgba(30, 41, 59, 0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '12px' }} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-          <Bar dataKey="cases" name="จำนวนคดี" fill="url(#cyanGradient)" radius={[6, 6, 2, 2]} maxBarSize={60} filter="url(#neonGlow)">
+          <Bar dataKey="cases" name="จำนวนคดี" fill="url(#cyanGradient)" radius={[6, 6, 2, 2]} maxBarSize={60}>
             <LabelList dataKey="cases" position="top" fill="#67e8f9" fontSize={12} fontWeight="bold" />
           </Bar>
         </BarChart>
@@ -281,10 +274,10 @@ export const ComparativeCrimeChart = ({ rawData, globalFilters }) => {
                 />
                 <Legend wrapperStyle={{ paddingTop: '10px' }} formatter={(value) => <span className="text-slate-300 text-xs ml-1">{value === 'period1' ? 'ช่วงเวลาที่ 1' : 'ช่วงเวลาที่ 2'}</span>} />
 
-                <Bar dataKey="period1" name="period1" fill="url(#blueGradient)" radius={[6, 6, 2, 2]} maxBarSize={30} filter="url(#neonGlow)">
+                <Bar dataKey="period1" name="period1" fill="url(#blueGradient)" radius={[6, 6, 2, 2]} maxBarSize={30}>
                   <LabelList dataKey="period1" position="top" fill="#93c5fd" fontSize={10} formatter={(val) => val > 0 ? val : ''} />
                 </Bar>
-                <Bar dataKey="period2" name="period2" fill="url(#yellowGradient)" radius={[6, 6, 2, 2]} maxBarSize={30} filter="url(#neonGlow)">
+                <Bar dataKey="period2" name="period2" fill="url(#yellowGradient)" radius={[6, 6, 2, 2]} maxBarSize={30}>
                   <LabelList dataKey="period2" position="top" fill="#fde047" fontSize={10} formatter={(val) => val > 0 ? val : ''} />
                 </Bar>
               </BarChart>

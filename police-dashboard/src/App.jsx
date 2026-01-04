@@ -332,12 +332,12 @@ export default function App() {
                 <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[100px] mix-blend-screen animate-pulse-slow"></div>
                 <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-[120px] mix-blend-screen"></div>
 
-                {/* Floating Particles */}
-                <div className="absolute top-20 left-[15%] w-2 h-2 bg-blue-400/30 rounded-full blur-[1px] animate-float"></div>
+                {/* Floating Particles - Reduced for Performance */}
+                {/* <div className="absolute top-20 left-[15%] w-2 h-2 bg-blue-400/30 rounded-full blur-[1px] animate-float"></div>
                 <div className="absolute top-40 right-[20%] w-3 h-3 bg-cyan-400/20 rounded-full blur-[2px] animate-float-delayed"></div>
                 <div className="absolute bottom-60 left-[30%] w-2 h-2 bg-white/10 rounded-full blur-[1px] animate-pulse"></div>
                 <div className="absolute top-[60%] right-[40%] w-2 h-2 bg-blue-300/20 rounded-full blur-[1px] animate-float"></div>
-                <div className="absolute bottom-40 right-[15%] w-3 h-3 bg-cyan-300/15 rounded-full blur-[2px] animate-float-delayed"></div>
+                <div className="absolute bottom-40 right-[15%] w-3 h-3 bg-cyan-300/15 rounded-full blur-[2px] animate-float-delayed"></div> */}
               </div>
 
               {/* Content - relative z-index to appear above background */}
