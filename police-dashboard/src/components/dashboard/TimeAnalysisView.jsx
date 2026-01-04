@@ -6,13 +6,13 @@ const TimeAnalysisView = ({ peakHoursData, dayOfWeekData }) => {
     return (
         <div className="space-y-6 pb-6">
             {/* 1. Peak Hour Analysis (Area Chart) */}
-            <div className="glass-liquid p-4 sm:p-6 rounded-xl">
-                <h3 className="text-lg sm:text-xl font-bold flex items-center text-white mb-2">
+            <div className="glass-liquid p-3 sm:p-6 rounded-xl">
+                <h3 className="text-base sm:text-xl font-bold flex items-center text-white mb-2">
                     <Clock className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-cyan-400" /> ช่วงเวลาการจับกุมบ่อย
                 </h3>
                 <p className="text-sm text-slate-400 mb-6">วิเคราะห์แนวโน้มการจับกุมตลอด 24 ชั่วโมง</p>
 
-                <div className="h-72 w-full">
+                <div className="h-56 sm:h-72 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={peakHoursData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                             <defs>
@@ -34,13 +34,13 @@ const TimeAnalysisView = ({ peakHoursData, dayOfWeekData }) => {
 
             {/* 2. Day of Week Analysis (Radar Chart or Bar) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                <div className="glass-liquid p-4 sm:p-6 rounded-xl">
+                <div className="glass-liquid p-3 sm:p-6 rounded-xl">
                     <div className="flex flex-col justify-center h-full">
-                        <h3 className="text-lg sm:text-xl font-bold flex items-center text-white mb-2">
+                        <h3 className="text-base sm:text-xl font-bold flex items-center text-white mb-2">
                             <CalendarDays className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-purple-400" /> สถิติรายวัน
                         </h3>
                         <p className="text-sm text-slate-400 mb-4">วันที่มีการจับกุมมากที่สุด</p>
-                        <div className="h-64 w-full">
+                        <div className="h-48 sm:h-64 w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={dayOfWeekData}>
                                     <PolarGrid stroke="#334155" />
@@ -54,7 +54,7 @@ const TimeAnalysisView = ({ peakHoursData, dayOfWeekData }) => {
                     </div>
                 </div>
 
-                <div className="glass-liquid p-4 sm:p-6 rounded-xl flex items-center justify-center bg-slate-900/40">
+                <div className="glass-liquid p-3 sm:p-6 rounded-xl flex items-center justify-center bg-slate-900/40">
                     <div className="text-center">
                         <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                             <Clock className="w-8 h-8 text-red-500" />
