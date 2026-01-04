@@ -235,6 +235,46 @@
     }
 }
 
-.animate-beam-sweep {
-    animation: beam-sweep 3s ease-in-out infinite;
+
+@keyframes scan-vertical {
+    0% {
+        top: -100%;
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    90% {
+        opacity: 1;
+    }
+
+    100% {
+        top: 200%;
+        opacity: 0;
+    }
+}
+
+.animate-scan-vertical {
+    animation: scan-vertical 3s linear infinite;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.8);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.5);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.8);
 }
