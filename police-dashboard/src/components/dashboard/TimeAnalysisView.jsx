@@ -75,7 +75,8 @@ const TimeAnalysisView = ({ peakHoursData, dayOfWeekData }) => {
                     </div>
                 </div>
             </div>
-            );
+        </div>
+    );
 };
 
-            export default TimeAnalysisView;
+export default TimeAnalysisView;
