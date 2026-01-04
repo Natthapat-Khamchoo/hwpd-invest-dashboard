@@ -56,24 +56,26 @@ const TimeAnalysisView = ({ peakHoursData, dayOfWeekData }) => {
                     </div>
 
                     {/* Right/Bottom: Special Watch Time */}
-                    <div className="flex-none md:w-64 flex flex-col justify-center items-center p-4 bg-slate-900/30 rounded-xl border border-white/5">
-                        <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mb-3 animate-pulse">
-                            <Clock className="w-6 h-6 text-red-500" />
+                    <div className="flex-none md:w-64 flex flex-col justify-center items-center p-4 bg-slate-900/40 rounded-xl border border-red-500/30 shadow-[0_0_15px_rgba(220,38,38,0.1)] relative overflow-hidden">
+                        <div className="absolute inset-0 bg-red-500/5 animate-pulse-slow"></div>
+                        <div className="relative z-10 flex flex-col items-center">
+                            <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mb-3 animate-pulse">
+                                <Clock className="w-6 h-6 text-red-500" />
+                            </div>
+                            <h4 className="text-sm font-bold text-white mb-1">เฝ้าระวังพิเศษ</h4>
+                            <p className="text-2xl font-black text-red-400 tracking-wider mb-2">
+                                {peakHoursData.length > 0 ? (
+                                    peakHoursData.reduce((max, curr) => curr.count > max.count ? curr : max, peakHoursData[0]).name
+                                ) : '--:--'}
+                            </p>
+                            <p className="text-slate-400 text-xs text-center leading-relaxed">
+                                สถิติการจับกุมสูงสุดในช่วงเวลานี้
+                            </p>
                         </div>
-                        <h4 className="text-sm font-bold text-white mb-1">เฝ้าระวังพิเศษ</h4>
-                        <p className="text-2xl font-black text-red-400 tracking-wider mb-2">
-                            {peakHoursData.length > 0 ? (
-                                peakHoursData.reduce((max, curr) => curr.count > max.count ? curr : max, peakHoursData[0]).name
-                            ) : '--:--'}
-                        </p>
-                        <p className="text-slate-400 text-xs text-center leading-relaxed">
-                            สถิติการจับกุมสูงสุดในช่วงเวลานี้
-                        </p>
                     </div>
                 </div>
             </div>
-        </div>
-    );
+            );
 };
 
-export default TimeAnalysisView;
+            export default TimeAnalysisView;

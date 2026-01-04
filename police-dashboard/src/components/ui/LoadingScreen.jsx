@@ -27,6 +27,17 @@ const LoadingScreen = ({ onFinished }) => {
     return (
         <div className={`fixed top-0 left-0 w-full h-[100dvh] z-[99999] bg-[#0f172a] flex flex-col items-center justify-center overflow-hidden font-sans transition-all duration-700 ease-in-out touch-none overscroll-none ${isExiting ? 'opacity-0 scale-110 filter blur-sm pointer-events-none' : 'opacity-100 scale-100'}`} style={{ backgroundColor: '#0f172a' }}>
 
+            {/* Cyber Frame / Border Overlay */}
+            <div className="absolute inset-0 z-[100000] pointer-events-none p-2 sm:p-4">
+                <div className="w-full h-full border-2 border-blue-500/30 rounded-lg relative">
+                    {/* Corners */}
+                    <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-400 rounded-tl-lg"></div>
+                    <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-400 rounded-tr-lg"></div>
+                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-400 rounded-bl-lg"></div>
+                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-blue-400 rounded-br-lg"></div>
+                </div>
+            </div>
+
             {/* Siren Background Animation (Grid Layer) */}
             <div className="absolute inset-0 z-0 animate-siren-bg opacity-50"></div>
 
@@ -60,7 +71,7 @@ const LoadingScreen = ({ onFinished }) => {
                     <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-500/10 to-red-500/10 animate-pulse blur-xl"></div>
 
                     {/* Logo Area */}
-                    <div className="relative w-20 h-20 sm:w-40 sm:h-40 flex items-center justify-center">
+                    <div className="relative w-32 h-32 sm:w-48 sm:h-48 flex items-center justify-center">
                         <img
                             src="https://cib.go.th/backend/uploads/medium_logo_cib_4_2x_9f2da10e9f_a7828c9ca0.png"
                             alt="CIB Logo"
@@ -79,7 +90,7 @@ const LoadingScreen = ({ onFinished }) => {
 
                 {/* Text Cluster */}
                 <div className="text-center space-y-4 mb-10 z-20">
-                    <h2 className="text-sm sm:text-3xl font-black tracking-normal sm:tracking-[0.25em] animate-siren-text uppercase px-2">
+                    <h2 className="text-xl sm:text-4xl font-black tracking-widest animate-siren-text uppercase px-2 drop-shadow-lg">
                         Investigation In Progress
                     </h2>
                     <div className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-6 text-[9px] sm:text-xs font-mono tracking-widest">
