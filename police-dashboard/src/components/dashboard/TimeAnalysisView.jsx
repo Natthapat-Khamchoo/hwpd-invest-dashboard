@@ -33,10 +33,12 @@ const TimeAnalysisView = ({ peakHoursData, dayOfWeekData }) => {
             </div>
 
             {/* 2. Day of Week Analysis (Radar Chart or Bar) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                <div className="glass-liquid p-3 sm:p-6 rounded-xl">
-                    <div className="flex flex-col justify-center h-full">
-                        <h3 className="text-base sm:text-xl font-bold flex items-center text-white mb-2">
+            {/* 2. Day of Week Analysis (Unified Card) */}
+            <div className="glass-liquid p-3 sm:p-6 rounded-xl">
+                <div className="flex flex-col md:flex-row gap-6">
+                    {/* Left: Chart */}
+                    <div className="flex-1 flex flex-col">
+                        <h3 className="text-sm sm:text-xl font-bold flex items-center text-white mb-2">
                             <CalendarDays className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-purple-400" /> สถิติรายวัน
                         </h3>
                         <p className="text-sm text-slate-400 mb-4">วันที่มีการจับกุมมากที่สุด</p>
@@ -52,21 +54,20 @@ const TimeAnalysisView = ({ peakHoursData, dayOfWeekData }) => {
                             </ResponsiveContainer>
                         </div>
                     </div>
-                </div>
 
-                <div className="glass-liquid p-2 sm:p-6 rounded-xl flex items-center justify-center bg-slate-900/40">
-                    <div className="text-center">
-                        <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-                            <Clock className="w-8 h-8 text-red-500" />
+                    {/* Right/Bottom: Special Watch Time */}
+                    <div className="flex-none md:w-64 flex flex-col justify-center items-center p-4 bg-slate-900/30 rounded-xl border border-white/5">
+                        <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mb-3 animate-pulse">
+                            <Clock className="w-6 h-6 text-red-500" />
                         </div>
-                        <h4 className="text-lg font-bold text-white mb-2">ช่วงเวลาเฝ้าระวังพิเศษ</h4>
-                        <p className="text-3xl font-black text-red-400 tracking-wider mb-2">
+                        <h4 className="text-sm font-bold text-white mb-1">เฝ้าระวังพิเศษ</h4>
+                        <p className="text-2xl font-black text-red-400 tracking-wider mb-2">
                             {peakHoursData.length > 0 ? (
                                 peakHoursData.reduce((max, curr) => curr.count > max.count ? curr : max, peakHoursData[0]).name
                             ) : '--:--'}
                         </p>
-                        <p className="text-slate-400 text-sm max-w-xs mx-auto">
-                            แนะนำให้เพิ่มความเข้มงวดในการตั้งด่านตรวจในช่วงเวลานี้ เนื่องจากสถิติการจับกุมสูงกว่าปกติ
+                        <p className="text-slate-400 text-xs text-center leading-relaxed">
+                            สถิติการจับกุมสูงสุดในช่วงเวลานี้
                         </p>
                     </div>
                 </div>

@@ -25,7 +25,8 @@ const LoadingScreen = ({ onFinished }) => {
     }, [onFinished]);
 
     return (
-        <div className={`fixed top-0 left-0 w-full h-[100dvh] z-[99999] bg-[#0f172a] flex flex-col items-center justify-center overflow-hidden font-sans transition-all duration-700 ease-in-out ${isExiting ? 'opacity-0 scale-110 filter blur-sm pointer-events-none' : 'opacity-100 scale-100'}`}>
+    return (
+        <div className={`fixed top-0 left-0 w-full h-[100dvh] z-[99999] bg-[#0f172a] flex flex-col items-center justify-center overflow-hidden font-sans transition-all duration-700 ease-in-out touch-none overscroll-none ${isExiting ? 'opacity-0 scale-110 filter blur-sm pointer-events-none' : 'opacity-100 scale-100'}`} style={{ backgroundColor: '#0f172a' }}>
 
             {/* Siren Background Animation (Grid Layer) */}
             <div className="absolute inset-0 z-0 animate-siren-bg opacity-50"></div>
