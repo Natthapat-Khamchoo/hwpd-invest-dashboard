@@ -12,8 +12,8 @@ const TimeAnalysisView = ({ peakHoursData, dayOfWeekData }) => {
                 </h3>
                 <p className="text-sm text-slate-400 mb-6">วิเคราะห์แนวโน้มการจับกุมตลอด 24 ชั่วโมง</p>
 
-                <div className="h-48 sm:h-72 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div className="h-48 sm:h-72 w-full overflow-hidden">
+                    <ResponsiveContainer width="99%" height="100%">
                         <AreaChart data={peakHoursData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
@@ -40,8 +40,8 @@ const TimeAnalysisView = ({ peakHoursData, dayOfWeekData }) => {
                             <CalendarDays className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-purple-400" /> สถิติรายวัน
                         </h3>
                         <p className="text-sm text-slate-400 mb-4">วันที่มีการจับกุมมากที่สุด</p>
-                        <div className="h-48 sm:h-64 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
+                        <div className="h-48 sm:h-64 w-full overflow-hidden">
+                            <ResponsiveContainer width="99%" height="100%">
                                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={dayOfWeekData}>
                                     <PolarGrid stroke="#334155" />
                                     <PolarAngleAxis dataKey="subject" tick={{ fill: '#e2e8f0', fontSize: 10 }} />

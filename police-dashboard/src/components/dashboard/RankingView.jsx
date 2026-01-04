@@ -210,24 +210,24 @@ const RankingView = ({ unitRankings }) => {
                                 left: isAnimating ? '50%' : originRect.left,
                                 width: isAnimating ? '400px' : originRect.width,
                                 height: isAnimating ? 'auto' : originRect.height,
-                                transform: isAnimating
-                                    ? 'translate(-50%, -50%) rotateY(720deg) scale(1.4)'
-                                    : 'translate(0, 0) rotateY(0deg) scale(1)',
-                                maxWidth: '90vw'
+                                    ? `translate(-50%, -50%) rotateY(720deg) scale(${window.innerWidth < 640 ? 1.02 : 1.4})`
+                                : 'translate(0, 0) rotateY(0deg) scale(1)',
+                                maxWidth: '90vw',
+                        maxHeight: '80vh'
                             }}
                         >
-                            <RankingCard
-                                {...selectedCard}
-                                isSelected={true}
-                                disableHover={true}
-                                onClose={handleClose}
-                                onClick={() => { }}
-                            />
-                        </div>
+                        <RankingCard
+                            {...selectedCard}
+                            isSelected={true}
+                            disableHover={true}
+                            onClose={handleClose}
+                            onClick={() => { }}
+                        />
+                    </div>
                     </div>
                 )}
-            </div>
         </div>
+        </div >
     );
 };
 
