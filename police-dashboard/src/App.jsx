@@ -59,13 +59,43 @@ export default function App() {
   } = useAnalytics(data, filters); // Use filtered or raw data depending on requirement. Passing 'data' and applying filters inside hook is better for consistency.
 
   // --- UI State ---
-  const [activeTab, setActiveTab] = useState('result');
+  // Get initial view from URL
+  const getInitialView = () => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('view') || 'result';
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialView());
   const [selectedCase, setSelectedCase] = useState(null);
   const [mapError, setMapError] = useState(false);
   const handleMapError = useCallback(() => setMapError(true), []);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+
+  // --- URL Sync Handlers ---
+  const updateUrlView = (view) => {
+    const params = new URLSearchParams(window.location.search);
+    if (view) params.set('view', view); else params.delete('view');
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.pushState({ path: newUrl }, '', newUrl);
+  };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setMobileSidebarOpen(false);
+    updateUrlView(tab);
+  };
+
+  // Sync on Popstate
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      setActiveTab(params.get('view') || 'result');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // --- Report Preview State ---
   const [showReportModal, setShowReportModal] = useState(false);
@@ -238,7 +268,7 @@ export default function App() {
         </div>
         <nav className="p-4 space-y-2 whitespace-nowrap">
           {['result', 'dashboard'].map(tab => (
-            <button key={tab} onClick={() => { setActiveTab(tab); setMobileSidebarOpen(false); }} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden ${activeTab === tab ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 'text-slate-400 hover:bg-white/5 hover:text-white hover:shadow-lg'}`}>
+            <button key={tab} onClick={() => handleTabChange(tab)} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden ${activeTab === tab ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 'text-slate-400 hover:bg-white/5 hover:text-white hover:shadow-lg'}`}>
 
               {/* Active Tab Indicator Line */}
               {activeTab === tab && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,1)]"></div>}
@@ -259,7 +289,7 @@ export default function App() {
             { id: 'ranking', label: 'Ranking', icon: Award, color: 'text-yellow-400', activeBg: 'bg-yellow-500/10', activeBorder: 'border-yellow-500/30' },
             { id: 'trend', label: 'Trend Prediction', icon: TrendingUp, color: 'text-green-400', activeBg: 'bg-green-500/10', activeBorder: 'border-green-500/30' }
           ].map(item => (
-            <button key={item.id} onClick={() => { setActiveTab(item.id); setMobileSidebarOpen(false); }}
+            <button key={item.id} onClick={() => handleTabChange(item.id)}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden 
                 ${activeTab === item.id ? `${item.activeBg} ${item.color} border ${item.activeBorder} shadow-[0_0_15px_rgba(0,0,0,0.2)]` : 'text-slate-400 hover:bg-white/5 hover:text-white'}
 `}>

@@ -4,19 +4,75 @@ import { Truck, Siren, Crown, Mail, ShieldAlert, Award, FileText, Zap, ChevronDo
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 import { fetchDashboardData } from '../../services/GoogleSheetService';
+import { UNIT_HIERARCHY } from '../../utils/helpers';
 
 const ResultDashboardView = ({ filteredData, filters }) => {
     // --- State ---
+    // --- State ---
     const [sheetCounts, setSheetCounts] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('overview');
     const [viewMode, setViewMode] = useState('default'); // 'default' | 'print_all'
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth()); // Default to current month
-    const [selectedUnit, setSelectedUnit] = useState(''); // Division (KK)
-    const [selectedStation, setSelectedStation] = useState(''); // Station (S.TL)
+
+    // Get initial values from URL if present
+    const getInitialParams = () => {
+        const params = new URLSearchParams(window.location.search);
+        return {
+            tab: params.get('tab') || 'overview',
+            kk: params.get('kk') || '',
+            stl: params.get('stl') || ''
+        };
+    };
+
+    const initialParams = getInitialParams();
+    const [activeTab, setActiveTab] = useState(initialParams.tab);
+    const [selectedUnit, setSelectedUnit] = useState(initialParams.kk); // Division (KK)
+    const [selectedStation, setSelectedStation] = useState(initialParams.stl); // Station (S.TL)
 
     const [isPrintRequested, setIsPrintRequested] = useState(false); // Flag for print request
+
+    // --- Effect: Sync State to URL ---
+    const updateUrlParams = (tab, kk, stl) => {
+        const params = new URLSearchParams(window.location.search);
+        if (tab) params.set('tab', tab); else params.delete('tab');
+        if (kk) params.set('kk', kk); else params.delete('kk');
+        if (stl) params.set('stl', stl); else params.delete('stl');
+
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.pushState({ path: newUrl }, '', newUrl);
+    };
+
+    const handleTabChange = (tab) => {
+        setActiveTab(tab);
+        setViewMode('default');
+        updateUrlParams(tab, selectedUnit, selectedStation);
+    };
+
+    const handleUnitSelect = (unitId) => {
+        const newUnit = selectedUnit === unitId ? '' : unitId;
+        setSelectedUnit(newUnit);
+        setSelectedStation(''); // Reset station when unit changes
+        updateUrlParams(activeTab, newUnit, '');
+    };
+
+    const handleStationSelect = (stationId) => {
+        const newStation = selectedStation === stationId ? '' : stationId;
+        setSelectedStation(newStation);
+        updateUrlParams(activeTab, selectedUnit, newStation);
+    };
+
+    // --- Effect: Handle Popstate (Browser Back/Forward) ---
+    useEffect(() => {
+        const handlePopState = () => {
+            const params = new URLSearchParams(window.location.search);
+            setActiveTab(params.get('tab') || 'overview');
+            setSelectedUnit(params.get('kk') || '');
+            setSelectedStation(params.get('stl') || '');
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
 
     // --- Effect: Fetch Google Sheet Data ---
     useEffect(() => {
@@ -247,51 +303,76 @@ const ResultDashboardView = ({ filteredData, filters }) => {
 
                     {/* Right: Blue Section */}
                     <div className="bg-[#0047ba] flex-1 flex items-center justify-center md:justify-end md:pr-16 py-4 md:py-6 px-4 md:pl-20 relative z-10 text-center md:text-right border-t md:border-t-0 border-white/10">
-                        <h1 className="text-2xl md:text-4xl font-bold text-white">
+                        <h1 className="text-xl md:text-3xl lg:text-4xl font-bold text-white">
                             ผลการปฏิบัติภาพรวม <span className="text-[#fbbf24] ml-2 font-extrabold block md:inline">{headerDate}</span>
                         </h1>
                     </div>
                 </div>
 
-                {/* --- Filter Section (New) --- */}
-                <div className="px-4 md:px-12 py-4 flex flex-wrap gap-4 items-center bg-slate-50 border-b border-slate-200">
-                    {/* Division (KK) Filter */}
-                    <select
-                        className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
-                        value={selectedUnit}
-                        onChange={(e) => {
-                            setSelectedUnit(e.target.value);
-                            setSelectedStation(''); // Reset station when unit changes
-                        }}
-                    >
-                        <option value="">ทุกกองกำกับการ (All Divisions)</option>
-                        {[...Array(8)].map((_, i) => (
-                            <option key={i + 1} value={String(i + 1)}>{`กก.${i + 1}`}</option>
-                        ))}
-                    </select>
+                {/* --- Filter Section (New Tab Design) --- */}
+                <div className="flex flex-col border-b border-slate-200 bg-slate-50">
+                    {/* Level 1: Divisions (KK) */}
+                    <div className="flex items-center gap-2 overflow-x-auto p-4 no-scrollbar">
+                        <button
+                            onClick={() => handleUnitSelect('')}
+                            className={`flex-shrink-0 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 shadow-sm ${selectedUnit === ''
+                                ? 'bg-blue-600 text-white shadow-blue-500/30'
+                                : 'bg-white text-slate-600 hover:bg-white hover:text-blue-600 border border-slate-200'
+                                }`}
+                        >
+                            ทุกกองกำกับการ
+                        </button>
+                        {[...Array(8)].map((_, i) => {
+                            const unitId = String(i + 1);
+                            const isActive = selectedUnit === unitId;
+                            return (
+                                <button
+                                    key={unitId}
+                                    onClick={() => handleUnitSelect(unitId)}
+                                    className={`flex-shrink-0 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 shadow-sm whitespace-nowrap ${isActive
+                                        ? 'bg-blue-600 text-white shadow-blue-500/30'
+                                        : 'bg-white text-slate-600 hover:bg-white hover:text-blue-600 border border-slate-200'
+                                        }`}
+                                >
+                                    กก.{unitId}
+                                </button>
+                            );
+                        })}
+                    </div>
 
-                    {/* Station (S.TL) Filter - Only enabled if Unit is selected? Or allow free type? 
-                        For now, let's keep it simple: Station Number input or dropdown if we knew the list.
-                        Since we don't have a dynamic list of stations per unit loaded, let's use a text input or simple number dropdown for now 
-                        OR assuming standard pattern: if KK.1 selected, maybe S.TL 1, 2... ? 
-                        Let's use a generic subset of numbers for now or just allow typing the number.
-                        Actually, existing data has stations like "ส.ทล.1 กก.1". 
-                        The user likely wants to pick "1" which implies "ส.ทล.1".
-                    */}
-                    <select
-                        className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
-                        value={selectedStation}
-                        onChange={(e) => setSelectedStation(e.target.value)}
-                        disabled={!selectedUnit} // Optional: easy way to guide user
-                    >
-                        <option value="">ทุกสถานี (All Stations)</option>
-                        {[...Array(6)].map((_, i) => ( // Arbitrary limit, maybe up to 6 stations per KK?
-                            <option key={i + 1} value={String(i + 1)}>{`ส.ทล.${i + 1}`}</option>
-                        ))}
-                    </select>
-
-                    <div className="text-sm text-slate-500 ml-auto">
-                        * เลือก กก. ก่อนเพื่อเลือก ส.ทล.
+                    {/* Level 2: Stations (S.TL) - Only show if unit selected */}
+                    <div className={`overflow-hidden transition-all duration-300 ease-in-out bg-blue-50/50 ${selectedUnit ? 'max-h-20 opacity-100 border-t border-blue-100' : 'max-h-0 opacity-0'}`}>
+                        <div className="flex items-center gap-2 overflow-x-auto px-4 py-3 no-scrollbar">
+                            <div className="flex-shrink-0 text-sm font-bold text-blue-800 mr-2 flex items-center">
+                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
+                                เลือกสถานี:
+                            </div>
+                            <button
+                                onClick={() => handleStationSelect('')}
+                                className={`flex-shrink-0 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border ${selectedStation === ''
+                                    ? 'bg-blue-100 text-blue-700 border-blue-300'
+                                    : 'bg-white text-slate-500 hover:bg-blue-50 border-slate-200'
+                                    }`}
+                            >
+                                ทั้งหมดใน กก.{selectedUnit}
+                            </button>
+                            {selectedUnit && UNIT_HIERARCHY[selectedUnit] && [...Array(UNIT_HIERARCHY[selectedUnit])].map((_, i) => {
+                                const stationId = String(i + 1);
+                                const isActive = selectedStation === stationId;
+                                return (
+                                    <button
+                                        key={stationId}
+                                        onClick={() => handleStationSelect(stationId)}
+                                        className={`flex-shrink-0 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border ${isActive
+                                            ? 'bg-blue-500 text-white border-blue-600 shadow-sm'
+                                            : 'bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600 border-slate-200'
+                                            }`}
+                                    >
+                                        ส.ทล.{stationId}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
@@ -301,31 +382,31 @@ const ResultDashboardView = ({ filteredData, filters }) => {
                     <div className="flex bg-slate-100 p-1.5 rounded-2xl shadow-inner gap-2 overflow-x-auto w-full xl:w-auto no-scrollbar">
                         <TabButton
                             active={activeTab === 'overview' && viewMode !== 'print_all'}
-                            onClick={() => { setActiveTab('overview'); setViewMode('default'); }}
+                            onClick={() => handleTabChange('overview')}
                             label="ภาพรวม"
                             icon={<Award size={18} />}
                         />
                         <TabButton
                             active={activeTab === 'comparison' && viewMode !== 'print_all'}
-                            onClick={() => { setActiveTab('comparison'); setViewMode('default'); }}
+                            onClick={() => handleTabChange('comparison')}
                             label="เปรียบเทียบอาญา"
                             icon={<ChartIcon size={18} />}
                         />
                         <TabButton
                             active={activeTab === 'traffic-comparison' && viewMode !== 'print_all'}
-                            onClick={() => { setActiveTab('traffic-comparison'); setViewMode('default'); }}
+                            onClick={() => handleTabChange('traffic-comparison')}
                             label="เปรียบเทียบจราจร"
                             icon={<ChartIcon size={18} />}
                         />
                         <TabButton
                             active={activeTab === 'press' && viewMode !== 'print_all'}
-                            onClick={() => { setActiveTab('press'); setViewMode('default'); }}
+                            onClick={() => handleTabChange('press')}
                             label="สื่อ"
                             icon={<ExternalLink size={18} />}
                         />
                         <TabButton
                             active={activeTab === 'truck' && viewMode !== 'print_all'}
-                            onClick={() => { setActiveTab('truck'); setViewMode('default'); }}
+                            onClick={() => handleTabChange('truck')}
                             label="รถหนัก"
                             icon={<Truck size={18} />}
                         />
