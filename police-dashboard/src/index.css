@@ -14,7 +14,7 @@
         @apply bg-slate-800/40 backdrop-blur-sm border border-white/5 shadow-lg transition-all duration-300 hover:bg-slate-800/60 hover:border-white/20 hover:shadow-blue-500/10 hover:-translate-y-1;
     }
 
-    /* New Liquid Glass Effect - iOS 26 Concept */
+    /* New Liquid Glass Effect */
     .glass-liquid {
         @apply bg-slate-800/30 backdrop-blur-md border border-white/10 shadow-2xl;
         box-shadow:
@@ -53,6 +53,121 @@
         box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
         @apply border-blue-400/50;
     }
+
+    /* NEW: Hightech & Liquid Additions */
+    .hightech-border {
+        @apply relative border border-blue-500/20;
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
+    }
+
+    .hightech-border::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 8px;
+        height: 8px;
+        border-top: 2px solid #60a5fa;
+        border-left: 2px solid #60a5fa;
+        opacity: 0.5;
+    }
+
+    .hightech-border::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 8px;
+        height: 8px;
+        border-bottom: 2px solid #60a5fa;
+        border-right: 2px solid #60a5fa;
+        opacity: 0.5;
+    }
+
+    .liquid-bg-anim {
+        background: linear-gradient(-45deg, #0f172a, #1e3a8a, #0f172a, #312e81);
+        background-size: 400% 400%;
+        animation: liquid-flow 15s ease infinite;
+    }
+
+    /* Logo Rotation Effect */
+    .hover-rotate-y-360 {
+        transition: transform 1s ease-in-out;
+        transform-style: preserve-3d;
+    }
+
+    .hover-rotate-y-360:hover {
+        transform: rotateY(360deg) scale(1.1);
+    }
+
+    /* Digital Circuit Animation (Dashed Line Flow) */
+    .beam-path {
+        stroke-dasharray: 40 800;
+        /* 40px line, 800px gap */
+        stroke-dashoffset: 840;
+        animation: beam-flow 3s linear infinite;
+        stroke-linecap: round;
+        filter: drop-shadow(0 0 5px currentColor);
+    }
+
+    .beam-delay-1 {
+        animation-delay: 0.5s;
+    }
+
+    .beam-delay-2 {
+        animation-delay: 1.2s;
+    }
+
+    .beam-delay-3 {
+        animation-delay: 2.0s;
+    }
+
+    /* --- EXPORT MODE OVERRIDES (Strict Fidelity) --- */
+    .export-mode .liquid-bg-anim,
+    .export-mode.liquid-bg-anim {
+        background: #020617 !important;
+        /* Solid dark background */
+        animation: none !important;
+    }
+
+    .export-mode .hightech-border {
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+    }
+
+    .export-mode .hightech-border::before,
+    .export-mode .hightech-border::after {
+        display: none !important;
+        /* Hide corner accents in export */
+    }
+
+    .export-mode .glass-liquid {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+    }
+
+    .export-mode .text-glow-liquid,
+    .export-mode .drop-shadow-sm,
+    .export-mode .drop-shadow-md {
+        filter: none !important;
+        text-shadow: none !important;
+    }
+
+    /* Force text colors to be solid and readable in export */
+    .export-mode .text-transparent {
+        color: #f1f5f9 !important;
+        /* slate-100 */
+        -webkit-text-fill-color: #f1f5f9 !important;
+        background: none !important;
+    }
+
+    .export-mode .exclude-in-export-mode {
+        display: none !important;
+    }
 }
 
 /* Custom Scrollbar */
@@ -74,7 +189,21 @@
     background: #475569;
 }
 
-/* Shimmer Animation */
+/* Animations */
+@keyframes liquid-flow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
 @keyframes shimmer {
     0% {
         transform: translateX(-150%) skewX(-15deg);
@@ -98,6 +227,50 @@
     animation: shimmer 0.8s ease-in-out;
 }
 
+/* New Pulse Slow */
+@keyframes pulse-slow {
+
+    0%,
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+    }
+
+    50% {
+        opacity: 0.8;
+        box-shadow: 0 0 25px rgba(239, 68, 68, 0.7);
+    }
+}
+
+.animate-pulse-slow {
+    animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Beam Flow Animation (Dashed Line) */
+@keyframes beam-flow {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes stroke-anim {
+    0% {
+        stroke-dashoffset: 3500;
+    }
+
+    100% {
+        stroke-dashoffset: 0;
+    }
+}
+
+.text-stroke-neon {
+    stroke-dasharray: 200 300;
+    /* Long dash, longer gap */
+    stroke-width: 2px;
+    animation: stroke-anim 15s linear infinite;
+    filter: drop-shadow(0 0 5px #3b82f6) drop-shadow(0 0 10px #3b82f6);
+}
+
 @layer base {
     body {
         @apply font-sans bg-hwpd-dark text-slate-100 overflow-hidden;
@@ -110,171 +283,4 @@
         background-image: radial-gradient(circle at 50% 50%, #1e293b 1px, transparent 1px);
         background-size: 30px 30px;
     }
-}
-
-/* Laser Beam Animations */
-@keyframes scan-vertical {
-    0% {
-        top: -50%;
-    }
-
-    100% {
-        top: 150%;
-    }
-}
-
-@keyframes scan-horizontal {
-    0% {
-        left: -50%;
-    }
-
-    100% {
-        left: 150%;
-    }
-}
-
-.animate-scan-v {
-    animation: scan-vertical 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-.animate-scan-h {
-    animation: scan-horizontal 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-@keyframes siren-pulse-border {
-
-    0%,
-    100% {
-        border-color: rgba(59, 130, 246, 0.6);
-        box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
-    }
-
-    50% {
-        border-color: rgba(239, 68, 68, 0.6);
-        box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
-    }
-}
-
-@keyframes siren-text-glow {
-
-    0%,
-    100% {
-        text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
-        color: #60a5fa;
-    }
-
-    50% {
-        text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
-        color: #f87171;
-    }
-}
-
-@keyframes siren-bg-pulse {
-
-    0%,
-    100% {
-        background: radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.15), rgba(15, 23, 42, 1));
-    }
-
-    50% {
-        background: radial-gradient(circle at 50% 50%, rgba(220, 38, 38, 0.15), rgba(15, 23, 42, 1));
-    }
-}
-
-.animate-siren-border {
-    animation: siren-pulse-border 1.5s ease-in-out infinite;
-}
-
-.animate-siren-text {
-    animation: siren-text-glow 1.5s ease-in-out infinite;
-}
-
-.animate-siren-bg {
-    animation: siren-bg-pulse 2s ease-in-out infinite;
-}
-
-/* Razor Beam Grid */
-.razor-grid {
-    background-image:
-        linear-gradient(to right, rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
-    background-size: 40px 40px;
-    transform: perspective(500px) rotateX(60deg);
-    transform-origin: center top;
-}
-
-@keyframes razor-scan {
-    0% {
-        background-position: 0 0;
-    }
-
-    100% {
-        background-position: 0 40px;
-    }
-}
-
-.animate-razor-grid {
-    animation: razor-scan 1s linear infinite;
-}
-
-@keyframes beam-sweep {
-
-    0%,
-    100% {
-        top: 0%;
-        opacity: 0;
-    }
-
-    50% {
-        opacity: 1;
-    }
-
-    100% {
-        top: 100%;
-        opacity: 0;
-    }
-}
-
-
-@keyframes scan-vertical {
-    0% {
-        top: -100%;
-        opacity: 0;
-    }
-
-    10% {
-        opacity: 1;
-    }
-
-    90% {
-        opacity: 1;
-    }
-
-    100% {
-        top: 200%;
-        opacity: 0;
-    }
-}
-
-.animate-scan-vertical {
-    animation: scan-vertical 3s linear infinite;
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: rgba(15, 23, 42, 0.8);
-}
-
-::-webkit-scrollbar-thumb {
-    background: rgba(59, 130, 246, 0.5);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(59, 130, 246, 0.8);
 }

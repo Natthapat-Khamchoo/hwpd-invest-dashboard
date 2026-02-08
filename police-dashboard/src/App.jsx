@@ -1,15 +1,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  LayoutDashboard, Table as TableIcon, Search, Filter, Siren, Users,
-  FileText, Calendar, ChevronRight, X, Menu, BarChart3, Map as MapIcon,
+  LayoutDashboard, Search, Filter, Siren, Users,
+  FileText, Calendar, ChevronRight, X, Menu, BarChart3,
   Building2, ChevronLeft, Truck, FileWarning, Activity, Radar, RefreshCw, Download, Check, ClipboardCopy,
-  Award, Clock, TrendingUp
+  Award, Clock, TrendingUp, PieChart
 } from 'lucide-react';
 
 // Import Components
 import { StatCard, SplitStatCard } from './components/dashboard/StatCard';
 import { UnitBarChart, MonthlyBarChart, ComparativeCrimeChart } from './components/dashboard/Charts';
-import { LeafletMap } from './components/dashboard/LeafletMap';
 import { getCrimeColor } from './utils/helpers';
 import FilterBar from './components/dashboard/FilterBar';
 import { Header } from './components/dashboard/Header';
@@ -19,18 +18,13 @@ import LoadingScreen from './components/ui/LoadingScreen';
 import RankingView from './components/dashboard/RankingView';
 import TimeAnalysisView from './components/dashboard/TimeAnalysisView';
 import TrendView from './components/dashboard/TrendView';
+import SummaryDashboardView from './components/dashboard/SummaryDashboardView';
+import ResultDashboardView from './components/dashboard/ResultDashboardView';
 
 // Import Hooks
 import { usePoliceData } from './hooks/usePoliceData';
 import { useDashboardLogic } from './hooks/useDashboardLogic';
 import { useAnalytics } from './hooks/useAnalytics';
-
-// Fallback Map Placeholder
-const SimpleMapPlaceholder = () => (
-  <div className="flex items-center justify-center h-full text-slate-500 bg-slate-800">
-    <p>Loading Map Component...</p>
-  </div>
-);
 
 // LOCAL DEBUG LOADING SCREEN
 const DebugLoading = ({ onFinished }) => (
@@ -65,7 +59,7 @@ export default function App() {
   } = useAnalytics(data, filters); // Use filtered or raw data depending on requirement. Passing 'data' and applying filters inside hook is better for consistency.
 
   // --- UI State ---
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('result');
   const [selectedCase, setSelectedCase] = useState(null);
   const [mapError, setMapError] = useState(false);
   const handleMapError = useCallback(() => setMapError(true), []);
@@ -81,7 +75,7 @@ export default function App() {
   const handleExportCSV = () => {
     if (filteredData.length === 0) { alert('ไม่มีข้อมูลสำหรับ Export'); return; }
     const headers = ["วันที่", "เวลา", "หน่วยงาน", "หัวข้อ", "ประเภทจับกุม", "ผู้ต้องหา", "สถานที่"];
-    const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + filteredData.map(e => `${e.date_capture},${e.time_capture},กก.${e.unit_kk},${e.topic},${e.arrest_type},"${e.suspect_name}",${e.location}`).join("\n");
+    const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + filteredData.map(e => `${e.date_capture},${e.time_capture}, กก.${e.unit_kk},${e.topic},${e.arrest_type}, "${e.suspect_name}", ${e.location} `).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -93,7 +87,7 @@ export default function App() {
   const handleCopyReport = () => {
     const today = new Date();
     const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-    const thDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear() + 543}`;
+    const thDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear() + 543} `;
 
     // --- คำนวณวันที่สำหรับแสดงใน Header ---
     let headerDateText = "";
@@ -101,17 +95,17 @@ export default function App() {
     // ฟังก์ชันช่วยแปลงวันที่
     const formatThDate = (date) => {
       if (!date) return '-';
-      return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
+      return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543} `;
     };
 
     if (filters.period === 'today') {
-      headerDateText = `ประจำวันที่ ${formatThDate(new Date())}`;
+      headerDateText = `ประจำวันที่ ${formatThDate(new Date())} `;
     } else if (filters.period === 'yesterday') {
       const yest = new Date();
       yest.setDate(yest.getDate() - 1);
-      headerDateText = `ประจำวันที่ ${formatThDate(yest)}`;
+      headerDateText = `ประจำวันที่ ${formatThDate(yest)} `;
     } else if (filters.rangeStart && filters.rangeEnd) {
-      headerDateText = `ประจำห้วงวันที่ ${formatThDate(filters.rangeStart)} ถึง ${formatThDate(filters.rangeEnd)}`;
+      headerDateText = `ประจำห้วงวันที่ ${formatThDate(filters.rangeStart)} ถึง ${formatThDate(filters.rangeEnd)} `;
     } else {
       headerDateText = `ข้อมูลทั้งหมด`;
     }
@@ -155,29 +149,29 @@ export default function App() {
 
     const reportText = `เรียน ผู้บังคับบัญชา
 
-       วันที่ ${thDate} ขออนุญาตส่งสรุปผลการปฏิบัติของ บก.ทล. ${headerDateText} ดังนี้
-🔹 ภายใต้การบังคับบัญชาของ 
+       วันที่ ${thDate} ขออนุญาตส่งสรุปผลการปฏิบัติของ บก.ทล.${headerDateText} ดังนี้
+🔹 ภายใต้การบังคับบัญชาของ
 พล.ต.ต.พรศักดิ์ เลารุจิราลัย ผบก.ทล.
 
 🔺 สถิติผลการจับกุมคดีจราจร
-- พ.ร.บ.จราจรฯ ${counts.trafficAct} ราย
-- พ.ร.บ.รถยนต์ฯ ${counts.carAct} ราย
-- พ.ร.บ.ขนส่งฯ ${counts.transportAct} ราย
-- พ.ร.บ.ทางหลวง(ทั่วไป) ${counts.highwayAct} ราย
-- จับกุมรถบรรทุกน้ำหนักเกินฯ ${counts.weight} ราย
+  - พ.ร.บ.จราจรฯ ${counts.trafficAct} ราย
+    - พ.ร.บ.รถยนต์ฯ ${counts.carAct} ราย
+      - พ.ร.บ.ขนส่งฯ ${counts.transportAct} ราย
+        - พ.ร.บ.ทางหลวง(ทั่วไป) ${counts.highwayAct} ราย
+          - จับกุมรถบรรทุกน้ำหนักเกินฯ ${counts.weight} ราย
 
 
 🔺 สถิติจับกุมคดีอาญา
 📍ความผิดตามประมวลกฎหมายอาญา
-- หมายจับ ${counts.warrant} ราย
-- ปลอมและใช้เอกสารราชการปลอม ${counts.forgery} ราย
+  - หมายจับ ${counts.warrant} ราย
+    - ปลอมและใช้เอกสารราชการปลอม ${counts.forgery} ราย
 📍ความผิดตาม พ.ร.บ.ต่างๆ
-- พ.ร.บ.ยาเสพติด ${counts.drugs} ราย
-- พ.ร.บ.อาวุธปืน ${counts.guns} ราย
-- พ.ร.บ.คนเข้าเมือง ${counts.immigration} ราย
-- อื่นๆ ${counts.others} ราย
+  - พ.ร.บ.ยาเสพติด ${counts.drugs} ราย
+    - พ.ร.บ.อาวุธปืน ${counts.guns} ราย
+      - พ.ร.บ.คนเข้าเมือง ${counts.immigration} ราย
+        - อื่นๆ ${counts.others} ราย
 
-       จึงเรียนมาเพื่อโปรดทราบ`;
+จึงเรียนมาเพื่อโปรดทราบ`;
 
     setReportText(reportText); // เก็บข้อความรายงาน
     setShowReportModal(true); // เปิด Modal
@@ -215,7 +209,7 @@ export default function App() {
   }, [loading]);
 
   return (
-    <div className="flex h-screen bg-[#0f172a] font-sans text-slate-100 overflow-hidden relative">
+    <div className="flex h-screen bg-[#0f172a] font-sans text-slate-100 overflow-hidden relative print:h-auto print:overflow-visible print:block print:bg-white">
 
       {/* Loading Screen Overlay (Fades out when finished) */}
       {(showLoadingScreen || loading) && (
@@ -235,7 +229,7 @@ export default function App() {
 
       {mobileSidebarOpen && (<div className="fixed inset-0 bg-black/80 z-20 lg:hidden backdrop-blur-sm" onClick={() => setMobileSidebarOpen(false)} />)}
 
-      <aside className={`fixed inset-y-0 left-0 z-30 glass-liquid-bar border-y-0 border-l-0 border-r border-white/10 text-white transition-all duration-300 ease-in-out shadow-2xl ${mobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full'} lg:relative lg:translate-x-0 ${desktopSidebarOpen ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-30 glass-liquid-bar border-y-0 border-l-0 border-r border-white/10 text-white transition-all duration-300 ease-in-out shadow-2xl ${mobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full'} lg:relative lg:translate-x-0 ${desktopSidebarOpen ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden'} print:hidden`}>
         <div className="p-6 border-b border-white/5 flex justify-between items-center whitespace-nowrap bg-gradient-to-r from-white/5 to-transparent">
           <div className="flex items-center space-x-3">
             <span className={`text-xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 transition-opacity duration-200`}>HWPD <span className="text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]">WARROOM</span></span>
@@ -243,13 +237,15 @@ export default function App() {
           <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X className="w-6 h-6" /></button>
         </div>
         <nav className="p-4 space-y-2 whitespace-nowrap">
-          {['dashboard', 'list', 'map'].map(tab => (
+          {['result', 'dashboard'].map(tab => (
             <button key={tab} onClick={() => { setActiveTab(tab); setMobileSidebarOpen(false); }} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden ${activeTab === tab ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 'text-slate-400 hover:bg-white/5 hover:text-white hover:shadow-lg'}`}>
 
               {/* Active Tab Indicator Line */}
               {activeTab === tab && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,1)]"></div>}
 
-              {tab === 'dashboard' ? <LayoutDashboard className="w-5 h-5" /> : tab === 'list' ? <TableIcon className="w-5 h-5" /> : <MapIcon className="w-5 h-5" />}
+              {tab === 'dashboard' ? <LayoutDashboard className="w-5 h-5" /> :
+                tab === 'result' ? <PieChart className="w-5 h-5" /> :
+                  <FileText className="w-5 h-5" />}
               <span className="font-medium capitalize relative z-10">{tab}</span>
               {activeTab === tab && <ChevronRight className="w-4 h-4 ml-auto opacity-70" />}
             </button>
@@ -261,13 +257,12 @@ export default function App() {
 
           {[
             { id: 'ranking', label: 'Ranking', icon: Award, color: 'text-yellow-400', activeBg: 'bg-yellow-500/10', activeBorder: 'border-yellow-500/30' },
-            { id: 'time', label: 'Time Analysis', icon: Clock, color: 'text-cyan-400', activeBg: 'bg-cyan-500/10', activeBorder: 'border-cyan-500/30' },
             { id: 'trend', label: 'Trend Prediction', icon: TrendingUp, color: 'text-green-400', activeBg: 'bg-green-500/10', activeBorder: 'border-green-500/30' }
           ].map(item => (
             <button key={item.id} onClick={() => { setActiveTab(item.id); setMobileSidebarOpen(false); }}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden 
                 ${activeTab === item.id ? `${item.activeBg} ${item.color} border ${item.activeBorder} shadow-[0_0_15px_rgba(0,0,0,0.2)]` : 'text-slate-400 hover:bg-white/5 hover:text-white'}
-              `}>
+`}>
 
               {activeTab === item.id && <div className={`absolute left-0 top-0 bottom-0 w-1 ${item.color.replace('text', 'bg')} shadow-[0_0_10px_rgba(255,255,255,0.5)]`}></div>}
 
@@ -278,20 +273,22 @@ export default function App() {
         </nav>
       </aside>
 
-      <main className="flex-1 flex flex-col overflow-hidden min-w-0 z-10">
+      <main className="flex-1 flex flex-col overflow-hidden min-w-0 z-10 print:overflow-visible print:h-auto print:block">
 
-        <Header
-          activeTab={activeTab}
-          mobileSidebarOpen={mobileSidebarOpen}
-          setMobileSidebarOpen={setMobileSidebarOpen}
-          desktopSidebarOpen={desktopSidebarOpen}
-          setDesktopSidebarOpen={setDesktopSidebarOpen}
-          onCopyReport={handleCopyReport}
-          onResetFilters={resetFilters}
-          onExportCSV={handleExportCSV}
-          showFilterPanel={showFilterPanel}
-          setShowFilterPanel={setShowFilterPanel}
-        />
+        <div className="print:hidden">
+          <Header
+            activeTab={activeTab}
+            mobileSidebarOpen={mobileSidebarOpen}
+            setMobileSidebarOpen={setMobileSidebarOpen}
+            desktopSidebarOpen={desktopSidebarOpen}
+            setDesktopSidebarOpen={setDesktopSidebarOpen}
+            onCopyReport={handleCopyReport}
+            onResetFilters={resetFilters}
+            onExportCSV={handleExportCSV}
+            showFilterPanel={showFilterPanel}
+            setShowFilterPanel={setShowFilterPanel}
+          />
+        </div>
 
         <FilterBar
           show={showFilterPanel}
@@ -302,7 +299,7 @@ export default function App() {
           filterOptions={filterOptions}
         />
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-4">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-4 print:overflow-visible print:h-auto print:p-0">
           {activeTab === 'dashboard' && (
             <div className="relative space-y-4 sm:space-y-6">
               {/* Police Command Center Background Effects */}
@@ -463,67 +460,17 @@ export default function App() {
             </div>
           )}
 
-          {activeTab === 'list' && (
-            <div className="bg-slate-800/90 backdrop-blur rounded-xl shadow-lg border border-slate-700 flex flex-col h-full overflow-hidden">
-              <div className="flex-1 overflow-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-900 sticky top-0 z-10"><tr><th className="p-4 text-xs font-semibold text-slate-400 uppercase border-b border-slate-700">วันที่/เวลา</th><th className="p-4 text-xs font-semibold text-slate-400 uppercase border-b border-slate-700">หน่วยงาน</th><th className="p-4 text-xs font-semibold text-slate-400 uppercase border-b border-slate-700">ข้อหา/ประเภท</th><th className="p-4 text-xs font-semibold text-slate-400 uppercase border-b border-slate-700">ผู้ถูกจับ</th><th className="p-4 text-xs font-semibold text-slate-400 uppercase border-b border-slate-700">สถานที่</th><th className="p-4 border-b border-slate-700"></th></tr></thead>
-                  <tbody className="divide-y divide-slate-700">
-                    {filteredData.slice(0, 100).map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-700/50 transition-colors cursor-pointer" onClick={() => setSelectedCase(item)}>
-                        <td className="p-4 text-sm text-slate-300 whitespace-nowrap"><div className="font-medium text-white">{item.date_capture}</div><div className="text-xs text-slate-500">{item.time_capture} น.</div></td>
-                        <td className="p-4 text-sm text-slate-300 whitespace-nowrap"><div className="font-medium text-white">กก.{item.unit_kk}</div><div className="text-xs text-slate-500">ส.ทล.{item.unit_s_tl}</div></td>
-                        <td className="p-4 text-sm text-white max-w-xs truncate"><div className="text-yellow-400 text-xs mb-1">{item.topic}</div>{item.charge}</td>
-                        <td className="p-4 text-sm text-slate-300">{item.suspect_name}</td>
-                        <td className="p-4 text-sm text-slate-400 max-w-xs truncate">{item.location}</td>
-                        <td className="p-4"><ChevronRight className="w-5 h-5 text-slate-500" /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {filteredData.length === 0 && <div className="p-10 text-center text-slate-500">ไม่พบข้อมูล</div>}
-              </div>
-            </div>
+
+
+          {activeTab === 'summary' && (
+            <SummaryDashboardView filteredData={filteredData} filters={filters} />
           )}
 
-          {activeTab === 'map' && (
-            <div className="h-full w-full flex flex-col bg-slate-800 rounded-xl overflow-hidden border border-slate-700 relative">
-              {/* Geo-Intel Overlay Effects */}
-              <div className="absolute inset-0 pointer-events-none z-[500] overflow-hidden">
-                {/* Tactical Grid */}
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(6,182,212,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(6,182,212,0.05)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
-
-                {/* Corner Brackets */}
-                <div className="absolute top-0 left-0 w-32 h-32 p-4">
-                  <div className="w-full h-full border-t-2 border-l-2 border-cyan-500/30 rounded-tl-2xl"></div>
-                </div>
-                <div className="absolute top-0 right-0 w-32 h-32 p-4">
-                  <div className="w-full h-full border-t-2 border-r-2 border-cyan-500/30 rounded-tr-2xl"></div>
-                </div>
-                <div className="absolute bottom-0 left-0 w-32 h-32 p-4">
-                  <div className="w-full h-full border-b-2 border-l-2 border-cyan-500/30 rounded-bl-2xl"></div>
-                </div>
-                <div className="absolute bottom-0 right-0 w-32 h-32 p-4">
-                  <div className="w-full h-full border-b-2 border-r-2 border-cyan-500/30 rounded-br-2xl"></div>
-                </div>
-
-                {/* Live Status Indicator */}
-                <div className="absolute top-6 right-8 flex items-center gap-2 bg-slate-900/80 backdrop-blur px-3 py-1 rounded-full border border-cyan-500/20 shadow-lg">
-                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
-                  <span className="text-[10px] font-mono font-bold text-cyan-400 tracking-wider">GEO-INTEL: ACTIVE</span>
-                </div>
-
-                {/* Center Crosshair (Subtle) */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 opacity-10">
-                  <div className="absolute inset-0 border border-cyan-500 rounded-full"></div>
-                  <div className="absolute top-1/2 left-0 w-full h-[1px] bg-cyan-500"></div>
-                  <div className="absolute top-0 left-1/2 w-[1px] h-full bg-cyan-500"></div>
-                </div>
-              </div>
-
-              {!mapError ? <LeafletMap data={filteredData} onSelectCase={setSelectedCase} onError={handleMapError} /> : <SimpleMapPlaceholder />}
-            </div>
+          {activeTab === 'result' && (
+            <ResultDashboardView filteredData={filteredData} filters={filters} />
           )}
+
+
 
           {
             activeTab === 'ranking' && (
@@ -636,7 +583,7 @@ export default function App() {
                     <dl className="space-y-3 text-sm">
                       <div><dt className="text-slate-500 text-xs">วัน/เวลา</dt><dd className="text-slate-200 font-medium">{selectedCase.date_capture} เวลา {selectedCase.time_capture || '-'} น.</dd></div>
                       <div><dt className="text-slate-500 text-xs">สถานที่</dt><dd className="text-slate-200">{selectedCase.location || 'ไม่ระบุ'}</dd></div>
-                      <div><dt className="text-slate-500 text-xs">พิกัด</dt><dd className="text-slate-200 font-mono text-xs">{selectedCase.lat && selectedCase.long ? `${selectedCase.lat}, ${selectedCase.long}` : '-'}</dd></div>
+                      <div><dt className="text-slate-500 text-xs">พิกัด</dt><dd className="text-slate-200 font-mono text-xs">{selectedCase.lat && selectedCase.long ? `${selectedCase.lat}, ${selectedCase.long} ` : '-'}</dd></div>
                       <div><dt className="text-slate-500 text-xs">หัวข้อเรื่อง</dt><dd className="inline-block px-2 py-1 rounded text-xs font-bold text-white mt-1" style={{ backgroundColor: getCrimeColor(selectedCase.topic) }}>{selectedCase.topic}</dd></div>
                       {/* แสดงรายละเอียดจับกุมเพิ่มเติม */}
                       {selectedCase.arrest_type && (<div><dt className="text-slate-500 text-xs mt-2">ประเภทการจับกุม</dt><dd className="text-emerald-400">{selectedCase.arrest_type}</dd></div>)}

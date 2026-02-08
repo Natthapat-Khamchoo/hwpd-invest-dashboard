@@ -76,15 +76,32 @@ export const useAnalytics = (data, filters) => {
         const weaponsData = filteredData.filter(item => item.topic === 'อาวุธปืน/วัตถุระเบิด');
         const weaponsRankings = calculateTopUnits(weaponsData);
 
-        // Warrants
+        // Warrants - General (or Total? Users asked for separate cards, maybe keep total warrant card?)
+        // User asked to replace Weapons with Big Data and Bodyworn.
+        // Existing "Warrants" card might be kept or user only mentioned Big Data and Bodyworn?
+        // "เพิ่ม การจัดลำดับของ หมายจับจาก big data 1 card และ หมายจับจาก bodyworn 1 card"
+        // "เอา card อาวุธปืน/วัตถุระเบิดออก"
+        // So we will have: Overall, Drugs, Big Data, Bodyworn. (Total 4 cards to fit grid)
+
+        // Warrants (Total) - Restore this for safety
         const warrantsData = filteredData.filter(item => item.topic === 'บุคคลตามหมายจับ');
         const warrantsRankings = calculateTopUnits(warrantsData);
+
+        // Warrants (Big Data)
+        const warrantsBigData = filteredData.filter(item => item.topic === 'บุคคลตามหมายจับ' && item.warrant_source === 'Big Data');
+        const warrantsBigDataRankings = calculateTopUnits(warrantsBigData);
+
+        // Warrants (Bodyworn)
+        const warrantsBodyworn = filteredData.filter(item => item.topic === 'บุคคลตามหมายจับ' && item.warrant_source === 'Bodyworn');
+        const warrantsBodywornRankings = calculateTopUnits(warrantsBodyworn);
 
         const unitRankings = {
             overall: overallRankings,
             drugs: drugsRankings,
-            weapons: weaponsRankings,
-            warrants: warrantsRankings
+            weapons: weaponsRankings, // Keeping it in data but won't display in view
+            warrants: warrantsRankings, // Total warrants
+            warrantsBigData: warrantsBigDataRankings,
+            warrantsBodyworn: warrantsBodywornRankings
         };
 
         // -------------------------------------------------------------
@@ -96,22 +113,26 @@ export const useAnalytics = (data, filters) => {
 
         filteredData.forEach(item => {
             // Hourly
-            if (item.time_capture) {
+            if (item.time_capture && typeof item.time_capture === 'string') {
                 // Assume time format HH:MM or HH.MM
-                const parts = item.time_capture.replace('.', ':').split(':');
-                if (parts.length >= 1) {
-                    const hour = parseInt(parts[0], 10);
-                    if (!isNaN(hour) && hour >= 0 && hour < 24) {
-                        hourMap[hour]++;
+                try {
+                    const parts = item.time_capture.replace('.', ':').split(':');
+                    if (parts.length >= 1) {
+                        const hour = parseInt(parts[0], 10);
+                        if (!isNaN(hour) && hour >= 0 && hour < 24) {
+                            hourMap[hour]++;
+                        }
                     }
+                } catch (e) {
+                    // Ignore bad time format
                 }
             }
 
             // Daily
-            if (item.date_obj) {
+            if (item.date_obj && item.date_obj instanceof Date && !isNaN(item.date_obj)) {
                 const dayIndex = item.date_obj.getDay(); // 0 = Sunday
                 const dayName = dayOrder[dayIndex];
-                dayMap[dayName]++;
+                if (dayName) dayMap[dayName]++;
             }
         });
 

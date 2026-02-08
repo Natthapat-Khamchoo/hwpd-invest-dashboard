@@ -108,13 +108,13 @@ const RankingView = ({ unitRankings }) => {
     const [isAnimating, setIsAnimating] = useState(false);
 
     if (!unitRankings) return null;
-    const { overall, drugs, weapons, warrants } = unitRankings;
+    const { overall, drugs, warrantsBigData, warrantsBodyworn } = unitRankings;
 
     const cards = [
-        { id: 'overall', title: "ยอดเยี่ยมรวม", icon: Crown, data: overall, colorClass: "bg-yellow-500", isPremium: true },
-        { id: 'drugs', title: "ปราบปรามยาเสพติด", icon: Pill, data: drugs, colorClass: "bg-red-500" },
-        { id: 'weapons', title: "อาวุธปืน/วัตถุระเบิด", icon: Target, data: weapons, colorClass: "bg-orange-500" },
-        { id: 'warrants', title: "ติดตามจับกุมหมายจับ", icon: FileText, data: warrants, colorClass: "bg-pink-500" }
+        { id: 'overall', title: "ยอดเยี่ยมรวม", icon: Crown, data: overall || [], colorClass: "bg-yellow-500", isPremium: true },
+        { id: 'drugs', title: "ปราบปรามยาเสพติด", icon: Pill, data: drugs || [], colorClass: "bg-red-500" },
+        { id: 'warrants_bigdata', title: "หมายจับ Big Data", icon: Target, data: warrantsBigData || [], colorClass: "bg-cyan-500" },
+        { id: 'warrants_bodyworn', title: "หมายจับ Bodyworn", icon: Siren, data: warrantsBodyworn || [], colorClass: "bg-pink-500" }
     ];
 
     const selectedCard = cards.find(c => c.id === selectedCategory);

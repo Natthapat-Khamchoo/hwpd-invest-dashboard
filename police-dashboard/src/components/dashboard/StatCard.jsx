@@ -6,7 +6,15 @@ const CountUp = ({ end, duration = 1000 }) => {
 
   useEffect(() => {
     let startTime = null;
-    const endVal = parseInt(String(end).replace(/,/g, ''), 10) || 0;
+    // Calculate endVal safely. Parse int only if valid, else 0.
+    let endVal = 0;
+    try {
+      if (end !== null && end !== undefined && !isNaN(end)) {
+        endVal = parseInt(String(end).replace(/,/g, ''), 10) || 0;
+      }
+    } catch (e) {
+      endVal = 0;
+    }
 
     const animate = (currentTime) => {
       if (!startTime) startTime = currentTime;
