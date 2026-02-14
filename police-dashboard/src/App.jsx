@@ -59,13 +59,18 @@ export default function App() {
   } = useAnalytics(data, filters); // Use filtered or raw data depending on requirement. Passing 'data' and applying filters inside hook is better for consistency.
 
   // --- UI State ---
-  // Get initial view from URL
-  const getInitialView = () => {
+  const getInitialActiveTab = () => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('view') || 'result';
+    const tab = params.get('tab');
+    // 'dashboard', 'ranking', 'trend', 'time' are top-level tabs.
+    // 'result' is the default container for 'overview', 'comparison', etc.
+    // If tab is defined and is one of the top-level keys, use it.
+    if (['dashboard', 'ranking', 'trend', 'time'].includes(tab)) return tab;
+    // Otherwise, assume it belongs to 'result' (ResultDashboardView)
+    return 'result';
   };
 
-  const [activeTab, setActiveTab] = useState(getInitialView());
+  const [activeTab, setActiveTab] = useState(getInitialActiveTab);
   const [selectedCase, setSelectedCase] = useState(null);
   const [mapError, setMapError] = useState(false);
   const handleMapError = useCallback(() => setMapError(true), []);
@@ -73,25 +78,31 @@ export default function App() {
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
 
-  // --- URL Sync Handlers ---
-  const updateUrlView = (view) => {
+  // Sync activeTab changes to URL (helper)
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setMobileSidebarOpen(false);
+
     const params = new URLSearchParams(window.location.search);
-    if (view) params.set('view', view); else params.delete('view');
+    params.set('tab', tab);
+    // If switching to top-level tab that doesn't use kk/stl, we might want to keep them or clear them. 
+    // Keeping them is safer for "returning" to result view.
+
+    // However, ResultDashboardView will update the URL itself when it mounts if we let it,
+    // but here we are setting the "Container" tab.
+
     const newUrl = `${window.location.pathname}?${params.toString()}`;
     window.history.pushState({ path: newUrl }, '', newUrl);
   };
 
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    setMobileSidebarOpen(false);
-    updateUrlView(tab);
-  };
-
-  // Sync on Popstate
   useEffect(() => {
     const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      setActiveTab(params.get('view') || 'result');
+      const tab = new URLSearchParams(window.location.search).get('tab');
+      if (['dashboard', 'ranking', 'trend', 'time'].includes(tab)) {
+        setActiveTab(tab);
+      } else {
+        setActiveTab('result');
+      }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -257,14 +268,14 @@ export default function App() {
         <div className="absolute -bottom-40 left-1/3 w-[500px] h-[500px] bg-neon-amber/10 rounded-full blur-[120px] animate-pulse-slow"></div>
       </div>
 
-      {mobileSidebarOpen && (<div className="fixed inset-0 bg-black/80 z-20 lg:hidden backdrop-blur-sm" onClick={() => setMobileSidebarOpen(false)} />)}
+      {mobileSidebarOpen && (<div className="fixed inset-0 bg-black/80 z-20 xl:hidden backdrop-blur-sm" onClick={() => setMobileSidebarOpen(false)} />)}
 
-      <aside className={`fixed inset-y-0 left-0 z-30 glass-liquid-bar border-y-0 border-l-0 border-r border-white/10 text-white transition-all duration-300 ease-in-out shadow-2xl ${mobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full'} lg:relative lg:translate-x-0 ${desktopSidebarOpen ? 'lg:w-64' : 'lg:w-0 lg:overflow-hidden'} print:hidden`}>
+      <aside className={`fixed inset-y-0 left-0 z-30 glass-liquid-bar border-y-0 border-l-0 border-r border-white/10 text-white transition-all duration-300 ease-in-out shadow-2xl ${mobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full'} xl:relative xl:translate-x-0 ${desktopSidebarOpen ? 'xl:w-64' : 'xl:w-0 xl:overflow-hidden'} print:hidden`}>
         <div className="p-6 border-b border-white/5 flex justify-between items-center whitespace-nowrap bg-gradient-to-r from-white/5 to-transparent">
           <div className="flex items-center space-x-3">
             <span className={`text-xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 transition-opacity duration-200`}>HWPD <span className="text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]">WARROOM</span></span>
           </div>
-          <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X className="w-6 h-6" /></button>
+          <button onClick={() => setMobileSidebarOpen(false)} className="xl:hidden text-slate-400 hover:text-white"><X className="w-6 h-6" /></button>
         </div>
         <nav className="p-4 space-y-2 whitespace-nowrap">
           {['result', 'dashboard'].map(tab => (

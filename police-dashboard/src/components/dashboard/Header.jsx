@@ -16,8 +16,8 @@ export const Header = ({
     return (
         <header className="sticky top-0 z-20 glass-liquid-bar border-x-0 border-t-0 border-b border-white/10 px-4 py-3 flex items-center justify-between transition-all duration-300">
             <div className="flex items-center gap-3">
-                <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"><Menu className="w-6 h-6" /></button>
-                <button onClick={() => setDesktopSidebarOpen(!desktopSidebarOpen)} className="hidden lg:block p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">{desktopSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
+                <button onClick={() => setMobileSidebarOpen(true)} className="xl:hidden p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"><Menu className="w-6 h-6" /></button>
+                <button onClick={() => setDesktopSidebarOpen(!desktopSidebarOpen)} className="hidden xl:block p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">{desktopSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
                 <h1 className="text-base sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 tracking-wide uppercase animate-in fade-in slide-in-from-left-4">{activeTab}</h1>
             </div>
 
