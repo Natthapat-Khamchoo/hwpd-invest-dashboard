@@ -52,7 +52,7 @@ const RankingCard = ({ title, icon: Icon, data, colorClass, isPremium = false, o
                             {title}
                         </h3>
                         <p className="text-xs text-slate-400 flex items-center gap-1">
-                            {isPremium && <Crown className="w-3 h-3 text-yellow-500" />} Top 3 Units
+                            {isPremium && <Crown className="w-3 h-3 text-yellow-500" />} Top 5 Units
                         </p>
                     </div>
                 </div>

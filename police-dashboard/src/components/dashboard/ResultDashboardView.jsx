@@ -488,8 +488,10 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
                             className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer flex-1 sm:flex-none"
                             value={selectedMonth}
                             onChange={(e) => {
-                                setSelectedMonth(parseInt(e.target.value));
+                                const newMonth = parseInt(e.target.value);
+                                setSelectedMonth(newMonth);
                                 setDateRange({ start: '', end: '' }); // Clear manual range if month is picked
+                                if (setFilters) setFilters(prev => ({ ...prev, selectedMonth: newMonth, rangeStart: null, rangeEnd: null }));
                             }}
                         >
                             {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
@@ -506,8 +508,10 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
                                 className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
                                 value={dateRange.start}
                                 onChange={(e) => {
-                                    setDateRange({ ...dateRange, start: e.target.value });
+                                    const newStart = e.target.value;
+                                    setDateRange({ ...dateRange, start: newStart });
                                     setSelectedMonth(''); // Clear month selection if manual range is used
+                                    if (setFilters) setFilters(prev => ({ ...prev, selectedMonth: '', rangeStart: newStart ? new Date(newStart) : null, rangeEnd: dateRange.end ? new Date(dateRange.end) : null }));
                                 }}
                             />
                             <span className="text-slate-400">-</span>
@@ -516,8 +520,10 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
                                 className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
                                 value={dateRange.end}
                                 onChange={(e) => {
-                                    setDateRange({ ...dateRange, end: e.target.value });
+                                    const newEnd = e.target.value;
+                                    setDateRange({ ...dateRange, end: newEnd });
                                     setSelectedMonth(''); // Clear month selection if manual range is used
+                                    if (setFilters) setFilters(prev => ({ ...prev, selectedMonth: '', rangeStart: dateRange.start ? new Date(dateRange.start) : null, rangeEnd: newEnd ? new Date(newEnd) : null }));
                                 }}
                             />
                         </div>

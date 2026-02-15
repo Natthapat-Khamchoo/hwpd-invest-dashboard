@@ -151,6 +151,10 @@ export default function App() {
       headerDateText = `ประจำวันที่ ${formatThDate(yest)} `;
     } else if (filters.rangeStart && filters.rangeEnd) {
       headerDateText = `ประจำห้วงวันที่ ${formatThDate(filters.rangeStart)} ถึง ${formatThDate(filters.rangeEnd)} `;
+    } else if (filters.selectedMonth !== undefined && filters.selectedMonth !== null && filters.selectedMonth !== '') {
+      const selMonth = parseInt(filters.selectedMonth);
+      const yearBE = new Date().getFullYear() + 543;
+      headerDateText = `ประจำเดือน ${months[selMonth]} ${yearBE} `;
     } else {
       headerDateText = `ข้อมูลทั้งหมด`;
     }

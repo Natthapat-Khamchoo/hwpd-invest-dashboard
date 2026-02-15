@@ -62,7 +62,7 @@ export const useAnalytics = (data, filters) => {
             return Object.entries(unitMap)
                 .map(([name, count]) => ({ name, count }))
                 .sort((a, b) => b.count - a.count)
-                .slice(0, 3); // Top 3
+                .slice(0, 5); // Top 5
         };
 
         // Overall
@@ -88,11 +88,11 @@ export const useAnalytics = (data, filters) => {
         const warrantsRankings = calculateTopUnits(warrantsData);
 
         // Warrants (Big Data)
-        const warrantsBigData = filteredData.filter(item => item.topic === 'บุคคลตามหมายจับ' && item.warrant_source === 'Big Data');
+        const warrantsBigData = filteredData.filter(item => item.topic === 'บุคคลตามหมายจับ' && item.warrant_source === 'bigdata');
         const warrantsBigDataRankings = calculateTopUnits(warrantsBigData);
 
         // Warrants (Bodyworn)
-        const warrantsBodyworn = filteredData.filter(item => item.topic === 'บุคคลตามหมายจับ' && item.warrant_source === 'Bodyworn');
+        const warrantsBodyworn = filteredData.filter(item => item.topic === 'บุคคลตามหมายจับ' && item.warrant_source === 'bodyworn');
         const warrantsBodywornRankings = calculateTopUnits(warrantsBodyworn);
 
         const unitRankings = {
