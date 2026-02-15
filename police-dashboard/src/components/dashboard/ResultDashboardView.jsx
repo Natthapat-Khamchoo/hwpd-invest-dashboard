@@ -12,13 +12,16 @@ import TrafficComparisonTab from './tabs/TrafficComparisonTab';
 import TruckInspectionTab from './tabs/TruckInspectionTab';
 import PressReleaseTab from './tabs/PressReleaseTab';
 
-const ResultDashboardView = ({ filteredData, filters }) => {
+const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
     // --- State ---
     const [sheetCounts, setSheetCounts] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [viewMode, setViewMode] = useState('default'); // 'default' | 'print_all'
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
-    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth()); // Default to current month
+    // Initialize from props if available, else default to now
+    const [selectedMonth, setSelectedMonth] = useState(
+        (filters && filters.selectedMonth !== undefined) ? filters.selectedMonth : new Date().getMonth()
+    );
 
     // Get initial values from URL if present
     const getInitialParams = () => {
@@ -59,12 +62,24 @@ const ResultDashboardView = ({ filteredData, filters }) => {
         const newUnit = selectedUnit === unitId ? '' : unitId;
         setSelectedUnit(newUnit);
         setSelectedStation(''); // Reset station when unit changes
+
+        // Sync with global App state if setFilters is provided
+        if (setFilters) {
+            setFilters(prev => ({ ...prev, unit_kk: newUnit ? [newUnit] : [], unit_s_tl: '' }));
+        }
+
         updateUrlParams(activeTab, newUnit, '');
     };
 
     const handleStationSelect = (stationId) => {
         const newStation = selectedStation === stationId ? '' : stationId;
         setSelectedStation(newStation);
+
+        // Sync with global App state
+        if (setFilters) {
+            setFilters(prev => ({ ...prev, unit_s_tl: newStation }));
+        }
+
         updateUrlParams(activeTab, selectedUnit, newStation);
     };
 
@@ -72,13 +87,25 @@ const ResultDashboardView = ({ filteredData, filters }) => {
     useEffect(() => {
         const handlePopState = () => {
             const params = new URLSearchParams(window.location.search);
-            setActiveTab(params.get('tab') || 'overview');
-            setSelectedUnit(params.get('kk') || '');
-            setSelectedStation(params.get('stl') || '');
+            const tab = params.get('tab') || 'overview';
+            const kk = params.get('kk') || '';
+            const stl = params.get('stl') || '';
+
+            setActiveTab(tab);
+            setSelectedUnit(kk);
+            setSelectedStation(stl);
+
+            if (setFilters) {
+                setFilters(prev => ({
+                    ...prev,
+                    unit_kk: kk ? [kk] : [],
+                    unit_s_tl: stl
+                }));
+            }
         };
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
-    }, []);
+    }, [setFilters]);
 
     // --- Effect: Fetch Google Sheet Data ---
     useEffect(() => {

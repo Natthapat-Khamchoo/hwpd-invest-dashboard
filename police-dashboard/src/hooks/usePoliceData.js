@@ -3,7 +3,7 @@ import { normalizeTopic, parseDateRobust } from '../utils/helpers';
 import { fetchDashboardData } from '../services/GoogleSheetService';
 
 export const usePoliceData = () => {
-    const [data, setData] = useState([]);
+    const [data, setData] = useState({ allCases: [], rawData: {} });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -14,11 +14,14 @@ export const usePoliceData = () => {
                 // We might want to optimize this later if App only needs specific parts, 
                 // but for now we need the 'allCases' array it generates.
                 const result = await fetchDashboardData({}); // Pass empty filters initially
-                if (result && result.allCases) {
-                    setData(result.allCases);
+                if (result) {
+                    setData({
+                        allCases: result.allCases || [],
+                        rawData: result.rawData || {}
+                    });
                 } else {
-                    console.warn("fetchDashboardData returned no allCases", result);
-                    setData([]);
+                    console.warn("fetchDashboardData returned empty result", result);
+                    setData({ allCases: [], rawData: {} });
                 }
             } catch (err) {
                 console.error("Failed to load police data:", err);
@@ -32,5 +35,9 @@ export const usePoliceData = () => {
         return () => clearInterval(intervalId);
     }, []);
 
-    return { data, loading };
+    return {
+        data: data.allCases,
+        rawData: data.rawData,
+        loading
+    };
 };

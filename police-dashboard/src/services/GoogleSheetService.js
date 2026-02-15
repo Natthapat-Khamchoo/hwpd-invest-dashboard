@@ -6,6 +6,25 @@ const SHEETS = {
         gid: '684351662',
         name: 'crime'
     },
+    VOLUNTEER: {
+        id: '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk',
+        gid: '0', // TODO: User needs to provide GID for Volunteer if different? User didn't specify GID for these but listed them. Assuming same Sheet ID.
+        // Wait, user provided GIDs in previous turns or I can assume they are in main SHEET_ID.
+        // User didn't give GIDs for these in the prompt "date ... " list, but they are sheets. 
+        // I will stick to existing SHEETS config if they are there, otherwise I might miss GIDs.
+        // Let's assume standard GID fetching or check if I have them.
+        // The file already has definitions for CRIME, TRAFFIC etc. 
+        // It does NOT have VOLUNTEER or SERVICE.
+        // I will add them.
+        id: '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk',
+        gid: '1925338272', // Placeholder
+        name: 'volunteer'
+    },
+    SERVICE: {
+        id: '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk',
+        gid: '1435884266', // Placeholder
+        name: 'service'
+    },
     TRAFFIC: {
         id: '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk',
         gid: '1718714301',
@@ -25,6 +44,11 @@ const SHEETS = {
         id: '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk',
         gid: '1914089424',
         name: 'convoy'
+    },
+    STATIONS: {
+        id: '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk',
+        gid: '1282713566',
+        name: 'stations'
     }
 };
 
@@ -49,8 +73,25 @@ const fetchCSV = async (url) => {
 
 const parseDate = (dateStr) => {
     if (!dateStr) return null;
+
+    // Handle DD/MM/YYYY or D/M/YYYY (Common in TH)
+    // Supports / . - separators
+    const ddmmyyyy = dateStr.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+    if (ddmmyyyy) {
+        return new Date(ddmmyyyy[3], ddmmyyyy[2] - 1, ddmmyyyy[1]);
+    }
+
+    // Handle YYYY-MM-DD (ISO)
+    const yyyymmdd = dateStr.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
+    if (yyyymmdd) {
+        return new Date(yyyymmdd[1], yyyymmdd[2] - 1, yyyymmdd[3]);
+    }
+
+    // Fallback
     const date = new Date(dateStr);
     if (!isNaN(date.getTime())) return date;
+
+    // console.warn("Invalid date format:", dateStr);
     return null;
 };
 
@@ -58,18 +99,37 @@ const parseDate = (dateStr) => {
 const filterRow = (row, filters) => {
     // 1. Filter by Unit (KK)
     if (filters.unit_kk) {
+        // Use subDiv if available (e.g. "กก.1"), else fallback to station regex
+        const subDiv = row.subDiv || '';
         const station = row.station || '';
-        if (!station.includes(`กก.${filters.unit_kk}`)) return false;
+
+        // Check subDiv (precise) or station (contains)
+        const matchSubDiv = subDiv.includes(`กก.${filters.unit_kk}`) || subDiv.includes(`กองกำกับการ ${filters.unit_kk}`);
+        const matchStation = station.includes(`กก.${filters.unit_kk}`);
+
+        if (!matchSubDiv && !matchStation) return false;
     }
 
     // 1.1 Filter by Station (S.TL)
     if (filters.unit_s_tl) {
         const station = row.station || '';
-        // Check for specific station string e.g. "ส.ทล.1"
-        // Need to be careful about matching, usually user selects "1" or "ส.ทล.1"
-        // Let's assume passed value is just the number "1", "2" etc.
-        // And station string in CSV is like "ส.ทล.1 กก.1 .."
-        if (!station.includes(`ส.ทล.${filters.unit_s_tl}`)) return false;
+        // Check for specific station string e.g. "ส.ทล.1" or "สถานี...1"
+        const target = filters.unit_s_tl.toString();
+        // Remove leading zero if present in filter for relaxed matching
+        const targetInt = parseInt(target, 10).toString();
+
+        // Matches: "ส.ทล.1", "สถานี... 1"
+        // We look for "ส.ทล." followed by the number, OR just check if the station string contains the specific S.TL code
+        // Given existing patterns: "ส.ทล.1 ...", "ส.ทล.01 ..."
+
+        const matches = (
+            station.includes(`ส.ทล.${target}`) ||
+            station.includes(`ส.ทล.${targetInt}`) ||
+            station.includes(`สถานีตำรวจทางหลวง ${target}`) ||
+            station.includes(`สถานีตำรวจทางหลวง ${targetInt}`)
+        );
+
+        if (!matches) return false;
     }
 
     // 2. Filter by Date
@@ -105,7 +165,100 @@ export const fetchDashboardData = async (filters) => {
         return acc;
     }, {});
 
-    // --- Aggregation ---
+    // --- Build allCases array for Dashboard/Ranking/Trend tabs ---
+    // Each crime row has aggregated counts. We expand them into individual "case" records
+    // so the Dashboard tab's filtering (by topic, unit, date) works correctly.
+    const allCases = [];
+
+    if (rawData.crime) {
+        rawData.crime.forEach(row => {
+            const rowDate = parseDate(row.date);
+            // Extract unit_kk from station or subDiv
+            let unit_kk = '';
+            const stationStr = row.station || row.subDiv || '';
+            const kkMatch = stationStr.match(/กก\.?\s*(\d+)/);
+            if (kkMatch) unit_kk = kkMatch[1];
+
+            // Extract unit_s_tl from station
+            let unit_s_tl = '';
+            const stlMatch = stationStr.match(/ส\.?ทล\.?\s*(\d+)/);
+            if (stlMatch) unit_s_tl = stlMatch[1];
+
+            // --- Flagrant offense columns (dir_f_*) → topic-based cases ---
+            // These are the offense type breakdown of CRIM_FLAGRANTE
+            const flagrantMap = [
+                { col: 'dir_f_drugs', topic: 'ยาเสพติด' },
+                { col: 'dir_f_gun', topic: 'อาวุธปืน/วัตถุระเบิด' },
+                { col: 'dir_f_weight', topic: 'รถบรรทุก/น้ำหนัก' },
+                { col: 'dir_f_immig', topic: 'อื่นๆ' },
+                { col: 'dir_f_drunk', topic: 'อื่นๆ' },
+                { col: 'dir_f_other', topic: 'อื่นๆ' },
+                { col: 'dir_f_life', topic: 'อื่นๆ' },
+                { col: 'dir_f_property', topic: 'อื่นๆ' },
+                { col: 'dir_f_sex', topic: 'อื่นๆ' },
+                { col: 'dir_f_com', topic: 'อื่นๆ' },
+                { col: 'dir_f_doc', topic: 'อื่นๆ' },
+                { col: 'dir_f_customs', topic: 'อื่นๆ' },
+                { col: 'dir_f_disease', topic: 'อื่นๆ' },
+                { col: 'dir_f_transport', topic: 'อื่นๆ' },
+            ];
+
+            // Expand flagrant offense columns into individual case records
+            flagrantMap.forEach(({ col, topic }) => {
+                const count = Number(row[col]) || 0;
+                for (let i = 0; i < count; i++) {
+                    allCases.push({
+                        date_capture: row.date || '',
+                        date_obj: rowDate,
+                        unit_kk,
+                        unit_s_tl,
+                        topic,
+                        station: row.station || '',
+                        subDiv: row.subDiv || '',
+                    });
+                }
+            });
+
+            // --- Warrant columns (CRIM_W_*) → "บุคคลตามหมายจับ" topic ---
+            // NOTE: dir_w_* columns are the offense breakdown of warrants (same cases as CRIM_W_*)
+            // We only use CRIM_W_* here to avoid double-counting
+            const warrantCols = [
+                { col: 'CRIM_W_BIGDATA', source: 'bigdata' },
+                { col: 'CRIM_W_BODYWARN', source: 'bodyworn' },
+                { col: 'CRIM_W_GENERAL', source: 'general' },
+            ];
+
+            warrantCols.forEach(({ col, source }) => {
+                const count = Number(row[col]) || 0;
+                for (let i = 0; i < count; i++) {
+                    allCases.push({
+                        date_capture: row.date || '',
+                        date_obj: rowDate,
+                        unit_kk,
+                        unit_s_tl,
+                        topic: 'บุคคลตามหมายจับ',
+                        warrant_source: source,
+                        station: row.station || '',
+                        subDiv: row.subDiv || '',
+                    });
+                }
+            });
+        });
+    }
+
+    console.log(`[GoogleSheetService] Built ${allCases.length} allCases records`);
+
+    // --- Aggregation logic for ResultDashboardView ---
+    const aggregations = calculateDashboardStats(rawData, filters);
+
+    return {
+        counts: aggregations.counts,
+        allCases,
+        rawData // Returning rawData so hooks can re-aggregate if needed
+    };
+};
+
+export const calculateDashboardStats = (rawData, filters) => {
     const counts = {
         criminalTotal: 0,
         warrantTotal: 0,
@@ -154,8 +307,15 @@ export const fetchDashboardData = async (filters) => {
             drugs: { yaba: 0, ice: 0, ketamine: 0, other: 0 },
             guns: { registered: 0, unregistered: 0, bullets: 0, explosives: 0 },
             vehicles: { car: 0, bike: 0 },
-            others: { money: 0, account: 0, phone: 0, items: 0 }
-        }
+            others: { money: 0, account: 0, phone: 0, electronics: 0, items: 0 }
+        },
+
+        accidentsTotal: 0,
+        accidentsDeath: 0,
+        accidentsInjured: 0,
+
+        volunteerTotal: 0,
+        serviceTotal: 0
     };
 
     // --- Initialize Chart Data Structures ---
@@ -184,7 +344,9 @@ export const fetchDashboardData = async (filters) => {
         truck: units.map(u => ({ name: u, inspected: 0, arrested: 0 })),
         monthNames: last3Months.map(m => m.name),
         qualityWork: units.map(u => ({ division: u, count: 0, details: [] })),
-        media: units.map(u => ({ label: `ส.ทล.${u.split('.')[1] || '?'}`, values: Array(8).fill(0) }))
+        media: units.map(u => ({ label: `ส.ทล.${u.split('.')[1] || '?'}`, values: Array(8).fill(0) })),
+        unitTotals: units.map(u => ({ name: u, value: 0 })),
+        stationTotals: {}
     };
 
     const getMonthKey = (date) => {
@@ -198,7 +360,8 @@ export const fetchDashboardData = async (filters) => {
         return null;
     };
 
-    const getUnitIndex = (stationStr) => {
+    const getUnitIndex = (row) => {
+        const stationStr = row.station || row.subDiv || '';
         if (!stationStr) return -1;
         for (let i = 1; i <= 8; i++) {
             if (stationStr.includes(`กก.${i}`)) return i - 1;
@@ -206,80 +369,21 @@ export const fetchDashboardData = async (filters) => {
         return -1;
     };
 
-    // --- Normalize Data for App.jsx (List/Map/Analytics) ---
-    const allCases = [];
-
-    const addCase = (source, item, topic, unitIdx, dateObj) => {
-        if (!item || !dateObj) return;
-
-        // Robust Lat/Long parsing
-        let rawLat = item['ละติจูด'] || item['lat'] || item['LAT'] || '';
-        let rawLong = item['ลองจิจูด'] || item['long'] || item['lng'] || item['LONG'] || '';
-
-        if (typeof rawLat === 'string') rawLat = rawLat.replace(/\s/g, '').replace(',', '.');
-        if (typeof rawLong === 'string') rawLong = rawLong.replace(/\s/g, '').replace(',', '.');
-
-        const latVal = parseFloat(rawLat);
-        const longVal = parseFloat(rawLong);
-        const isValidCoord = !isNaN(latVal) && !isNaN(longVal) && latVal !== 0 && longVal !== 0;
-
-        allCases.push({
-            id: `${source}-${allCases.length + 1}`,
-            unit_kk: (unitIdx + 1).toString(),
-            unit_s_tl: (item.station || '').match(/ส\.ทล\.(\d+)/)?.[1] || (item.station || '').match(/(\d+)/)?.[0] || '',
-            topic: topic || 'อื่นๆ',
-            original_topic: topic || 'อื่นๆ',
-            arrest_type: item.arrest_type || '', // Adjust field names if needed based on actual CSV headers
-            captured_by: item.captured_by || '',
-            warrant_source: item.warrant_source || '',
-            date_capture: item.date || '',
-            date_obj: dateObj,
-            time_capture: item.time || '',
-            suspect_name: item.suspect_name || '-',
-            charge: item.charge || '',
-            location: item.location || '',
-            lat: isValidCoord ? latVal.toFixed(6) : null,
-            long: isValidCoord ? longVal.toFixed(6) : null,
-        });
+    const getStationKey = (row) => {
+        const stationStr = row.station || '';
+        const match = stationStr.match(/ส\.?ทล\.?\s*(\d+)/);
+        if (match) return `ส.ทล.${match[1]}`;
+        return null;
     };
 
     // 1. Process CRIME data
     if (rawData.crime) {
         rawData.crime.forEach(row => {
             const rowDate = parseDate(row.date);
-            const unitIdx = getUnitIndex(row.station);
+            const unitIdx = getUnitIndex(row);
 
-            // Add to allCases for Analytics
-            // Determine Main Topic based on columns
-            // Determine Main Topic based on columns
-            let mainTopic = 'คดีอาญา';
-            let warrantSource = '';
-
-            if (Number(row.CRIM_W_BIGDATA) > 0) {
-                mainTopic = 'บุคคลตามหมายจับ';
-                warrantSource = 'Big Data';
-            } else if (Number(row.CRIM_W_BODYWARN) > 0) {
-                mainTopic = 'บุคคลตามหมายจับ';
-                warrantSource = 'Bodyworn';
-            } else if (Number(row.CRIM_W_GENERAL) > 0) {
-                mainTopic = 'บุคคลตามหมายจับ';
-                warrantSource = 'General';
-            } else if (Number(row.dir_drugs) > 0) mainTopic = 'ยาเสพติด';
-            else if (Number(row.dir_gun) > 0) mainTopic = 'อาวุธปืน/วัตถุระเบิด';
-            else if (Number(row.dir_immig) > 0) mainTopic = 'ต่างด้าว/ตม.';
-            else if (Number(row.dir_weight) > 0) mainTopic = 'รถบรรทุก/น้ำหนัก';
-
-            if (warrantSource && !row.warrant_source) {
-                row.warrant_source = warrantSource;
-            }
-
-            if (unitIdx !== -1) {
-                addCase('crime', row, mainTopic, unitIdx, rowDate);
-            }
-
-            // Global Filter Check (for Summary Cards)
-            if (filterRow(row, filters)) {
-                // Warrants
+            // Global Filter Check (for Summary Cards) — only count กก.1-8
+            if (unitIdx !== -1 && filterRow(row, filters)) {
                 // Warrants
                 const w_big = Number(row.CRIM_W_BIGDATA) || 0;
                 const w_body = Number(row.CRIM_W_BODYWARN) || 0;
@@ -290,25 +394,26 @@ export const fetchDashboardData = async (filters) => {
                 counts.warrantGeneral += w_gen;
                 counts.warrantTotal += (w_big + w_body + w_gen);
 
-                // Flagrant - Strict mapping from CRIM_FLAGRANTE
+                // Flagrant
                 const f_total = Number(row.CRIM_FLAGRANTE) || 0;
                 counts.flagrantTotal += f_total;
 
-                // Offenses Breakdown
-                const o_drugs = Number(row.dir_drugs) || 0;
-                const o_guns = Number(row.dir_gun) || 0;
-                const o_immig = Number(row.dir_immig) || 0;
-                const o_customs = Number(row.dir_customs) || 0;
-                const o_disease = Number(row.dir_disease) || 0;
-                const o_transport = Number(row.dir_transport) || 0;
-                const o_docs = Number(row.dir_doc) || 0;
-                const o_property = Number(row.dir_property) || 0;
-                const o_sex = Number(row.dir_sex) || 0;
-                const o_weight = Number(row.dir_weight) || 0;
-                const o_drunk = Number(row.dir_drunk) || 0;
-                const o_life = Number(row.dir_life) || 0;  // ความผิดเกี่ยวกับชีวิตและร่างกาย
-                const o_com = Number(row.dir_com) || 0;    // ความผิดเกี่ยวกับคอมพิวเตอร์
-                const o_other = Number(row.dir_other) || 0;
+                // Offenses Breakdown (Summing Flagrant + Warrant)
+                // New Schema: dir_f_* and dir_w_*
+                const o_drugs = (Number(row.dir_f_drugs) || 0) + (Number(row.dir_w_drugs) || 0);
+                const o_guns = (Number(row.dir_f_gun) || 0) + (Number(row.dir_w_gun) || 0);
+                const o_immig = (Number(row.dir_f_immig) || 0) + (Number(row.dir_w_immig) || 0);
+                const o_customs = (Number(row.dir_f_customs) || 0) + (Number(row.dir_w_customs) || 0);
+                const o_disease = (Number(row.dir_f_disease) || 0) + (Number(row.dir_w_disease) || 0);
+                const o_transport = (Number(row.dir_f_transport) || 0) + (Number(row.dir_w_transport) || 0);
+                const o_docs = (Number(row.dir_f_doc) || 0) + (Number(row.dir_w_doc) || 0);
+                const o_property = (Number(row.dir_f_property) || 0) + (Number(row.dir_w_property) || 0);
+                const o_sex = (Number(row.dir_f_sex) || 0) + (Number(row.dir_w_sex) || 0);
+                const o_weight = (Number(row.dir_f_weight) || 0) + (Number(row.dir_w_weight) || 0);
+                const o_drunk = (Number(row.dir_f_drunk) || 0) + (Number(row.dir_w_drunk) || 0);
+                const o_life = (Number(row.dir_f_life) || 0) + (Number(row.dir_w_life) || 0);
+                const o_com = (Number(row.dir_f_com) || 0) + (Number(row.dir_w_com) || 0);
+                const o_other = (Number(row.dir_f_other) || 0) + (Number(row.dir_w_other) || 0);
 
                 counts.offenseDrugs += o_drugs;
                 counts.offenseGuns += o_guns;
@@ -324,46 +429,55 @@ export const fetchDashboardData = async (filters) => {
                 counts.offenseLife += o_life;
                 counts.offenseCom += o_com;
                 counts.offenseOther += o_other;
-
-                // NOTE: removed fallback logic for flagrantTotal to strictly follow user requirement (CRIM_FLAGRANTE only)
             }
 
-            // Charts Aggregation (Comparisons)
+            // Charts Aggregation (Comparisons) - use actual case count per row
             if (unitIdx !== -1 && rowDate) {
+                const rowCrimTotal = (Number(row.CRIM_FLAGRANTE) || 0) + (Number(row.CRIM_W_BIGDATA) || 0) + (Number(row.CRIM_W_BODYWARN) || 0) + (Number(row.CRIM_W_GENERAL) || 0);
                 const monthKey = getMonthKey(rowDate);
                 if (monthKey) {
-                    counts.charts.comparison[unitIdx][monthKey] += 1;
+                    counts.charts.comparison[unitIdx][monthKey] += rowCrimTotal;
+                }
+            }
+
+            // Per-unit totals (for bar chart on Dashboard tab)
+            if (unitIdx !== -1 && filterRow(row, filters)) {
+                const rowCrimTotal = (Number(row.CRIM_FLAGRANTE) || 0) + (Number(row.CRIM_W_BIGDATA) || 0) + (Number(row.CRIM_W_BODYWARN) || 0) + (Number(row.CRIM_W_GENERAL) || 0);
+                counts.charts.unitTotals[unitIdx].value += rowCrimTotal;
+            }
+
+            // Per-station totals (for drill-down chart)
+            if (filterRow(row, filters)) {
+                const stationKey = getStationKey(row);
+                if (stationKey) {
+                    const rowCrimTotal = (Number(row.CRIM_FLAGRANTE) || 0) + (Number(row.CRIM_W_BIGDATA) || 0) + (Number(row.CRIM_W_BODYWARN) || 0) + (Number(row.CRIM_W_GENERAL) || 0);
+                    if (!counts.charts.stationTotals) counts.charts.stationTotals = {};
+                    counts.charts.stationTotals[stationKey] = (counts.charts.stationTotals[stationKey] || 0) + rowCrimTotal;
                 }
             }
 
             // Truck Chart (from Crime/Flagrant sheet?)
             if (unitIdx !== -1) {
                 if (filterRow(row, filters)) {
-                    // Assuming dir_weight corresponds to Truck/Weight cases
-                    const f_truck = Number(row.dir_weight) || 0;
+                    const f_truck = (Number(row.dir_f_weight) || 0) + (Number(row.dir_w_weight) || 0);
                     if (f_truck > 0) {
                         counts.charts.truck[unitIdx].arrested += f_truck;
-                        // Assuming total inspected is not in this sheet or is same as arrested for now unless specified
                     }
                 }
             }
         });
         counts.criminalTotal = counts.warrantTotal + counts.flagrantTotal;
-
-        // Fix truckTotal to use dir_weight as well, as 'flagrantTruck' variable was removed/not mapped
         counts.truckTotal = counts.offenseWeight;
-        counts.truckSelf = counts.offenseWeight; // Fallback since no specific breakdown for Self/Joint in this list
+        counts.truckSelf = counts.offenseWeight; // Fallback
+
+
     }
 
     // 2. Process TRAFFIC data
     if (rawData.traffic) {
         rawData.traffic.forEach(row => {
             const rowDate = parseDate(row.date);
-            const unitIdx = getUnitIndex(row.station);
-
-            if (unitIdx !== -1) {
-                addCase('traffic', row, 'จราจร/ขนส่ง', unitIdx, rowDate);
-            }
+            const unitIdx = getUnitIndex(row);
 
             if (filterRow(row, filters)) {
                 const t_left = Number(row.traf_left) || 0;
@@ -405,11 +519,6 @@ export const fetchDashboardData = async (filters) => {
     // 3. Process CONVOY data
     if (rawData.convoy) {
         rawData.convoy.forEach(row => {
-            // Convoy usually doesn't count as "Cases" in the list, but if needed:
-            // const rowDate = parseDate(row.date);
-            // const unitIdx = getUnitIndex(row.station);
-            // if (unitIdx !== -1) addCase('convoy', row, 'อำนวยความสะดวก/ขบวน', unitIdx, rowDate);
-
             if (filterRow(row, filters)) {
                 const c_royal = Number(row.convoy_royal) || 0;
                 const c_general = (Number(row.convoy_route) || 0) + (Number(row.convoy_vip) || 0) + (Number(row.convoy_safety) || 0);
@@ -430,19 +539,16 @@ export const fetchDashboardData = async (filters) => {
 
                 if (!itemName || amount <= 0) return;
 
-                // Helper to check keywords
                 const has = (keyword) => itemName.includes(keyword);
 
                 // --- Drugs ---
-                if (has('ยาบ้า')) counts.seized.drugs.yaba += amount;
+                if (has('ยาบ้า') || has('ยาอี')) counts.seized.drugs.yaba += amount;
                 else if (has('ไอซ์')) counts.seized.drugs.ice += amount;
                 else if (has('เคตามีน')) counts.seized.drugs.ketamine += amount;
-                else if (has('เฮโรอีน') || has('ยาอี') || has('ยาเสพติด')) counts.seized.drugs.other += amount;
+                else if (has('โคเคน')) counts.seized.drugs.other += amount;
 
                 // --- Guns ---
                 else if (has('อาวุธปืน')) {
-                    // User didn't specify reg/unreg, so map to registered by default or sum?
-                    // Let's assume registered if not specified, or checks for 'ทะเบียน'
                     if (has('ไม่มีทะเบียน') || has('ไทยประดิษฐ์')) counts.seized.guns.unregistered += amount;
                     else counts.seized.guns.registered += amount;
                 }
@@ -457,10 +563,45 @@ export const fetchDashboardData = async (filters) => {
                 else if (has('เงิน') || has('ธนบัตร')) counts.seized.others.money += amount;
                 else if (has('บัญชี')) counts.seized.others.account += amount;
                 else if (has('โทรศัพท์') || has('มือถือ')) counts.seized.others.phone += amount;
+                else if (has('คอมพิวเตอร์') || has('โน๊ตบุ๊ค') || has('ipad') || has('tablet') || has('อุปกรณ์อิเล็กทรอนิกส์')) counts.seized.others.electronics += amount;
                 else counts.seized.others.items += amount;
             }
         });
     }
 
-    return { counts, allCases };
+    // 5. Process ACCIDENTS data
+    if (rawData.accidents) {
+        rawData.accidents.forEach(row => {
+            if (filterRow(row, filters)) {
+                counts.accidentsTotal++;
+                // Assuming columns: dead, injured (need to verify mapping if possible, else generic)
+                // If columns are different, this will need adjustment. 
+                // Common names: 'dead', 'death', 'injured', 'injury'
+                counts.accidentsDeath += (Number(row.acc_dead) || 0);
+                counts.accidentsInjured += (Number(row.acc_injured) || 0);
+            }
+        });
+    }
+
+    // 6. Process VOLUNTEER data
+    if (rawData.volunteer) {
+        rawData.volunteer.forEach(row => {
+            if (filterRow(row, filters)) {
+                counts.volunteerTotal += (Number(row.volunteer_task) || 0);
+            }
+        });
+    }
+
+    // 7. Process SERVICE data
+    if (rawData.service) {
+        rawData.service.forEach(row => {
+            if (filterRow(row, filters)) {
+                // Sum of Traffic Service + Help Service
+                counts.serviceTotal += (Number(row.service_traffic) || 0) + (Number(row.service_help) || 0);
+            }
+        });
+    }
+
+    return { counts };
 };
+

@@ -10,6 +10,7 @@ import {
 import { StatCard, SplitStatCard } from './components/dashboard/StatCard';
 import { UnitBarChart, MonthlyBarChart, ComparativeCrimeChart } from './components/dashboard/Charts';
 import { getCrimeColor } from './utils/helpers';
+import { getMainCommander } from './utils/constants';
 import FilterBar from './components/dashboard/FilterBar';
 import { Header } from './components/dashboard/Header';
 import LoadingScreen from './components/ui/LoadingScreen';
@@ -25,6 +26,7 @@ import ResultDashboardView from './components/dashboard/ResultDashboardView';
 import { usePoliceData } from './hooks/usePoliceData';
 import { useDashboardLogic } from './hooks/useDashboardLogic';
 import { useAnalytics } from './hooks/useAnalytics';
+import { useStationData } from './hooks/useStationData';
 
 // LOCAL DEBUG LOADING SCREEN
 const DebugLoading = ({ onFinished }) => (
@@ -38,7 +40,8 @@ const DebugLoading = ({ onFinished }) => (
 
 export default function App() {
   // --- Data & Logic Hooks ---
-  const { data, loading } = usePoliceData();
+  const { data, rawData, loading } = usePoliceData();
+  const { getCommanderInfo } = useStationData(rawData);
   const {
     filters, setFilters,
     localSearch, setLocalSearch,
@@ -46,8 +49,9 @@ export default function App() {
     filterOptions,
     filteredData,
     stats,
+    detailedStats,
     resetFilters
-  } = useDashboardLogic(data);
+  } = useDashboardLogic(data, rawData);
 
   // --- Analytics Hook ---
   const {
@@ -151,66 +155,81 @@ export default function App() {
       headerDateText = `ข้อมูลทั้งหมด`;
     }
 
-    // --- นับยอด ---
-    const counts = {
-      trafficAct: 0, carAct: 0, transportAct: 0, highwayAct: 0,
-      weight: 0, checkWeight: 0, checkSticker: 0,
-      warrant: 0, forgery: 0, drugs: 0, guns: 0, immigration: 0, others: 0
+    // --- Use Detailed Stats if available ---
+    const s = detailedStats || {
+      trafficTotal: 0, trafficNotKeepLeft: 0, trafficNotCovered: 0, trafficModify: 0,
+      trafficNoPart: 0, trafficSign: 0, trafficLight: 0, trafficSpeed: 0,
+      trafficTax: 0, trafficNoPlate: 0, trafficGeneral: 0, criminalTotal: 0,
+      warrantTotal: 0, warrantBigData: 0, warrantBodyworn: 0, warrantGeneral: 0,
+      flagrantTotal: 0, offenseDrugs: 0, offenseGuns: 0, offenseImmig: 0,
+      offenseCustoms: 0, offenseDisease: 0, offenseTransport: 0, offenseDocs: 0,
+      offenseProperty: 0, offenseSex: 0, offenseWeight: 0, offenseDrunk: 0,
+      offenseLife: 0, offenseCom: 0, offenseOther: 0,
+      convoyTotal: 0, convoyRoyal: 0, convoyGeneral: 0,
+      seized: { drugs: { yaba: 0, ice: 0, ketamine: 0, other: 0 }, guns: { registered: 0, unregistered: 0, bullets: 0, explosives: 0 }, vehicles: { car: 0, bike: 0 }, others: { money: 0, account: 0, phone: 0, electronics: 0, items: 0 } },
+      accidentsTotal: 0, accidentsDeath: 0, accidentsInjured: 0,
+      volunteerTotal: 0, serviceTotal: 0
     };
 
-    filteredData.forEach(item => {
-      const topic = item.topic;
-      const textSearch = (item.charge + " " + item.original_topic).toLowerCase();
+    // --- Dynamic Header (Unit/Commander) ---
+    const unitId = (filters.unit_kk && filters.unit_kk.length > 0) ? filters.unit_kk[0] : '0';
+    // Assuming single unit selection for now, or default to 0 if multiple or none
+    // If multiple units selected (e.g. 1 and 2), we might want to stay at '0' (HQ) or pick first.
+    // Let's assume filters.unit_kk is array of strings. 
+    // If it is just a string in state, check usage. 
+    // useDashboardLogic: filters.unit_kk is initialized as ''.
+    // In UnitBarChart onBarClick: setFilters(prev => ({ ...prev, unit_kk: entry.name.replace('กก.', '') })) -> string.
 
-      if (topic === 'รถบรรทุก/น้ำหนัก') {
-        counts.weight++;
-      } else if (topic === 'บุคคลตามหมายจับ') {
-        counts.warrant++;
-      } else if (topic === 'ยาเสพติด') {
-        counts.drugs++;
-      } else if (topic === 'อาวุธปืน/วัตถุระเบิด') {
-        counts.guns++;
-      } else if (topic === 'ต่างด้าว/ตม.') {
-        counts.immigration++;
-      } else if (textSearch.includes('ปลอม')) {
-        counts.forgery++;
-      } else if (topic === 'จราจร/ขนส่ง' || topic === 'เมาแล้วขับ') {
-        if (textSearch.includes('รถยนต์') || textSearch.includes('ทะเบียน')) counts.carAct++;
-        else if (textSearch.includes('ขนส่ง')) counts.transportAct++;
-        else if (textSearch.includes('ทางหลวง')) counts.highwayAct++;
-        else counts.trafficAct++;
-      } else if (textSearch.includes('ทางหลวง')) {
-        counts.highwayAct++;
-      } else {
-        if (textSearch.includes('ตรวจสอบน้ำหนัก')) counts.checkWeight++;
-        else if (textSearch.includes('สติกเกอร์') || textSearch.includes('สัญลักษณ์')) counts.checkSticker++;
-        else counts.others++;
-      }
-    });
+    const currentUnitId = Array.isArray(filters.unit_kk) ? (filters.unit_kk[0] || '0') : (filters.unit_kk || '0');
+    const currentStationId = filters.unit_s_tl || '';
+    const { commander, unitName } = getCommanderInfo(currentUnitId, currentStationId);
+
 
     const reportText = `เรียน ผู้บังคับบัญชา
 
-       วันที่ ${thDate} ขออนุญาตส่งสรุปผลการปฏิบัติของ บก.ทล.${headerDateText} ดังนี้
-🔹 ภายใต้การบังคับบัญชาของ
-พล.ต.ต.พรศักดิ์ เลารุจิราลัย ผบก.ทล.
+ภายใต้การอำนวยการของ ${commander}
+ขอรายงานผลการปฏิบัติงานของ ${unitName} ${headerDateText.trim()}
 
-🔺 สถิติผลการจับกุมคดีจราจร
-  - พ.ร.บ.จราจรฯ ${counts.trafficAct} ราย
-    - พ.ร.บ.รถยนต์ฯ ${counts.carAct} ราย
-      - พ.ร.บ.ขนส่งฯ ${counts.transportAct} ราย
-        - พ.ร.บ.ทางหลวง(ทั่วไป) ${counts.highwayAct} ราย
-          - จับกุมรถบรรทุกน้ำหนักเกินฯ ${counts.weight} ราย
+1. ผลการจับกุมคดีอาญา รวม ${s.criminalTotal} ราย
+- ความผิดซึ่งหน้า ${s.flagrantTotal} ราย
+- หมายจับ ${s.warrantTotal} ราย
+แบ่งเป็นประเภทฐานความผิด ดังนี้
+- พ.ร.บ.ยาเสพติด  ${s.offenseDrugs}
+- พ.ร.บ.อาวุธปืน   ${s.offenseGuns}
+- พ.ร.บ.คนเข้าเมือง  ${s.offenseImmig}
+- รถบรรทุกน้ำหนักเกินฯ ${s.offenseWeight}
+- ขับรถขณะเมาสุรา ${s.offenseDrunk}
+- อื่นๆ ${s.offenseOther}
 
+2. ผลการจับกุมคดีจราจร รวม ${s.trafficTotal} ราย
+- ไม่ชิดขอบทางด้านซ้าย ${s.trafficNotKeepLeft}
+- ไม่ปกคลุม ${s.trafficNotCovered}
+- ดัดแปลงสภาพรถ ${s.trafficModify}
+- ฝ่าฝืนเครื่องหมายจราจร ${s.trafficSign}
+- ฝ่าฝืนเครื่องสัญญาณไฟจราจร ${s.trafficLight}
+- ขับรถเร็วเกินกำหนด ${s.trafficSpeed}
+- ไม่ติดแผ่นป้ายทะเบียน ${s.trafficNoPlate}
+- ขาดต่อภาษี/พ.ร.บ.ฯ ${s.trafficTax}
+- อื่นๆ ${s.trafficGeneral}
 
-🔺 สถิติจับกุมคดีอาญา
-📍ความผิดตามประมวลกฎหมายอาญา
-  - หมายจับ ${counts.warrant} ราย
-    - ปลอมและใช้เอกสารราชการปลอม ${counts.forgery} ราย
-📍ความผิดตาม พ.ร.บ.ต่างๆ
-  - พ.ร.บ.ยาเสพติด ${counts.drugs} ราย
-    - พ.ร.บ.อาวุธปืน ${counts.guns} ราย
-      - พ.ร.บ.คนเข้าเมือง ${counts.immigration} ราย
-        - อื่นๆ ${counts.others} ราย
+3. นำขบวน รวม ${s.convoyTotal} ขบวน
+- ขบวนเสด็จ ${s.convoyRoyal}
+- ขบวนทั่วไป ${s.convoyGeneral}
+
+4. รับแจ้งอุบัติเหตุ รวม ${s.accidentsTotal} ครั้ง
+- เสียชีวิต ${s.accidentsDeath}
+- บาดเจ็บ ${s.accidentsInjured}
+
+5. ตรวจยึดของกลาง
+  . ยาเสพติด (ยาบ้า ${s.seized.drugs.yaba.toLocaleString()} เม็ด, ไอซ์ ${s.seized.drugs.ice.toLocaleString()} กรัม)
+  . อาวุธปืนและเครื่องกระสุน (ปืน ${s.seized.guns.registered + s.seized.guns.unregistered} กระบอก, กระสุน ${s.seized.guns.bullets} นัด)
+  . รถยนต์ ${s.seized.vehicles.car} คัน
+  . อุปกรณ์อิเล็กทรอนิกส์ ${s.seized.others.electronics || 0} รายการ
+  . เงินสด ${s.seized.others.money.toLocaleString()} บาท
+  . บัญชี ${s.seized.others.account} บัญชี
+
+6. กิจกรรมจิตอาสา ${s.volunteerTotal} ครั้ง
+7. ช่วยเหลือ/บริการประชาชน ${s.serviceTotal} ครั้ง
 
 จึงเรียนมาเพื่อโปรดทราบ`;
 
@@ -383,7 +402,7 @@ export default function App() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   <StatCard
                     title="ผลการจับกุมรวม"
-                    value={stats.totalCases}
+                    value={detailedStats ? detailedStats.criminalTotal : stats.totalCases}
                     icon={Activity}
                     colorClass="text-blue-400 bg-blue-500"
                     delay={0}
@@ -392,7 +411,7 @@ export default function App() {
                   />
                   <StatCard
                     title="คดียาเสพติด"
-                    value={stats.drugCases}
+                    value={detailedStats ? detailedStats.offenseDrugs : stats.drugCases}
                     icon={Siren}
                     colorClass="text-red-400 bg-red-500"
                     delay={100}
@@ -401,7 +420,7 @@ export default function App() {
                   />
                   <StatCard
                     title="คดีอาวุธปืน"
-                    value={stats.weaponCases}
+                    value={detailedStats ? detailedStats.offenseGuns : stats.weaponCases}
                     icon={Radar}
                     colorClass="text-orange-400 bg-orange-500"
                     delay={200}
@@ -416,13 +435,13 @@ export default function App() {
                     subValues={[
                       {
                         label: "ทั้งหมด",
-                        value: stats.heavyTruckCases,
+                        value: detailedStats ? detailedStats.offenseWeight : stats.heavyTruckCases,
                         onClick: () => handleCardClick('รถบรรทุก/น้ำหนัก', null),
                         isActive: filters.topic.includes('รถบรรทุก/น้ำหนัก') && filters.subFilter === null
                       },
                       {
                         label: "จับเอง",
-                        value: stats.heavyTruckSelf,
+                        value: detailedStats ? detailedStats.truckSelf : stats.heavyTruckSelf,
                         labelColor: "text-green-500",
                         valueColor: "text-green-400",
                         onClick: () => handleCardClick('รถบรรทุก/น้ำหนัก', 'self'),
@@ -430,7 +449,7 @@ export default function App() {
                       },
                       {
                         label: "จับร่วม",
-                        value: stats.heavyTruckJoint,
+                        value: detailedStats ? detailedStats.truckJoint : stats.heavyTruckJoint,
                         labelColor: "text-pink-500",
                         valueColor: "text-pink-400",
                         onClick: () => handleCardClick('รถบรรทุก/น้ำหนัก', 'joint'),
@@ -446,13 +465,13 @@ export default function App() {
                     subValues={[
                       {
                         label: "ทั้งหมด",
-                        value: stats.warrantCases,
+                        value: detailedStats ? detailedStats.warrantTotal : stats.warrantCases,
                         onClick: () => handleCardClick('บุคคลตามหมายจับ', null),
                         isActive: filters.topic.includes('บุคคลตามหมายจับ') && filters.subFilter === null
                       },
                       {
                         label: "หมายทั่วไป",
-                        value: stats.warrantGeneral,
+                        value: detailedStats ? (detailedStats.warrantGeneral + detailedStats.warrantBodyworn) : stats.warrantGeneral,
                         labelColor: "text-green-500",
                         valueColor: "text-green-400",
                         onClick: () => handleCardClick('บุคคลตามหมายจับ', 'general'),
@@ -460,7 +479,7 @@ export default function App() {
                       },
                       {
                         label: "Big Data",
-                        value: stats.warrantBigData,
+                        value: detailedStats ? detailedStats.warrantBigData : stats.warrantBigData,
                         labelColor: "text-pink-500",
                         valueColor: "text-pink-400",
                         onClick: () => handleCardClick('บุคคลตามหมายจับ', 'bigdata'),
@@ -470,7 +489,7 @@ export default function App() {
                   />
                   <StatCard
                     title="คดีอื่นๆ"
-                    value={stats.otherCases}
+                    value={detailedStats ? (detailedStats.offenseImmig + detailedStats.offenseCustoms + detailedStats.offenseDisease + detailedStats.offenseTransport + detailedStats.offenseDocs + detailedStats.offenseProperty + detailedStats.offenseSex + detailedStats.offenseDrunk + detailedStats.offenseLife + detailedStats.offenseCom + detailedStats.offenseOther) : stats.otherCases}
                     icon={FileText}
                     colorClass="text-gray-400 bg-gray-500"
                     delay={500}
@@ -481,7 +500,24 @@ export default function App() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mt-2">
                   <UnitBarChart
-                    data={stats.unitChartData}
+                    data={(() => {
+                      // Top level: use unitTotals from detailedStats
+                      if (!filters.unit_kk && detailedStats && detailedStats.charts) {
+                        return detailedStats.charts.unitTotals;
+                      }
+                      // Drill-down: use stationTotals from detailedStats
+                      if (filters.unit_kk && detailedStats && detailedStats.charts && detailedStats.charts.stationTotals) {
+                        return Object.entries(detailedStats.charts.stationTotals)
+                          .map(([name, value]) => ({ name, value }))
+                          .sort((a, b) => {
+                            const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
+                            const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
+                            return numA - numB;
+                          });
+                      }
+                      // Fallback
+                      return stats.unitChartData;
+                    })()}
                     title={stats.unitChartTitle}
                     onBarClick={(entry) => { if (entry && entry.name && entry.name.includes('กก.')) setFilters(prev => ({ ...prev, unit_kk: entry.name.replace('กก.', '') })) }}
                     onBack={filters.unit_kk ? () => setFilters(prev => ({ ...prev, unit_kk: '' })) : null}
@@ -504,11 +540,11 @@ export default function App() {
 
 
           {activeTab === 'summary' && (
-            <SummaryDashboardView filteredData={filteredData} filters={filters} />
+            <SummaryDashboardView filteredData={filteredData} filters={filters} reportStats={detailedStats} getCommanderInfo={getCommanderInfo} />
           )}
 
           {activeTab === 'result' && (
-            <ResultDashboardView filteredData={filteredData} filters={filters} />
+            <ResultDashboardView filteredData={filteredData} filters={filters} setFilters={setFilters} />
           )}
 
 

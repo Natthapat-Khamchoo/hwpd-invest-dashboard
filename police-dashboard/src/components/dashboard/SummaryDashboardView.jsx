@@ -1,8 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { ClipboardCopy, Image as ImageIcon, FileText, Siren, Truck, Scale, ShieldAlert, Award, Activity, AlertTriangle, Eye, FileSearch, Copy, Sparkles, Zap, Fingerprint, Pill, Crosshair, User, LayoutTemplate, Monitor, Square } from 'lucide-react';
 import { toPng } from 'html-to-image';
+import { getMainCommander } from '../../utils/constants';
 
-const SummaryDashboardView = ({ filteredData, filters }) => {
+const SummaryDashboardView = ({ filteredData, filters, reportStats, getCommanderInfo }) => {
   const printRef = useRef(null);
   const [template, setTemplate] = useState('default'); // 'default' | 'infographic' | 'square'
   const [scale, setScale] = useState(1);
@@ -114,41 +115,77 @@ const SummaryDashboardView = ({ filteredData, filters }) => {
 
   // --- Actions ---
   const handleCopyReport = async () => {
+    // Use reportStats if available, otherwise fallback to basic counts (though reportStats is preferred for detailed breakdown)
+    const s = reportStats || {
+      trafficTotal: 0, trafficNotKeepLeft: 0, trafficNotCovered: 0, trafficModify: 0,
+      trafficNoPart: 0, trafficSign: 0, trafficLight: 0, trafficSpeed: 0,
+      trafficTax: 0, trafficNoPlate: 0, trafficGeneral: 0, criminalTotal: 0,
+      warrantTotal: 0, warrantBigData: 0, warrantBodyworn: 0, warrantGeneral: 0,
+      flagrantTotal: 0, offenseDrugs: 0, offenseGuns: 0, offenseImmig: 0,
+      offenseCustoms: 0, offenseDisease: 0, offenseTransport: 0, offenseDocs: 0,
+      offenseProperty: 0, offenseSex: 0, offenseWeight: 0, offenseDrunk: 0,
+      offenseLife: 0, offenseCom: 0, offenseOther: 0,
+      convoyTotal: 0, convoyRoyal: 0, convoyGeneral: 0,
+      seized: { drugs: { yaba: 0, ice: 0, ketamine: 0, other: 0 }, guns: { registered: 0, unregistered: 0, bullets: 0, explosives: 0 }, vehicles: { car: 0, bike: 0 }, others: { money: 0, account: 0, phone: 0, electronics: 0, items: 0 } },
+      accidentsTotal: 0, accidentsDeath: 0, accidentsInjured: 0,
+      volunteerTotal: 0, serviceTotal: 0
+    };
+
+    // --- Dynamic Header (Unit/Commander) ---
+    const currentUnitId = Array.isArray(filters.unit_kk) ? (filters.unit_kk[0] || '0') : (filters.unit_kk || '0');
+    const currentStationId = filters.unit_s_tl || '';
+
+    // Use prop if available, otherwise fallback (though prop should be there)
+    // Note: getMainCommander in utils/constants might not support stationId, so prefer getCommanderInfo
+    const { commander, unitName } = getCommanderInfo ? getCommanderInfo(currentUnitId, currentStationId) : getMainCommander(currentUnitId);
+
     const fullReportText = `เรียน ผู้บังคับบัญชา
-       วันที่ ${todayDate} ขออนุญาตส่งสรุปผลการปฏิบัติของ บก.ทล. ${headerDateText} ดังนี้
-🔹 ภายใต้การบังคับบัญชาของ 
-พล.ต.ต.พรศักดิ์ เลารุจิราลัย ผบก.ทล.
 
+ภายใต้การอำนวยการของ ${commander}
+ขอรายงานผลการปฏิบัติงานของ ${unitName} ${headerDateText.trim()}
 
+1. ผลการจับกุมคดีอาญา รวม ${s.criminalTotal} ราย
+- ความผิดซึ่งหน้า ${s.flagrantTotal} ราย
+- หมายจับ ${s.warrantTotal} ราย
+แบ่งเป็นประเภทฐานความผิด ดังนี้
+- พ.ร.บ.ยาเสพติด  ${s.offenseDrugs}
+- พ.ร.บ.อาวุธปืน   ${s.offenseGuns}
+- พ.ร.บ.คนเข้าเมือง  ${s.offenseImmig}
+- รถบรรทุกน้ำหนักเกินฯ ${s.offenseWeight}
+- ขับรถขณะเมาสุรา ${s.offenseDrunk}
+- อื่นๆ ${s.offenseOther}
 
-🔺 สถิติผลการจับกุมคดีจราจร (รวม ${totalTraffic} ราย)
-- พ.ร.บ.จราจรฯ ${counts.trafficAct} ราย
-- พ.ร.บ.รถยนต์ฯ ${counts.carAct} ราย
-- พ.ร.บ.ขนส่งฯ ${counts.transportAct} ราย
-- พ.ร.บ.ทางหลวง(ทั่วไป) ${counts.highwayAct} ราย
-- จับกุมรถบรรทุกน้ำหนักเกินฯ ${counts.weight} ราย
+2. ผลการจับกุมคดีจราจร รวม ${s.trafficTotal} ราย
+- ไม่ชิดขอบทางด้านซ้าย ${s.trafficNotKeepLeft}
+- ไม่ปกคลุม ${s.trafficNotCovered}
+- ดัดแปลงสภาพรถ ${s.trafficModify}
+- ฝ่าฝืนเครื่องหมายจราจร ${s.trafficSign}
+- ฝ่าฝืนเครื่องสัญญาณไฟจราจร ${s.trafficLight}
+- ขับรถเร็วเกินกำหนด ${s.trafficSpeed}
+- ไม่ติดแผ่นป้ายทะเบียน ${s.trafficNoPlate}
+- ขาดต่อภาษี/พ.ร.บ.ฯ ${s.trafficTax}
+- อื่นๆ ${s.trafficGeneral}
 
-🔺ตรวจสอบ
-- ตรวจสอบน้ำหนักรถบรรทุก ${counts.checkWeight} ราย
-- ตรวจสอบรถใช้สติกเกอร์/สัญลักษณ์ ${counts.checkSticker} ราย
+3. นำขบวน รวม ${s.convoyTotal} ขบวน
+- ขบวนเสด็จ ${s.convoyRoyal}
+- ขบวนทั่วไป ${s.convoyGeneral}
 
-🔺 สถิติจับกุมคดีอาญา (รวม ${totalCriminal} ราย)
-▪️ความผิดตามประมาณกฎหมายอาญา
-- หมายจับ ${totalWarrant} ราย (ทั่วไป ${counts.warrantGeneral}, Big Data ${counts.warrantBigData})
-- ปลอมและใช้เอกสารราชการปลอม ${counts.forgery} ราย
-▪️ความผิดตาม พ.ร.บ.ต่างๆ
-- พ.ร.บ.ยาเสพติด ${counts.drugs} ราย
-- พ.ร.บ.อาวุธปืน ${counts.guns} ราย
-- พ.ร.บ.คนเข้าเมือง ${counts.immigration} ราย
-- อื่นๆ ${counts.others} ราย
+4. รับแจ้งอุบัติเหตุ รวม ${s.accidentsTotal} ครั้ง
+- เสียชีวิต ${s.accidentsDeath}
+- บาดเจ็บ ${s.accidentsInjured}
 
-🔺 สถิติการเกิดอุบัติเหตุ
-เกิดอุบัติเหตุ ${counts.accidents} ราย
-เสียชีวิต ${counts.deaths} ราย
-บาดเจ็บ ${counts.injuries} ราย
-ทรัพย์สินเสียหาย ${counts.damages} ราย
+5. ตรวจยึดของกลาง
+  . ยาเสพติด (ยาบ้า ${s.seized.drugs.yaba.toLocaleString()} เม็ด, ไอซ์ ${s.seized.drugs.ice.toLocaleString()} กรัม)
+  . อาวุธปืนและเครื่องกระสุน (ปืน ${s.seized.guns.registered + s.seized.guns.unregistered} กระบอก, กระสุน ${s.seized.guns.bullets} นัด)
+  . รถยนต์ ${s.seized.vehicles.car} คัน
+  . อุปกรณ์อิเล็กทรอนิกส์ ${s.seized.others.electronics || 0} รายการ
+  . เงินสด ${s.seized.others.money.toLocaleString()} บาท
+  . บัญชี ${s.seized.others.account} บัญชี
 
-       จึงเรียนมาเพื่อโปรดทราบ`;
+6. กิจกรรมจิตอาสา ${s.volunteerTotal} ครั้ง
+7. ช่วยเหลือ/บริการประชาชน ${s.serviceTotal} ครั้ง
+
+จึงเรียนมาเพื่อโปรดทราบ`;
 
     try {
       await navigator.clipboard.writeText(fullReportText);

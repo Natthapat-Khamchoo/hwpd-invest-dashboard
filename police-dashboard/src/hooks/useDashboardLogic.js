@@ -1,18 +1,27 @@
 import { useState, useMemo, useEffect } from 'react';
 import { DATE_RANGES } from '../utils/helpers';
+import { calculateDashboardStats } from '../services/GoogleSheetService';
 
-export const useDashboardLogic = (data) => {
+export const useDashboardLogic = (data, rawData) => {
     const [comparisonYear, setComparisonYear] = useState(new Date().getFullYear().toString());
     const [localSearch, setLocalSearch] = useState('');
 
     // default filter state
     const [filters, setFilters] = useState(() => {
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        const endOfToday = new Date(); endOfToday.setHours(23, 59, 59, 999);
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        endOfMonth.setHours(23, 59, 59, 999);
+
         return {
-            search: '', period: 'today', rangeStart: today, rangeEnd: endOfToday,
+            search: '',
+            period: 'this_month',
+            rangeStart: startOfMonth,
+            rangeEnd: endOfMonth,
             unit_kk: '', unit_s_tl: '', topic: [], charge: '',
-            subFilter: null
+            subFilter: null,
+            selectedMonth: now.getMonth() // Add selectedMonth for sync
         };
     });
 
@@ -26,12 +35,20 @@ export const useDashboardLogic = (data) => {
 
     // --- Handlers ---
     const resetFilters = () => {
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        const endOfToday = new Date(); endOfToday.setHours(23, 59, 59, 999);
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        endOfMonth.setHours(23, 59, 59, 999);
 
         setFilters({
-            search: '', period: 'today', rangeStart: today, rangeEnd: endOfToday,
-            unit_kk: '', unit_s_tl: '', topic: [], charge: '', subFilter: null
+            search: '',
+            period: 'this_month',
+            rangeStart: startOfMonth,
+            rangeEnd: endOfMonth,
+            unit_kk: '', unit_s_tl: '', topic: [], charge: '',
+            subFilter: null,
+            selectedMonth: now.getMonth()
         });
         setLocalSearch('');
         setComparisonYear(new Date().getFullYear().toString());
@@ -139,6 +156,12 @@ export const useDashboardLogic = (data) => {
         };
     }, [baseFilteredData, filteredData, filters.unit_kk, data, comparisonYear]);
 
+    const detailedStats = useMemo(() => {
+        if (!rawData || Object.keys(rawData).length === 0) return null;
+        const result = calculateDashboardStats(rawData, filters);
+        return result.counts;
+    }, [rawData, filters]);
+
     return {
         filters, setFilters,
         localSearch, setLocalSearch,
@@ -147,6 +170,7 @@ export const useDashboardLogic = (data) => {
         baseFilteredData,
         filteredData,
         stats,
+        detailedStats,
         resetFilters
     };
 };

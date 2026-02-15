@@ -362,10 +362,10 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false }) => {
                         <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-blue-100 to-transparent rounded-bl-[4rem] group-hover:scale-110 transition-transform"></div>
                         <h4 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2"><span className="bg-blue-100 p-2 rounded-xl text-blue-600"><Zap size={24} /></span>ยาเสพติด</h4>
                         <div className="space-y-4">
-                            <SeizedItem label="ยาบ้า" value={safeCounts.seized.drugs.yaba.toLocaleString()} unit="เม็ด" />
+                            <SeizedItem label="ยาบ้า/ยาอี" value={safeCounts.seized.drugs.yaba.toLocaleString()} unit="เม็ด" />
                             <SeizedItem label="ยาไอซ์" value={safeCounts.seized.drugs.ice.toLocaleString()} unit="กรัม" />
                             <SeizedItem label="เคตามีน" value={safeCounts.seized.drugs.ketamine.toLocaleString()} unit="กรัม" />
-                            <SeizedItem label="ยาอี/อื่นๆ" value={safeCounts.seized.drugs.other.toLocaleString()} unit="กรัม" />
+                            <SeizedItem label="โคเคน" value={safeCounts.seized.drugs.other.toLocaleString()} unit="กรัม" />
                         </div>
                     </div>
                     <div className="bg-white rounded-3xl p-6 shadow-xl border border-blue-50/50 flex flex-col relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
