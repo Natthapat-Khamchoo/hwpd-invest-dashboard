@@ -45,21 +45,21 @@ export const StatCard = ({ title, value, icon: Icon, colorClass, delay, onClick,
 
   // Base glow color classes map
   const glowClasses = {
-    blue: 'hover:shadow-blue-500/30 hover:border-blue-400/50',
-    red: 'hover:shadow-red-500/30 hover:border-red-400/50',
-    orange: 'hover:shadow-orange-500/30 hover:border-orange-400/50',
-    purple: 'hover:shadow-purple-500/30 hover:border-purple-400/50',
-    pink: 'hover:shadow-pink-500/30 hover:border-pink-400/50',
-    gray: 'hover:shadow-slate-500/30 hover:border-slate-400/50',
+    blue: 'hover:shadow-blue-500/15 hover:border-blue-400/30',
+    red: 'hover:shadow-red-500/15 hover:border-red-400/30',
+    orange: 'hover:shadow-orange-500/15 hover:border-orange-400/30',
+    purple: 'hover:shadow-purple-500/15 hover:border-purple-400/30',
+    pink: 'hover:shadow-pink-500/15 hover:border-pink-400/30',
+    gray: 'hover:shadow-slate-500/15 hover:border-slate-400/30',
   };
 
   const activeGlow = {
-    blue: 'shadow-[0_0_20px_rgba(59,130,246,0.5)] border-blue-400',
-    red: 'shadow-[0_0_20px_rgba(239,68,68,0.5)] border-red-400',
-    orange: 'shadow-[0_0_20px_rgba(249,115,22,0.5)] border-orange-400',
-    purple: 'shadow-[0_0_20px_rgba(168,85,247,0.5)] border-purple-400',
-    pink: 'shadow-[0_0_20px_rgba(236,72,153,0.5)] border-pink-400',
-    gray: 'shadow-[0_0_20px_rgba(100,116,139,0.5)] border-slate-400',
+    blue: 'shadow-[0_0_20px_rgba(59,130,246,0.3)] border-blue-400',
+    red: 'shadow-[0_0_20px_rgba(239,68,68,0.3)] border-red-400',
+    orange: 'shadow-[0_0_20px_rgba(249,115,22,0.3)] border-orange-400',
+    purple: 'shadow-[0_0_20px_rgba(168,85,247,0.3)] border-purple-400',
+    pink: 'shadow-[0_0_20px_rgba(236,72,153,0.3)] border-pink-400',
+    gray: 'shadow-[0_0_20px_rgba(100,116,139,0.3)] border-slate-400',
   };
 
   return (
@@ -82,13 +82,13 @@ export const StatCard = ({ title, value, icon: Icon, colorClass, delay, onClick,
       {/* Active Indicator Pulse */}
       {isActive && <div className={`absolute top-2 right-2 w-2 h-2 bg-${colorName}-400 rounded-full animate-pulse shadow-[0_0_10px_currentColor]`}></div>}
 
-      <div className={`p-4 rounded-xl ${colorClass} bg-opacity-20 flex-shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 relative z-10`}>
+      <div className={`p-4 rounded-xl ${colorClass} bg-opacity-10 flex-shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 relative z-10`}>
         <Icon className={`w-8 h-8 ${colorClass.replace('bg-', 'text-')} drop-shadow-lg`} />
       </div>
 
       <div className="min-w-0 relative z-10">
-        <p className="text-sm text-slate-400 font-medium uppercase tracking-wider group-hover:text-slate-300 transition-colors">{title}</p>
-        <h3 className={`text-2xl sm:text-3xl font-bold text-white tracking-tight ${isActive ? 'neon-text' : ''}`}>
+        <p className="text-xl dark:text-slate-300 text-slate-700 font-semibold uppercase tracking-wider dark:group-hover:text-slate-200 group-hover:text-slate-900 transition-colors">{title}</p>
+        <h3 className={`text-4xl sm:text-5xl font-bold dark:text-white text-slate-900 tracking-tight ${isActive ? 'neon-text' : ''}`}>
           <CountUp end={value} />
         </h3>
       </div>
@@ -116,7 +116,7 @@ export const SplitStatCard = ({ title, icon: Icon, subValues, colorClass, delay 
         <div className={`p-2.5 rounded-lg ${colorClass} bg-opacity-20 flex-shrink-0`}>
           <Icon className={`w-6 h-6 ${colorClass.replace('bg-', 'text-')}`} />
         </div>
-        <p className="text-sm text-slate-400 font-medium uppercase tracking-wider">{title}</p>
+        <p className="text-xl dark:text-slate-300 text-slate-700 font-semibold uppercase tracking-wider">{title}</p>
       </div>
 
       {/* 3 Clickable Slots */}
@@ -136,8 +136,8 @@ export const SplitStatCard = ({ title, icon: Icon, subValues, colorClass, delay 
               }
             `}
           >
-            <p className={`text-[10px] mb-1 ${item.labelColor || 'text-slate-400'} group-hover/item:text-white transition-colors`}>{item.label}</p>
-            <h3 className={`text-sm sm:text-lg font-bold ${item.valueColor || 'text-white'}`}>
+            <p className={`text-sm mb-1 font-medium ${item.labelColor || 'dark:text-slate-300 text-slate-600'} dark:group-hover/item:text-white group-hover/item:text-slate-900 transition-colors`}>{item.label}</p>
+            <h3 className={`text-2xl sm:text-3xl font-bold ${item.valueColor || 'dark:text-white text-slate-900'}`}>
               <CountUp end={item.value} />
             </h3>
           </div>

@@ -13,15 +13,15 @@ const ComparisonTab = ({ data = [], monthNames = ["ม.ค.", "ก.พ.", "ม�
                 </div>
                 <div className="h-[600px] md:h-[850px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart layout="vertical" data={data} margin={{ top: 20, right: 30, left: 40, bottom: 20 }}>
+                        <BarChart layout="vertical" data={data} margin={{ top: 20, right: 80, left: 40, bottom: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                            <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 14, fill: '#64748b' }} />
-                            <YAxis type="category" dataKey="name" width={60} tick={{ fontSize: 16, fill: '#334155', fontWeight: '500' }} axisLine={false} tickLine={false} />
+                            <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 18, fill: '#64748b', fontWeight: 500 }} />
+                            <YAxis type="category" dataKey="name" width={70} tick={{ fontSize: 22, fill: '#334155', fontWeight: '700' }} axisLine={false} tickLine={false} />
                             <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', color: '#1e293b' }} cursor={{ fill: '#f1f5f9' }} />
                             <Legend wrapperStyle={{ paddingTop: '20px' }} formatter={(value) => <span className="text-slate-700 font-bold text-lg ml-2">{value}</span>} />
-                            <Bar dataKey="month1" name={monthNames[0]} fill="#cbd5e1" radius={[0, 8, 8, 0]} barSize={20} label={{ position: 'right', fill: '#475569', fontSize: 14, fontWeight: 'bold' }} />
-                            <Bar dataKey="month2" name={monthNames[1]} fill="#94a3b8" radius={[0, 8, 8, 0]} barSize={20} label={{ position: 'right', fill: '#475569', fontSize: 14, fontWeight: 'bold' }} />
-                            <Bar dataKey="month3" name={monthNames[2]} fill="#004aad" radius={[0, 8, 8, 0]} barSize={20} label={{ position: 'right', fill: '#1e3a8a', fontSize: 14, fontWeight: 'bold' }} />
+                            <Bar dataKey="month1" name={monthNames[0]} fill="#cbd5e1" radius={[0, 8, 8, 0]} barSize={40} label={{ position: 'right', fill: '#475569', fontSize: 24, fontWeight: 'bold' }} />
+                            <Bar dataKey="month2" name={monthNames[1]} fill="#94a3b8" radius={[0, 8, 8, 0]} barSize={40} label={{ position: 'right', fill: '#475569', fontSize: 24, fontWeight: 'bold' }} />
+                            <Bar dataKey="month3" name={monthNames[2]} fill="#004aad" radius={[0, 8, 8, 0]} barSize={40} label={{ position: 'right', fill: '#1e3a8a', fontSize: 24, fontWeight: 'bold' }} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>

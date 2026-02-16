@@ -82,6 +82,29 @@ export default function App() {
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
 
+  // --- Dark Mode State ---
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('hwpd-dark-mode');
+    return saved !== null ? JSON.parse(saved) : true; // Default to dark
+  });
+
+  const toggleDarkMode = useCallback(() => {
+    setIsDarkMode(prev => {
+      const next = !prev;
+      localStorage.setItem('hwpd-dark-mode', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  // Sync dark class to <html> element for CSS :root selectors
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
   // Sync activeTab changes to URL (helper)
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -115,6 +138,19 @@ export default function App() {
   // --- Report Preview State ---
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportText, setReportText] = useState("");
+
+  // --- Card Click Handler (for topic filter cards on Dashboard tab) ---
+  const handleCardClick = (topic, subFilter = null) => {
+    setFilters(prev => {
+      const isAlreadyActive = prev.topic.includes(topic) && prev.subFilter === subFilter;
+      if (isAlreadyActive) {
+        // Deselect: clear topic and subFilter
+        return { ...prev, topic: [], subFilter: null };
+      }
+      // Select: set topic and subFilter
+      return { ...prev, topic: [topic], subFilter };
+    });
+  };
 
   // --- UI Handlers ---
   const handleExportCSV = () => {
@@ -198,37 +234,37 @@ export default function App() {
 - ความผิดซึ่งหน้า ${s.flagrantTotal} ราย
 - หมายจับ ${s.warrantTotal} ราย
 แบ่งเป็นประเภทฐานความผิด ดังนี้
-- พ.ร.บ.ยาเสพติด  ${s.offenseDrugs}
-- พ.ร.บ.อาวุธปืน   ${s.offenseGuns}
-- พ.ร.บ.คนเข้าเมือง  ${s.offenseImmig}
-- รถบรรทุกน้ำหนักเกินฯ ${s.offenseWeight}
-- ขับรถขณะเมาสุรา ${s.offenseDrunk}
-- อื่นๆ ${s.offenseOther}
+- พ.ร.บ.ยาเสพติด  ${s.offenseDrugs} ราย
+- พ.ร.บ.อาวุธปืน   ${s.offenseGuns} ราย
+- พ.ร.บ.คนเข้าเมือง  ${s.offenseImmig} ราย
+- รถบรรทุกน้ำหนักเกินฯ ${s.offenseWeight} ราย
+- ขับรถขณะเมาสุรา ${s.offenseDrunk} ราย
+- อื่นๆ ${s.offenseOther} ราย
 
 2. ผลการจับกุมคดีจราจร รวม ${s.trafficTotal} ราย
-- ไม่ชิดขอบทางด้านซ้าย ${s.trafficNotKeepLeft}
-- ไม่ปกคลุม ${s.trafficNotCovered}
-- ดัดแปลงสภาพรถ ${s.trafficModify}
-- ฝ่าฝืนเครื่องหมายจราจร ${s.trafficSign}
-- ฝ่าฝืนเครื่องสัญญาณไฟจราจร ${s.trafficLight}
-- ขับรถเร็วเกินกำหนด ${s.trafficSpeed}
-- ไม่ติดแผ่นป้ายทะเบียน ${s.trafficNoPlate}
-- ขาดต่อภาษี/พ.ร.บ.ฯ ${s.trafficTax}
-- อื่นๆ ${s.trafficGeneral}
+- ไม่ชิดขอบทางด้านซ้าย ${s.trafficNotKeepLeft} ราย
+- ไม่ปกคลุม ${s.trafficNotCovered} ราย
+- ดัดแปลงสภาพรถ ${s.trafficModify} ราย
+- ฝ่าฝืนเครื่องหมายจราจร ${s.trafficSign} ราย
+- ฝ่าฝืนเครื่องสัญญาณไฟจราจร ${s.trafficLight} ราย
+- ขับรถเร็วเกินกำหนด ${s.trafficSpeed} ราย
+- ไม่ติดแผ่นป้ายทะเบียน ${s.trafficNoPlate} ราย
+- ขาดต่อภาษี/พ.ร.บ.ฯ ${s.trafficTax} ราย
+- อื่นๆ ${s.trafficGeneral} ราย
 
 3. นำขบวน รวม ${s.convoyTotal} ขบวน
-- ขบวนเสด็จ ${s.convoyRoyal}
-- ขบวนทั่วไป ${s.convoyGeneral}
+- ขบวนเสด็จ ${s.convoyRoyal} ขบวน
+- ขบวนทั่วไป ${s.convoyGeneral} ขบวน
 
 4. รับแจ้งอุบัติเหตุ รวม ${s.accidentsTotal} ครั้ง
-- เสียชีวิต ${s.accidentsDeath}
-- บาดเจ็บ ${s.accidentsInjured}
+- เสียชีวิต ${s.accidentsDeath} ราย
+- บาดเจ็บ ${s.accidentsInjured} ราย
 
 5. ตรวจยึดของกลาง
   . ยาเสพติด (ยาบ้า ${s.seized.drugs.yaba.toLocaleString()} เม็ด, ไอซ์ ${s.seized.drugs.ice.toLocaleString()} กรัม)
   . อาวุธปืนและเครื่องกระสุน (ปืน ${s.seized.guns.registered + s.seized.guns.unregistered} กระบอก, กระสุน ${s.seized.guns.bullets} นัด)
   . รถยนต์ ${s.seized.vehicles.car} คัน
-  . อุปกรณ์อิเล็กทรอนิกส์ ${s.seized.others.electronics || 0} รายการ
+  . อุปกรณ์อิเล็กทรอนิกส์ ${(s.seized.others.phone || 0) + (s.seized.others.electronics || 0)} รายการ (โทรศัพท์มือถือ ${s.seized.others.phone || 0} เครื่อง, คอมพิวเตอร์/อุปกรณ์อื่น ${s.seized.others.electronics || 0} เครื่อง)
   . เงินสด ${s.seized.others.money.toLocaleString()} บาท
   . บัญชี ${s.seized.others.account} บัญชี
 
@@ -239,14 +275,6 @@ export default function App() {
 
     setReportText(reportText); // เก็บข้อความรายงาน
     setShowReportModal(true); // เปิด Modal
-  };
-
-  const handleCardClick = (topicName, subType = null) => {
-    setFilters(prev => ({
-      ...prev,
-      topic: [topicName],
-      subFilter: subType
-    }));
   };
 
 
@@ -273,65 +301,79 @@ export default function App() {
   }, [loading]);
 
   return (
-    <div className="flex h-screen bg-[#0f172a] font-sans text-slate-100 overflow-hidden relative print:h-auto print:overflow-visible print:block print:bg-white">
+    <div className={`flex h-screen font-sans overflow-hidden relative print:h-auto print:overflow-visible print:block print:bg-white transition-colors duration-300 ${isDarkMode ? 'bg-[#0f172a] text-slate-100' : 'bg-slate-100 text-slate-800'}`}>
 
       {/* Loading Screen Overlay (Fades out when finished) */}
       {(showLoadingScreen || loading) && (
         <LoadingScreen onFinished={handleLoadingFinished} />
       )}
 
-      {/* Animated Background Layers */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        {/* Digital Grid overlay */}
-        <div className="absolute inset-0 digital-bg opacity-30"></div>
+      {/* Animated Background Layers (Night mode only) */}
+      {isDarkMode && (
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          {/* Digital Grid overlay */}
+          <div className="absolute inset-0 digital-bg opacity-30"></div>
 
-        {/* Floating Neon Blobs */}
-        <div className="absolute -top-20 -left-20 w-96 h-96 bg-neon-blue/20 rounded-full blur-[100px] animate-float"></div>
-        <div className="absolute top-1/2 -right-20 w-80 h-80 bg-neon-purple/20 rounded-full blur-[100px] animate-float-delayed"></div>
-        <div className="absolute -bottom-40 left-1/3 w-[500px] h-[500px] bg-neon-amber/10 rounded-full blur-[120px] animate-pulse-slow"></div>
-      </div>
+          {/* Floating Neon Blobs — softened */}
+          <div className="absolute -top-20 -left-20 w-96 h-96 bg-neon-blue/10 rounded-full blur-[100px] animate-float"></div>
+          <div className="absolute top-1/2 -right-20 w-80 h-80 bg-neon-purple/10 rounded-full blur-[100px] animate-float-delayed"></div>
+          <div className="absolute -bottom-40 left-1/3 w-[500px] h-[500px] bg-neon-amber/5 rounded-full blur-[120px] animate-pulse-slow"></div>
+        </div>
+      )}
 
       {mobileSidebarOpen && (<div className="fixed inset-0 bg-black/80 z-20 xl:hidden backdrop-blur-sm" onClick={() => setMobileSidebarOpen(false)} />)}
 
-      <aside className={`fixed inset-y-0 left-0 z-30 glass-liquid-bar border-y-0 border-l-0 border-r border-white/10 text-white transition-all duration-300 ease-in-out shadow-2xl ${mobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full'} xl:relative xl:translate-x-0 ${desktopSidebarOpen ? 'xl:w-64' : 'xl:w-0 xl:overflow-hidden'} print:hidden`}>
-        <div className="p-6 border-b border-white/5 flex justify-between items-center whitespace-nowrap bg-gradient-to-r from-white/5 to-transparent">
+      <aside className={`fixed inset-y-0 left-0 z-30 border-y-0 border-l-0 border-r transition-all duration-300 ease-in-out shadow-2xl ${isDarkMode ? 'glass-liquid-bar border-white/10 text-white' : 'bg-white border-slate-200 text-slate-800'} ${mobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full'} xl:relative xl:translate-x-0 ${desktopSidebarOpen ? 'xl:w-64' : 'xl:w-0 xl:overflow-hidden'} print:hidden`}>
+        <div className={`p-6 border-b flex justify-between items-center whitespace-nowrap ${isDarkMode ? 'border-white/5 bg-gradient-to-r from-white/5 to-transparent' : 'border-slate-200 bg-gradient-to-r from-slate-50 to-white'}`}>
           <div className="flex items-center space-x-3">
-            <span className={`text-xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 transition-opacity duration-200`}>HWPD <span className="text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]">WARROOM</span></span>
+            <span className={`text-xl font-bold tracking-tight transition-opacity duration-200 ${isDarkMode ? 'text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400' : 'text-slate-800'}`}>HWPD <span className={`drop-shadow-[0_0_10px_rgba(250,204,21,0.5)] ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>WARROOM</span></span>
           </div>
-          <button onClick={() => setMobileSidebarOpen(false)} className="xl:hidden text-slate-400 hover:text-white"><X className="w-6 h-6" /></button>
+          <button onClick={() => setMobileSidebarOpen(false)} className={`xl:hidden ${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}><X className="w-6 h-6" /></button>
         </div>
         <nav className="p-4 space-y-2 whitespace-nowrap">
           {['result', 'dashboard'].map(tab => (
-            <button key={tab} onClick={() => handleTabChange(tab)} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden ${activeTab === tab ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 'text-slate-400 hover:bg-white/5 hover:text-white hover:shadow-lg'}`}>
+            <button key={tab} onClick={() => handleTabChange(tab)} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden ${activeTab === tab
+              ? isDarkMode
+                ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
+                : 'bg-blue-50 text-blue-800 border border-blue-200 shadow-sm'
+              : isDarkMode
+                ? 'text-slate-400 hover:bg-white/5 hover:text-white hover:shadow-lg'
+                : 'text-slate-800 hover:bg-slate-50 hover:text-slate-900'
+              }`}>
 
               {/* Active Tab Indicator Line */}
-              {activeTab === tab && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,1)]"></div>}
+              {activeTab === tab && <div className={`absolute left-0 top-0 bottom-0 w-1 ${isDarkMode ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,1)]' : 'bg-blue-600'}`}></div>}
 
               {tab === 'dashboard' ? <LayoutDashboard className="w-5 h-5" /> :
                 tab === 'result' ? <PieChart className="w-5 h-5" /> :
                   <FileText className="w-5 h-5" />}
-              <span className="font-medium capitalize relative z-10">{tab}</span>
+              <span className="font-semibold text-lg capitalize relative z-10">{tab}</span>
               {activeTab === tab && <ChevronRight className="w-4 h-4 ml-auto opacity-70" />}
             </button>
           ))}
 
           <div className="pt-4 pb-2">
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider pl-4 mb-2">Advanced Analytics</div>
+            <div className={`text-sm font-semibold uppercase tracking-wider pl-4 mb-2 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Advanced Analytics</div>
           </div>
 
           {[
-            { id: 'ranking', label: 'Ranking', icon: Award, color: 'text-yellow-400', activeBg: 'bg-yellow-500/10', activeBorder: 'border-yellow-500/30' },
-            { id: 'trend', label: 'Trend Prediction', icon: TrendingUp, color: 'text-green-400', activeBg: 'bg-green-500/10', activeBorder: 'border-green-500/30' }
+            { id: 'ranking', label: 'Ranking', icon: Award, color: isDarkMode ? 'text-yellow-400' : 'text-yellow-600', activeBg: isDarkMode ? 'bg-yellow-500/10' : 'bg-yellow-50', activeBorder: isDarkMode ? 'border-yellow-500/30' : 'border-yellow-200' },
+            { id: 'trend', label: 'Trend Prediction', icon: TrendingUp, color: isDarkMode ? 'text-green-400' : 'text-green-600', activeBg: isDarkMode ? 'bg-green-500/10' : 'bg-green-50', activeBorder: isDarkMode ? 'border-green-500/30' : 'border-green-200' }
           ].map(item => (
             <button key={item.id} onClick={() => handleTabChange(item.id)}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden 
-                ${activeTab === item.id ? `${item.activeBg} ${item.color} border ${item.activeBorder} shadow-[0_0_15px_rgba(0,0,0,0.2)]` : 'text-slate-400 hover:bg-white/5 hover:text-white'}
+                ${activeTab === item.id
+                  ? `${item.activeBg} ${item.color} border ${item.activeBorder} ${isDarkMode ? 'shadow-[0_0_15px_rgba(0,0,0,0.2)]' : 'shadow-sm'}`
+                  : isDarkMode
+                    ? 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                }
 `}>
 
-              {activeTab === item.id && <div className={`absolute left-0 top-0 bottom-0 w-1 ${item.color.replace('text', 'bg')} shadow-[0_0_10px_rgba(255,255,255,0.5)]`}></div>}
+              {activeTab === item.id && <div className={`absolute left-0 top-0 bottom-0 w-1 ${item.color.replace('text', 'bg')} ${isDarkMode ? 'shadow-[0_0_10px_rgba(255,255,255,0.5)]' : ''}`}></div>}
 
-              <item.icon className={`w-5 h-5 ${activeTab === item.id ? '' : 'text-slate-500 group-hover:text-slate-300'}`} />
-              <span className="font-medium capitalize relative z-10">{item.label}</span>
+              <item.icon className={`w-5 h-5 ${activeTab === item.id ? '' : isDarkMode ? 'text-slate-500 group-hover:text-slate-300' : 'text-slate-500 group-hover:text-slate-700'}`} />
+              <span className="font-semibold text-lg capitalize relative z-10">{item.label}</span>
             </button>
           ))}
         </nav>
@@ -351,6 +393,8 @@ export default function App() {
             onExportCSV={handleExportCSV}
             showFilterPanel={showFilterPanel}
             setShowFilterPanel={setShowFilterPanel}
+            isDarkMode={isDarkMode}
+            toggleDarkMode={toggleDarkMode}
           />
         </div>
 
@@ -366,40 +410,35 @@ export default function App() {
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-4 print:overflow-visible print:h-auto print:p-0">
           {activeTab === 'dashboard' && (
             <div className="relative space-y-4 sm:space-y-6">
-              {/* Police Command Center Background Effects */}
-              <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                {/* Animated Grid Pattern */}
-                <div className="absolute inset-0 opacity-10">
-                  <div className="absolute inset-0 bg-[linear-gradient(to_right,#3b82f620_1px,transparent_1px),linear-gradient(to_bottom,#3b82f620_1px,transparent_1px)] bg-[size:40px_40px] animate-pulse-slow"></div>
+              {/* Police Command Center Background Effects (Night mode only) */}
+              {isDarkMode && (
+                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                  {/* Animated Grid Pattern */}
+                  <div className="absolute inset-0 opacity-10">
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#3b82f620_1px,transparent_1px),linear-gradient(to_bottom,#3b82f620_1px,transparent_1px)] bg-[size:40px_40px] animate-pulse-slow"></div>
+                  </div>
+
+                  {/* Radar Scan Effect */}
+                  <div className="absolute top-10 right-10 w-64 h-64 opacity-5">
+                    <div className="absolute inset-0 rounded-full border-2 border-blue-400 animate-ping"></div>
+                    <div className="absolute inset-4 rounded-full border border-blue-300 animate-pulse-slow"></div>
+                    <div className="absolute inset-8 rounded-full border border-blue-200"></div>
+                  </div>
+
+                  {/* CIB Logo Watermark */}
+                  <div className="absolute top-10 right-0 w-[500px] h-[500px] opacity-[0.04] pointer-events-none z-0">
+                    <img
+                      src="https://cib.go.th/backend/uploads/medium_logo_cib_4_2x_9f2da10e9f_a7828c9ca0.png"
+                      alt="CIB Logo"
+                      className="w-full h-full object-contain filter grayscale contrast-125 sepia-[100%] hue-rotate-[190deg] saturate-[500%] drop-shadow-[0_0_30px_rgba(59,130,246,0.6)]"
+                    />
+                  </div>
+
+                  {/* Gradient Spotlights */}
+                  <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[100px] mix-blend-screen animate-pulse-slow"></div>
+                  <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-[120px] mix-blend-screen"></div>
                 </div>
-
-                {/* Radar Scan Effect */}
-                <div className="absolute top-10 right-10 w-64 h-64 opacity-5">
-                  <div className="absolute inset-0 rounded-full border-2 border-blue-400 animate-ping"></div>
-                  <div className="absolute inset-4 rounded-full border border-blue-300 animate-pulse-slow"></div>
-                  <div className="absolute inset-8 rounded-full border border-blue-200"></div>
-                </div>
-
-                {/* CIB Logo Watermark */}
-                <div className="absolute top-10 right-0 w-[500px] h-[500px] opacity-[0.04] pointer-events-none z-0">
-                  <img
-                    src="https://cib.go.th/backend/uploads/medium_logo_cib_4_2x_9f2da10e9f_a7828c9ca0.png"
-                    alt="CIB Logo"
-                    className="w-full h-full object-contain filter grayscale contrast-125 sepia-[100%] hue-rotate-[190deg] saturate-[500%] drop-shadow-[0_0_30px_rgba(59,130,246,0.6)]"
-                  />
-                </div>
-
-                {/* Gradient Spotlights */}
-                <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[100px] mix-blend-screen animate-pulse-slow"></div>
-                <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-[120px] mix-blend-screen"></div>
-
-                {/* Floating Particles - Reduced for Performance */}
-                {/* <div className="absolute top-20 left-[15%] w-2 h-2 bg-blue-400/30 rounded-full blur-[1px] animate-float"></div>
-                <div className="absolute top-40 right-[20%] w-3 h-3 bg-cyan-400/20 rounded-full blur-[2px] animate-float-delayed"></div>
-                <div className="absolute bottom-60 left-[30%] w-2 h-2 bg-white/10 rounded-full blur-[1px] animate-pulse"></div>
-                <div className="absolute top-[60%] right-[40%] w-2 h-2 bg-blue-300/20 rounded-full blur-[1px] animate-float"></div>
-                <div className="absolute bottom-40 right-[15%] w-3 h-3 bg-cyan-300/15 rounded-full blur-[2px] animate-float-delayed"></div> */}
-              </div>
+              )}
 
               {/* Content - relative z-index to appear above background */}
               <div className="relative z-10 space-y-6 sm:space-y-8">
@@ -504,7 +543,12 @@ export default function App() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mt-2">
                   <UnitBarChart
+                    isDarkMode={isDarkMode}
                     data={(() => {
+                      // When a topic filter is active, use stats (which respects filteredData)
+                      if (filters.topic.length > 0) {
+                        return stats.unitChartData;
+                      }
                       // Top level: use unitTotals from detailedStats
                       if (!filters.unit_kk && detailedStats && detailedStats.charts) {
                         return detailedStats.charts.unitTotals;
@@ -527,12 +571,14 @@ export default function App() {
                     onBack={filters.unit_kk ? () => setFilters(prev => ({ ...prev, unit_kk: '' })) : null}
                   />
                   <ComparativeCrimeChart
+                    isDarkMode={isDarkMode}
                     rawData={data}
                     globalFilters={filters}
                   />
                 </div>
 
                 <MonthlyBarChart
+                  isDarkMode={isDarkMode}
                   data={stats.monthlyChartData}
                   year={comparisonYear}
                   onYearChange={setComparisonYear}
@@ -555,7 +601,7 @@ export default function App() {
 
           {
             activeTab === 'ranking' && (
-              <RankingView unitRankings={unitRankings} />
+              <RankingView unitRankings={unitRankings} isDarkMode={isDarkMode} />
             )
           }
 
@@ -587,14 +633,14 @@ export default function App() {
 
               {/* Content */}
               <div className="relative z-10 h-full overflow-hidden">
-                <TimeAnalysisView peakHoursData={peakHoursData} dayOfWeekData={dayOfWeekData} />
+                <TimeAnalysisView isDarkMode={isDarkMode} peakHoursData={peakHoursData} dayOfWeekData={dayOfWeekData} />
               </div>
             </div>
           )}
 
           {
             activeTab === 'trend' && (
-              <TrendView trendData={trendData} nextDayForecast={nextDayForecast} />
+              <TrendView isDarkMode={isDarkMode} trendData={trendData} nextDayForecast={nextDayForecast} />
             )
           }
 

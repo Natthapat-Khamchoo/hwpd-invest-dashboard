@@ -10,7 +10,7 @@ const getRankIcon = (index) => {
     }
 };
 
-const RankingCard = ({ title, icon: Icon, data, colorClass, isPremium = false, onClick, isSelected = false, onClose, disableHover = false }) => {
+const RankingCard = ({ title, icon: Icon, data, colorClass, isPremium = false, onClick, isSelected = false, onClose, disableHover = false, isDarkMode = true }) => {
     return (
         <div
             onClick={onClick}
@@ -18,7 +18,9 @@ const RankingCard = ({ title, icon: Icon, data, colorClass, isPremium = false, o
       relative overflow-hidden group transition-all duration-700
       rounded-xl border backdrop-blur-md
       ${isPremium
-                    ? 'bg-gradient-to-b from-slate-800/60 to-slate-900/80 border-yellow-500/30 shadow-[0_0_30px_rgba(234,179,8,0.1)]'
+                    ? isDarkMode
+                        ? 'bg-gradient-to-b from-slate-800/60 to-slate-900/80 border-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.05)]'
+                        : 'bg-gradient-to-b from-yellow-50 to-white border-yellow-300/40 shadow-md'
                     : 'glass-liquid border-white/10 hover:border-white/20'}
       ${isSelected
                     ? 'shadow-2xl z-50'
@@ -39,7 +41,7 @@ const RankingCard = ({ title, icon: Icon, data, colorClass, isPremium = false, o
             )}
 
             {/* Background Glow Effect */}
-            <div className={`absolute -right-10 -top-10 w-40 h-40 ${colorClass} opacity-10 rounded-full blur-[60px] transition-opacity duration-700 ${isSelected ? 'opacity-30' : 'group-hover:opacity-20'}`}></div>
+            <div className={`absolute -right-10 -top-10 w-40 h-40 ${colorClass} opacity-5 rounded-full blur-[60px] transition-opacity duration-700 ${isSelected ? 'opacity-15' : 'group-hover:opacity-10'}`}></div>
             {isPremium && <div className={`absolute inset-0 bg-gradient-to-b from-yellow-500/5 to-transparent transition-opacity duration-500 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}></div>}
 
             <div className="p-2 sm:p-6 relative z-10 h-full flex flex-col">
@@ -48,7 +50,7 @@ const RankingCard = ({ title, icon: Icon, data, colorClass, isPremium = false, o
                         <Icon className={`w-7 h-7 ${colorClass.replace('bg-', 'text-')} drop-shadow-md`} />
                     </div>
                     <div>
-                        <h3 className={`text-sm sm:text-lg font-bold ${isPremium ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-500' : 'text-white'}`}>
+                        <h3 className={`text-lg sm:text-2xl font-bold ${isPremium ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-500' : 'dark:text-white text-slate-900'}`}>
                             {title}
                         </h3>
                         <p className="text-xs text-slate-400 flex items-center gap-1">
@@ -64,15 +66,19 @@ const RankingCard = ({ title, icon: Icon, data, colorClass, isPremium = false, o
                                 className={`
                    flex items-center justify-between p-3 rounded-lg border transition-all duration-300
                    ${index === 0 && isPremium
-                                        ? 'bg-gradient-to-r from-yellow-900/20 to-slate-900/40 border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.1)]'
-                                        : 'bg-slate-900/40 border-white/5 hover:bg-slate-800/60'}
+                                        ? isDarkMode
+                                            ? 'bg-gradient-to-r from-yellow-900/20 to-slate-900/40 border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.1)]'
+                                            : 'bg-gradient-to-r from-yellow-50 to-white border-yellow-300/40 shadow-sm'
+                                        : isDarkMode
+                                            ? 'bg-slate-900/40 border-white/5 hover:bg-slate-800/60'
+                                            : 'bg-white/80 border-slate-200 hover:bg-slate-50'}
                  `}>
                                 <div className="flex items-center gap-3">
                                     <div className="flex-shrink-0 w-8 flex justify-center">
                                         {getRankIcon(index)}
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className={`text-sm font-semibold ${index === 0 ? 'text-white' : 'text-slate-300'}`}>
+                                        <span className={`text-lg font-semibold ${index === 0 ? 'dark:text-white text-slate-900' : 'dark:text-slate-200 text-slate-700'}`}>
                                             {item.name}
                                         </span>
                                         {index === 0 && (
@@ -83,8 +89,8 @@ const RankingCard = ({ title, icon: Icon, data, colorClass, isPremium = false, o
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <span className={`text-lg font-bold ${colorClass.replace('bg-', 'text-')}`}>{item.count}</span>
-                                    <span className="text-xs text-slate-500 ml-1">เคส</span>
+                                    <span className={`text-2xl font-bold ${colorClass.replace('bg-', 'text-')}`}>{item.count}</span>
+                                    <span className="text-base dark:text-slate-400 text-slate-600 ml-1">เคส</span>
                                 </div>
                             </div>
                         ))
@@ -102,7 +108,7 @@ const RankingCard = ({ title, icon: Icon, data, colorClass, isPremium = false, o
     );
 };
 
-const RankingView = ({ unitRankings }) => {
+const RankingView = ({ unitRankings, isDarkMode = true }) => {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [originRect, setOriginRect] = useState(null);
     const [isAnimating, setIsAnimating] = useState(false);
@@ -154,24 +160,24 @@ const RankingView = ({ unitRankings }) => {
         <div className="relative min-h-screen -m-4 sm:-m-6 p-4 sm:p-6 overflow-hidden flex flex-col">
             {/* --- Ambient Background Effects --- */}
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[80%] h-[60%] bg-blue-900/20 blur-[120px] rounded-full mix-blend-screen"></div>
-                <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[40%] h-[40%] bg-yellow-600/10 blur-[100px] rounded-full mix-blend-screen animate-pulse-slow"></div>
-                <div className="absolute top-20 left-[20%] w-2 h-2 bg-yellow-400/40 rounded-full blur-[1px] animate-float"></div>
-                <div className="absolute top-40 right-[25%] w-3 h-3 bg-blue-400/40 rounded-full blur-[2px] animate-float-delayed"></div>
-                <div className="absolute bottom-40 left-[10%] w-2 h-2 bg-white/20 rounded-full blur-[1px] animate-pulse"></div>
+                <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[80%] h-[60%] bg-blue-900/10 blur-[120px] rounded-full mix-blend-screen"></div>
+                <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[40%] h-[40%] bg-yellow-600/5 blur-[100px] rounded-full mix-blend-screen animate-pulse-slow"></div>
+                <div className="absolute top-20 left-[20%] w-2 h-2 bg-yellow-400/20 rounded-full blur-[1px] animate-float"></div>
+                <div className="absolute top-40 right-[25%] w-3 h-3 bg-blue-400/20 rounded-full blur-[2px] animate-float-delayed"></div>
+                <div className="absolute bottom-40 left-[10%] w-2 h-2 bg-white/10 rounded-full blur-[1px] animate-pulse"></div>
             </div>
 
             <div className="relative z-10 space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-700 flex-1 flex flex-col">
 
                 {/* --- Header Section --- */}
                 <div className={`text-center space-y-2 py-4 transition-all duration-500 ${selectedCategory ? 'blur-sm opacity-50' : ''}`}>
-                    <div className="inline-flex items-center justify-center p-3 rounded-full bg-gradient-to-t from-yellow-500/20 to-transparent border border-yellow-500/30 mb-2 shadow-[0_0_20px_rgba(234,179,8,0.2)]">
-                        <Trophy className="w-10 h-10 text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]" />
+                    <div className="inline-flex items-center justify-center p-3 rounded-full bg-gradient-to-t from-yellow-500/10 to-transparent border border-yellow-500/20 mb-2 shadow-[0_0_15px_rgba(234,179,8,0.1)]">
+                        <Trophy className="w-10 h-10 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
                     </div>
-                    <h2 className="text-xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-yellow-100 to-yellow-500 drop-shadow-sm tracking-tight uppercase">
+                    <h2 className={`text-xl sm:text-4xl font-black tracking-tight uppercase ${isDarkMode ? 'text-transparent bg-clip-text bg-gradient-to-b from-white via-yellow-100 to-yellow-500 drop-shadow-sm' : 'text-transparent bg-clip-text bg-gradient-to-b from-yellow-600 to-yellow-800'}`}>
                         HWPD Hall of Fame
                     </h2>
-                    <p className="text-slate-400 text-sm font-medium tracking-wide">
+                    <p className="dark:text-slate-300 text-slate-600 text-lg font-medium tracking-wide">
                         ทำเนียบเกียรติยศหน่วยงานปฏิบัติการยอดเยี่ยมแห่งปี
                     </p>
                 </div>
@@ -187,6 +193,7 @@ const RankingView = ({ unitRankings }) => {
                         >
                             <RankingCard
                                 {...card}
+                                isDarkMode={isDarkMode}
                                 onClick={(e) => handleCardClick(card.id, e)}
                             />
                         </div>
@@ -219,6 +226,7 @@ const RankingView = ({ unitRankings }) => {
                         >
                             <RankingCard
                                 {...selectedCard}
+                                isDarkMode={isDarkMode}
                                 isSelected={true}
                                 disableHover={true}
                                 onClose={handleClose}

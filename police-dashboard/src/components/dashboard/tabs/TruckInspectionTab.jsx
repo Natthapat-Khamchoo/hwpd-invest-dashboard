@@ -32,14 +32,14 @@ const TruckInspectionTab = ({ data = [] }) => {
 
                 <div className="h-[600px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart layout="vertical" data={truckData} margin={{ top: 20, right: 30, left: 40, bottom: 5 }}>
+                        <BarChart layout="vertical" data={truckData} margin={{ top: 20, right: 80, left: 40, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                            <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 14, fill: '#64748b' }} />
-                            <YAxis type="category" dataKey="name" width={60} tick={{ fontSize: 16, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                            <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 18, fill: '#64748b', fontWeight: 500 }} />
+                            <YAxis type="category" dataKey="name" width={70} tick={{ fontSize: 22, fill: '#334155', fontWeight: '700' }} axisLine={false} tickLine={false} />
                             <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} cursor={{ fill: '#f1f5f9' }} />
                             <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                            <Bar dataKey="inspected" name="จำนวนที่ตรวจสอบ (คัน)" fill="#94a3b8" radius={[0, 8, 8, 0]} barSize={20} label={{ position: 'right' }} />
-                            <Bar dataKey="arrested" name="จับกุมน้ำหนักเกิน (ราย)" fill="#dc2626" radius={[0, 8, 8, 0]} barSize={20} label={{ position: 'right' }} />
+                            <Bar dataKey="inspected" name="จำนวนที่ตรวจสอบ (คัน)" fill="#94a3b8" radius={[0, 8, 8, 0]} barSize={40} label={{ position: 'right', fill: '#475569', fontSize: 24, fontWeight: 'bold' }} />
+                            <Bar dataKey="arrested" name="จับกุมน้ำหนักเกิน (ราย)" fill="#dc2626" radius={[0, 8, 8, 0]} barSize={40} label={{ position: 'right', fill: '#991b1b', fontSize: 24, fontWeight: 'bold' }} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>

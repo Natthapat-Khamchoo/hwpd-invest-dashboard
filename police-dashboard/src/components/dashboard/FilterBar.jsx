@@ -43,12 +43,12 @@ const FilterBar = ({
     };
 
     return (
-        <div className="bg-slate-800/60 backdrop-blur-xl border-b border-white/5 p-4 animate-in slide-in-from-top-2 duration-200 shadow-xl z-20 relative">
+        <div className="dark:bg-slate-800/60 bg-white/90 backdrop-blur-xl border-b dark:border-white/5 border-slate-200 p-4 animate-in slide-in-from-top-2 duration-200 shadow-xl z-20 relative">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 <div className="sm:col-span-2">
                     <input
                         type="text"
-                        className="w-full pl-3 pr-3 py-2 bg-slate-900/50 border border-white/10 rounded-lg text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all shadow-inner"
+                        className="w-full pl-3 pr-3 py-2.5 dark:bg-slate-900/50 bg-slate-50 border dark:border-white/10 border-slate-300 rounded-lg text-base dark:text-white text-slate-900 dark:placeholder-slate-400 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all shadow-inner"
                         placeholder="🔍 ค้นหา ชื่อ/ข้อหา..."
                         value={localSearch}
                         onChange={(e) => setLocalSearch(e.target.value)}
@@ -56,12 +56,12 @@ const FilterBar = ({
                 </div>
                 <div>
                     <select
-                        className="w-full pl-2 pr-2 py-2 bg-slate-900/50 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all hover:bg-slate-800/80 cursor-pointer"
+                        className="w-full pl-2 pr-2 py-2.5 dark:bg-slate-900/50 bg-slate-50 border dark:border-white/10 border-slate-300 rounded-lg text-base dark:text-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:hover:bg-slate-800/80 hover:bg-slate-100 cursor-pointer"
                         value={filters.unit_kk}
                         onChange={(e) => setFilters(p => ({ ...p, unit_kk: e.target.value, unit_s_tl: '' }))}
                     >
-                        <option value="" className="bg-slate-900">🏢 ทุก กก.</option>
-                        {Object.keys(UNIT_HIERARCHY).map(kk => <option key={kk} value={kk} className="bg-slate-900">กก.{kk}</option>)}
+                        <option value="" className="dark:bg-slate-900 bg-white">🏢 ทุก กก.</option>
+                        {Object.keys(UNIT_HIERARCHY).map(kk => <option key={kk} value={kk} className="dark:bg-slate-900 bg-white">กก.{kk}</option>)}
                     </select>
                 </div>
                 <div>
@@ -69,22 +69,22 @@ const FilterBar = ({
                         options={filterOptions.topics}
                         selected={filters.topic}
                         onChange={(newVal) => setFilters(prev => ({ ...prev, topic: newVal }))}
-                        className="glass-input" // Note: MultiSelectDropdown might need internal tweaks, but for now we pass standard styles if it accepts className, otherwise it uses its own.
+                        className="glass-input"
                     />
                 </div>
                 <div>
                     <select
-                        className="w-full pl-2 pr-2 py-2 bg-slate-900/50 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all hover:bg-slate-800/80 cursor-pointer"
+                        className="w-full pl-2 pr-2 py-2.5 dark:bg-slate-900/50 bg-slate-50 border dark:border-white/10 border-slate-300 rounded-lg text-base dark:text-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all dark:hover:bg-slate-800/80 hover:bg-slate-100 cursor-pointer"
                         value={filters.period}
                         onChange={(e) => handlePeriodChange(e.target.value)}
                     >
-                        {DATE_RANGES.map((r) => <option key={r.value} value={r.value} className="bg-slate-900">{r.label}</option>)}
+                        {DATE_RANGES.map((r) => <option key={r.value} value={r.value} className="dark:bg-slate-900 bg-white">{r.label}</option>)}
                     </select>
                 </div>
                 {filters.period === 'custom' && (
                     <>
-                        <input type="date" className="w-full bg-slate-900/50 border border-white/10 rounded-lg text-sm text-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50" value={formatDateForInput(filters.rangeStart)} onChange={(e) => handleCustomDateChange('start', e.target.value)} />
-                        <input type="date" className="w-full bg-slate-900/50 border border-white/10 rounded-lg text-sm text-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50" value={formatDateForInput(filters.rangeEnd)} onChange={(e) => handleCustomDateChange('end', e.target.value)} />
+                        <input type="date" className="w-full dark:bg-slate-900/50 bg-slate-50 border dark:border-white/10 border-slate-300 rounded-lg text-base dark:text-white text-slate-900 p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50" value={formatDateForInput(filters.rangeStart)} onChange={(e) => handleCustomDateChange('start', e.target.value)} />
+                        <input type="date" className="w-full dark:bg-slate-900/50 bg-slate-50 border dark:border-white/10 border-slate-300 rounded-lg text-base dark:text-white text-slate-900 p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50" value={formatDateForInput(filters.rangeEnd)} onChange={(e) => handleCustomDateChange('end', e.target.value)} />
                     </>
                 )}
             </div>

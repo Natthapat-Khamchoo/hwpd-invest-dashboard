@@ -160,11 +160,11 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false }) => {
                                 </div>
                                 <div className="w-1/3 flex flex-col gap-1 text-xs">
                                     <div className="bg-slate-100 rounded px-2 py-1 flex justify-between items-center border border-slate-200">
-                                        <span>จับเอง</span>
+                                        <span className="text-slate-700 font-semibold">จับเอง</span>
                                         <span className="font-bold text-red-600 text-lg">{safeCounts.truckSelf}</span>
                                     </div>
                                     <div className="bg-slate-100 rounded px-2 py-1 flex justify-between items-center border border-slate-200">
-                                        <span>ร่วมฯ</span>
+                                        <span className="text-slate-700 font-semibold">จับร่วม</span>
                                         <span className="font-bold text-red-600 text-lg">{safeCounts.truckJoint}</span>
                                     </div>
                                 </div>
@@ -175,11 +175,11 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false }) => {
                                 </div>
                                 <div className="w-1/3 flex flex-col gap-1 text-xs">
                                     <div className="bg-slate-100 rounded px-2 py-1 flex justify-between items-center border border-slate-200">
-                                        <span>เสด็จ</span>
+                                        <span className="text-slate-700 font-semibold">ขบวนเสด็จ</span>
                                         <span className="font-bold text-red-600 text-lg">{safeCounts.convoyRoyal}</span>
                                     </div>
                                     <div className="bg-slate-100 rounded px-2 py-1 flex justify-between items-center border border-slate-200">
-                                        <span>ทั่วไป</span>
+                                        <span className="text-slate-700 font-semibold">ขบวนทั่วไป</span>
                                         <span className="font-bold text-red-600 text-lg">{safeCounts.convoyGeneral}</span>
                                     </div>
                                 </div>

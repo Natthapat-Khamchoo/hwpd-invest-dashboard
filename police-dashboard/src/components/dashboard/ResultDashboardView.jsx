@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
-import { Truck, Siren, Award, FileText, Zap, ChevronDown, BarChart as ChartIcon, Calendar } from 'lucide-react';
+import { toPng } from 'html-to-image';
+import { jsPDF } from 'jspdf';
+import { Truck, Siren, Award, FileText, Zap, ChevronDown, BarChart as ChartIcon, Calendar, FileDown, Loader2 } from 'lucide-react';
 
 import { fetchDashboardData } from '../../services/GoogleSheetService';
 import { UNIT_HIERARCHY } from '../../utils/helpers';
@@ -40,6 +42,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
     const [selectedStation, setSelectedStation] = useState(initialParams.stl); // Station (S.TL)
 
     const [isPrintRequested, setIsPrintRequested] = useState(false); // Flag for print request
+    const [isPdfExporting, setIsPdfExporting] = useState(false);
 
     // --- Effect: Sync State to URL ---
     const updateUrlParams = (tab, kk, stl) => {
@@ -191,6 +194,178 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
         }
     }, [isPrintRequested, viewMode]);
 
+    // --- PDF Export Handler ---
+    const handleExportPDF = async () => {
+        if (isPdfExporting) return;
+        setIsPdfExporting(true);
+
+        // Save current state
+        const prevViewMode = viewMode;
+        const prevTab = activeTab;
+
+        // Switch to print_all mode to render all sections
+        setViewMode('print_all');
+
+        // Wait for DOM render
+        await new Promise(resolve => setTimeout(resolve, 2500));
+
+        try {
+            // Use fixed 1920x1080 px format
+            const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [1920, 1080] });
+            const pageWidth = 1920;
+            const pageHeight = 1080;
+
+            const sections = [
+                { id: 'print-overview' },
+                { id: 'print-comparison' },
+                { id: 'print-traffic' },
+                { id: 'print-truck' },
+                { id: 'print-press' }
+            ];
+
+            // Build English date string
+            const engMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const now = new Date();
+            let pdfDateText = '';
+            if (dateRange.start && dateRange.end) {
+                const s = new Date(dateRange.start);
+                const e = new Date(dateRange.end);
+                pdfDateText = `${s.getDate()} ${engMonths[s.getMonth()]} ${s.getFullYear() + 543} - ${e.getDate()} ${engMonths[e.getMonth()]} ${e.getFullYear() + 543}`;
+            } else if (selectedMonth !== '') {
+                pdfDateText = `${engMonths[selectedMonth]} ${now.getFullYear() + 543}`;
+            } else {
+                pdfDateText = `${engMonths[now.getMonth()]} ${now.getFullYear() + 543}`;
+            }
+
+            // Capture Header Image
+            let headerImgData = null;
+            const headerElement = document.getElementById('print-header');
+            if (headerElement) {
+                try {
+                    headerImgData = await toPng(headerElement, {
+                        quality: 1.0,
+                        pixelRatio: 1.0, // Reduced to 1.0 for ~10-20MB size
+                        width: 1920,
+                        windowWidth: 1920
+                    });
+                } catch (err) {
+                    console.error("Failed to capture header:", err);
+                }
+            }
+
+            // Helper: draw page header (using captured image)
+            const drawHeader = (doc, pageNum, totalPages) => {
+                const headerH = 130; // Increased height for visual header
+
+                if (headerImgData) {
+                    try {
+                        doc.addImage(headerImgData, 'PNG', 0, 0, 1920, headerH);
+                    } catch (e) {
+                        // Fallback simple header if image fails
+                        doc.setFillColor(255, 255, 255);
+                        doc.rect(0, 0, pageWidth, headerH, 'F');
+                        doc.setFontSize(24);
+                        doc.setTextColor(0, 0, 0);
+                        doc.text('Highway Police Bureau', 30, 48);
+                    }
+                }
+
+                // (Page number removed as per request)
+
+                // Bottom line
+                doc.setDrawColor(0, 74, 173);
+                doc.setLineWidth(2);
+                doc.line(0, headerH, pageWidth, headerH);
+            };
+
+            let isFirstPage = true;
+
+            for (let i = 0; i < sections.length; i++) {
+                const section = sections[i];
+                const element = document.getElementById(section.id);
+                if (!element) continue;
+
+                // Capture section
+                const filter = (node) => {
+                    const exclusionClasses = ['exclude-from-export', 'animate-pulse'];
+                    return !(node.classList && exclusionClasses.some(cls => node.classList.contains(cls)));
+                };
+
+                const dataUrl = await toPng(element, {
+                    quality: 1.0,
+                    pixelRatio: 1.0, // Reduced to 1.0 for ~10-20MB size
+                    backgroundColor: '#ffffff',
+                    filter: filter,
+                    cacheBust: true,
+                    width: 1920, // Match target width
+                    windowWidth: 1920, // Enforce desktop media queries
+                });
+
+                const img = await new Promise((resolve, reject) => {
+                    const image = new Image();
+                    image.onload = () => resolve(image);
+                    image.onerror = reject;
+                    image.src = dataUrl;
+                });
+
+                const imgWidth = img.naturalWidth;
+                const imgHeight = img.naturalHeight;
+
+                // Available area (1920x1080)
+                const headerH = 130;
+                const bottomMargin = 20;
+                const sideMargin = 20;
+                const contentWidth = pageWidth - (sideMargin * 2);
+                const contentHeight = pageHeight - headerH - bottomMargin;
+
+                // Fit to page
+                const scaleX = contentWidth / imgWidth;
+                const scaleY = contentHeight / imgHeight;
+                const scale = Math.min(scaleX, scaleY);
+
+                const drawW = imgWidth * scale;
+                const drawH = imgHeight * scale;
+
+                const offsetX = sideMargin + (contentWidth - drawW) / 2;
+                const offsetY = headerH + (contentHeight - drawH) / 2;
+
+                if (!isFirstPage) {
+                    pdf.addPage();
+                }
+                isFirstPage = false;
+
+                pdf.addImage(dataUrl, 'PNG', offsetX, offsetY, drawW, drawH);
+            }
+
+            // Fix page numbers
+            const totalPages = pdf.internal.getNumberOfPages();
+            for (let p = 1; p <= totalPages; p++) {
+                pdf.setPage(p);
+                drawHeader(pdf, p, totalPages);
+            }
+
+            // Footer line
+            for (let p = 1; p <= totalPages; p++) {
+                pdf.setPage(p);
+                pdf.setFillColor(0, 74, 173);
+                pdf.rect(0, pageHeight - 10, pageWidth, 10, 'F');
+            }
+
+            // Save
+            const fileName = `Dashboard_Report_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.pdf`;
+            pdf.save(fileName);
+
+        } catch (error) {
+            console.error('PDF Export failed:', error);
+            alert('Export PDF failed. See console for details.');
+        } finally {
+            // Restore previous view
+            setViewMode(prevViewMode);
+            setActiveTab(prevTab);
+            setIsPdfExporting(false);
+        }
+    };
+
     // --- Tab Components ---
     const renderContent = () => {
         if (viewMode === 'print_all') {
@@ -244,8 +419,8 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
                         <div className="bg-blue-100 p-2 rounded-xl mb-4 text-center font-bold text-xl text-blue-800 border border-blue-200">
                             ส่วนที่ 1: ภาพรวม (Overview)
                         </div>
-                        {/* ส่ง Class พิเศษ print-grid-force เข้าไปช่วย */}
-                        <div className="print-grid-force w-full">
+                        {/* Remove 'print-grid-force' to prevent left-aligning the component in a grid cell */}
+                        <div className="w-full">
                             <OverviewTab counts={sheetCounts} isPrint={true} isLoading={isLoading} />
                         </div>
                     </div>
@@ -325,10 +500,10 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
 
     return (
         <div className="h-full w-full overflow-y-auto bg-slate-100 font-sans p-4 sm:p-6 lg:p-10 print:p-0 print:bg-white">
-            <div className={`max-w-[1800px] mx-auto min-h-[85vh] flex flex-col gap-6 bg-white shadow-2xl rounded-2xl md:rounded-[3rem] overflow-hidden border border-slate-200 ${viewMode === 'print_all' ? 'print-mode' : ''} print:max-w-none print:w-full print:min-h-0 print:overflow-visible`}>
+            <div className={`mx-auto min-h-[85vh] flex flex-col gap-6 bg-white shadow-2xl rounded-2xl md:rounded-[3rem] border border-slate-200 ${viewMode === 'print_all' ? 'max-w-[1920px] print-mode overflow-visible' : 'max-w-[1800px] overflow-hidden'} print:max-w-none print:w-full print:min-h-0 print:overflow-visible`}>
 
                 {/* --- Header Section --- */}
-                <div className="flex flex-col md:flex-row h-auto md:h-32 shadow-md relative overflow-hidden bg-white z-20">
+                <div id="print-header" className="flex flex-col md:flex-row h-auto md:h-32 shadow-md relative overflow-hidden bg-white z-20">
                     {/* Left: Gray Section */}
                     <div className="bg-[#5e666e] w-full md:w-[45%] lg:w-[42%] flex flex-col md:flex-row items-center justify-center md:justify-start px-4 md:px-6 lg:px-10 py-4 md:py-0 gap-3 md:gap-4 lg:gap-6 relative z-20 shadow-[4px_0_24px_rgba(0,0,0,0.2)]">
                         <img
@@ -475,6 +650,21 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
                             icon={<Zap size={18} />}
                         />
 
+                        {/* Export PDF Button */}
+                        <button
+                            onClick={handleExportPDF}
+                            disabled={isPdfExporting}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 shadow-sm whitespace-nowrap ${isPdfExporting
+                                ? 'bg-gray-300 text-gray-500 cursor-wait'
+                                : 'bg-red-600 text-white hover:bg-red-700 shadow-red-500/30'
+                                }`}
+                        >
+                            {isPdfExporting ? (
+                                <><Loader2 size={18} className="animate-spin" /> กำลัง Export...</>
+                            ) : (
+                                <><FileDown size={18} /> Export PDF</>
+                            )}
+                        </button>
                     </div>
 
 

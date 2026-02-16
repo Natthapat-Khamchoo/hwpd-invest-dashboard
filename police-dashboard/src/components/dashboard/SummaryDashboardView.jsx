@@ -183,7 +183,7 @@ const SummaryDashboardView = ({ filteredData, filters, reportStats, getCommander
   . ยาเสพติด (ยาบ้า ${s.seized.drugs.yaba.toLocaleString()} เม็ด, ไอซ์ ${s.seized.drugs.ice.toLocaleString()} กรัม)
   . อาวุธปืนและเครื่องกระสุน (ปืน ${s.seized.guns.registered + s.seized.guns.unregistered} กระบอก, กระสุน ${s.seized.guns.bullets} นัด)
   . รถยนต์ ${s.seized.vehicles.car} คัน
-  . อุปกรณ์อิเล็กทรอนิกส์ ${s.seized.others.electronics || 0} รายการ
+  . อุปกรณ์อิเล็กทรอนิกส์ ${(s.seized.others.phone || 0) + (s.seized.others.electronics || 0)} รายการ (โทรศัพท์มือถือ ${s.seized.others.phone || 0} เครื่อง, คอมพิวเตอร์/อุปกรณ์อื่น ${s.seized.others.electronics || 0} เครื่อง)
   . เงินสด ${s.seized.others.money.toLocaleString()} บาท
   . บัญชี ${s.seized.others.account} บัญชี
 
