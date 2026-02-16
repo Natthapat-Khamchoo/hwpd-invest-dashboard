@@ -80,135 +80,148 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false }) => {
         );
     }
 
+    // --- Print Components ---
+    const PrintItem = ({ text, value }) => (
+        <div className="grid grid-cols-2 items-center border-b border-dashed border-slate-300 py-2 last:border-0 gap-4">
+            <span className="text-2xl text-slate-700 font-medium truncate">{text}</span>
+            <span className="text-3xl font-bold text-slate-900 text-right">{value}</span>
+        </div>
+    );
+
+    const PrintSeizedBox = ({ title, items }) => (
+        <div className="bg-white rounded-lg p-3 border border-slate-300 shadow-sm">
+            <div className="font-bold text-2xl text-slate-600 mb-3 border-b border-slate-200 pb-2">{title}</div>
+            <div className="flex flex-col gap-2">
+                {items.map((item, idx) => (
+                    <div key={idx} className="grid grid-cols-[1.2fr_0.8fr] items-center py-1">
+                        <span className="text-xl text-slate-700 font-medium">{item.l}</span>
+                        <div className="text-right">
+                            <span className="text-2xl font-bold text-slate-900">{item.v}</span>
+                            {item.u && <span className="text-base text-slate-500 ml-1">{item.u}</span>}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
     // ★★★ Print Layout Logic ★★★
     if (isPrint) {
         return (
-            <div className="w-full text-sm">
-                <div className="grid grid-cols-2 gap-6 items-start">
-                    {/* --- Left Column --- */}
+            <div className="w-full text-base">
+                <div className="grid grid-cols-3 gap-6 items-start">
+                    {/* --- Column 1: Criminal --- */}
                     <div className="flex flex-col gap-4">
-                        {/* Criminal */}
-                        <div className="border border-slate-300 rounded-xl p-3 bg-white">
-                            <div className="mb-3">
+                        <div className="border border-slate-300 rounded-xl p-4 bg-white shadow-sm">
+                            <div className="mb-4">
                                 <NodeCard color="bg-[#fbbf24]" label="จับกุมทั้งหมด (คดี)" value={safeCounts.criminalTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="" />
                             </div>
-                            <div className="grid grid-cols-3 gap-3">
-                                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2">
-                                    <div className="flex justify-between items-center mb-1 border-b border-slate-200 pb-1">
-                                        <span className="font-bold text-slate-700">หมายจับ</span>
-                                        <span className="bg-[#dc2626] text-white px-2 rounded-md text-sm font-bold">{safeCounts.warrantTotal}</span>
+
+                            <div className="space-y-4">
+                                {/* Warrant */}
+                                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                                    <div className="flex justify-between items-center mb-2 border-b border-slate-200 pb-2">
+                                        <span className="font-bold text-2xl text-slate-800">หมายจับ</span>
+                                        <span className="bg-[#dc2626] text-white px-3 py-1 rounded-lg text-2xl font-bold">{safeCounts.warrantTotal}</span>
                                     </div>
-                                    <SimpleItemCompact text="Bodyworn" value={safeCounts.warrantBodyworn} />
-                                    <SimpleItemCompact text="Bigdata" value={safeCounts.warrantBigData} />
-                                    <SimpleItemCompact text="ทั่วไป" value={safeCounts.warrantGeneral} />
+                                    <PrintItem text="Bodyworn" value={safeCounts.warrantBodyworn} />
+                                    <PrintItem text="Bigdata" value={safeCounts.warrantBigData} />
+                                    <PrintItem text="ทั่วไป" value={safeCounts.warrantGeneral} />
                                 </div>
-                                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2">
-                                    <div className="flex justify-between items-center mb-1 border-b border-slate-200 pb-1">
-                                        <span className="font-bold text-slate-700">ซึ่งหน้า</span>
-                                        <span className="bg-[#dc2626] text-white px-2 rounded-md text-sm font-bold">{safeCounts.flagrantTotal}</span>
+
+                                {/* Flagrant */}
+                                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                                    <div className="flex justify-between items-center mb-2 border-b border-slate-200 pb-2">
+                                        <span className="font-bold text-2xl text-slate-800">ซึ่งหน้า</span>
+                                        <span className="bg-[#dc2626] text-white px-3 py-1 rounded-lg text-2xl font-bold">{safeCounts.flagrantTotal}</span>
                                     </div>
-                                    <div className="text-xs text-slate-400 text-center py-2">รวมจับกุมซึ่งหน้า</div>
                                 </div>
-                                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2">
-                                    <div className="flex justify-between items-center mb-1 border-b border-slate-200 pb-1">
-                                        <span className="font-bold text-slate-700">ฐานความผิด</span>
-                                    </div>
-                                    <SimpleItemCompact text="ยาเสพติด" value={safeCounts.offenseDrugs} />
-                                    <SimpleItemCompact text="อาวุธปืน" value={safeCounts.offenseGuns} />
-                                    <SimpleItemCompact text="ตม." value={safeCounts.offenseImmig} />
-                                    <SimpleItemCompact text="ศุลกากร" value={safeCounts.offenseCustoms} />
-                                    <SimpleItemCompact text="โรคติดต่อ" value={safeCounts.offenseDisease} />
-                                    <SimpleItemCompact text="ขนส่ง" value={safeCounts.offenseTransport} />
-                                    <SimpleItemCompact text="เอกสาร" value={safeCounts.offenseDocs} />
-                                    <SimpleItemCompact text="ทรัพย์" value={safeCounts.offenseProperty} />
-                                    <SimpleItemCompact text="เพศ" value={safeCounts.offenseSex} />
-                                    <SimpleItemCompact text="รถหนัก" value={safeCounts.offenseWeight} />
-                                    <SimpleItemCompact text="เมาสุรา" value={safeCounts.offenseDrunk} />
-                                    <SimpleItemCompact text="ชีวิต/ร่างกาย" value={safeCounts.offenseLife} />
-                                    <SimpleItemCompact text="คอมฯ" value={safeCounts.offenseCom} />
-                                    <SimpleItemCompact text="อื่นๆ" value={safeCounts.offenseOther} />
+
+                                {/* Offense Types */}
+                                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                                    <div className="font-bold text-2xl text-slate-800 mb-2 border-b border-slate-200 pb-2">ฐานความผิด</div>
+                                    <PrintItem text="ยาเสพติด" value={safeCounts.offenseDrugs} />
+                                    <PrintItem text="อาวุธปืน" value={safeCounts.offenseGuns} />
+                                    <PrintItem text="ตม." value={safeCounts.offenseImmig} />
+                                    <PrintItem text="ศุลกากร" value={safeCounts.offenseCustoms} />
+                                    <PrintItem text="ทรัพย์" value={safeCounts.offenseProperty} />
+                                    <PrintItem text="อื่นๆ" value={safeCounts.offenseOther} />
+                                    {/* Combine less critical items if needed, or list all if space permits */}
                                 </div>
-                            </div>
-                        </div>
-                        {/* Traffic */}
-                        <div className="border border-slate-300 rounded-xl p-3 bg-white">
-                            <div className="mb-3">
-                                <NodeCard color="bg-[#fbbf24]" label="จับกุมคดีจราจร" value={safeCounts.trafficTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                                <SimpleItemCompact text="ไม่ชิดซ้าย" value={safeCounts.trafficNotKeepLeft} />
-                                <SimpleItemCompact text="ไม่ปกคลุม" value={safeCounts.trafficNotCovered} />
-                                <SimpleItemCompact text="ดัดแปลงสภาพ" value={safeCounts.trafficModify} />
-                                <SimpleItemCompact text="อุปกรณ์ไม่ครบ" value={safeCounts.trafficNoPart} />
-                                <SimpleItemCompact text="ฝ่าฝืนป้าย" value={safeCounts.trafficSign} />
-                                <SimpleItemCompact text="ฝ่าฝืนไฟ" value={safeCounts.trafficLight} />
-                                <SimpleItemCompact text="ความเร็ว" value={safeCounts.trafficSpeed} />
-                                <SimpleItemCompact text="ภาษี/พรบ." value={safeCounts.trafficTax} />
-                                <SimpleItemCompact text="ไม่ติดป้าย" value={safeCounts.trafficNoPlate} />
-                                <SimpleItemCompact text="อื่นๆ" value={safeCounts.trafficGeneral} />
                             </div>
                         </div>
                     </div>
 
-                    {/* --- Right Column --- */}
+                    {/* --- Column 2: Traffic --- */}
+                    <div className="flex flex-col gap-4">
+                        <div className="border border-slate-300 rounded-xl p-4 bg-white shadow-sm h-full">
+                            <div className="mb-4">
+                                <NodeCard color="bg-[#fbbf24]" label="จับกุมคดีจราจร" value={safeCounts.trafficTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="" />
+                            </div>
+                            <div className="grid grid-cols-1 gap-y-2">
+                                <PrintItem text="ความเร็ว" value={safeCounts.trafficSpeed} />
+                                <PrintItem text="ฝ่าฝืนป้าย" value={safeCounts.trafficSign} />
+                                <PrintItem text="ฝ่าฝืนไฟ" value={safeCounts.trafficLight} />
+                                <PrintItem text="ไม่ชิดซ้าย" value={safeCounts.trafficNotKeepLeft} />
+                                <PrintItem text="ไม่ปกคลุม" value={safeCounts.trafficNotCovered} />
+                                <PrintItem text="ดัดแปลงสภาพ" value={safeCounts.trafficModify} />
+                                <PrintItem text="อุปกรณ์ไม่ครบ" value={safeCounts.trafficNoPart} />
+                                <PrintItem text="ภาษี/พรบ." value={safeCounts.trafficTax} />
+                                <PrintItem text="ไม่ติดป้าย" value={safeCounts.trafficNoPlate} />
+                                <PrintItem text="อื่นๆ" value={safeCounts.trafficGeneral} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* --- Column 3: Truck, Convoy, Seized --- */}
                     <div className="flex flex-col gap-4">
                         {/* Truck & Convoy */}
-                        <div className="border border-slate-300 rounded-xl p-3 bg-white flex flex-col gap-3">
-                            <div className="flex items-center gap-3">
-                                <div className="flex-1">
-                                    <NodeCard color="bg-[#fbbf24]" label="รถหนัก" value={safeCounts.truckTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="" />
-                                </div>
-                                <div className="w-1/3 flex flex-col gap-1 text-xs">
-                                    <div className="bg-slate-100 rounded px-2 py-1 flex justify-between items-center border border-slate-200">
-                                        <span className="text-slate-700 font-semibold">จับเอง</span>
-                                        <span className="font-bold text-red-600 text-lg">{safeCounts.truckSelf}</span>
+                        <div className="border border-slate-300 rounded-xl p-4 bg-white shadow-sm space-y-4">
+                            <div>
+                                <NodeCard color="bg-[#fbbf24]" label="รถหนัก" value={safeCounts.truckTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="" />
+                                <div className="grid grid-cols-2 gap-4 mt-2">
+                                    <div className="bg-slate-100 p-2 rounded border border-slate-200 text-center">
+                                        <div className="text-xl text-slate-600">จับเอง</div>
+                                        <div className="text-3xl font-bold text-red-600">{safeCounts.truckSelf}</div>
                                     </div>
-                                    <div className="bg-slate-100 rounded px-2 py-1 flex justify-between items-center border border-slate-200">
-                                        <span className="text-slate-700 font-semibold">จับร่วม</span>
-                                        <span className="font-bold text-red-600 text-lg">{safeCounts.truckJoint}</span>
+                                    <div className="bg-slate-100 p-2 rounded border border-slate-200 text-center">
+                                        <div className="text-xl text-slate-600">จับร่วม</div>
+                                        <div className="text-3xl font-bold text-red-600">{safeCounts.truckJoint}</div>
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3 border-t border-slate-200 pt-3">
-                                <div className="flex-1">
-                                    <NodeCard color="bg-[#fbbf24]" label="ขบวน" value={safeCounts.convoyTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="" />
-                                </div>
-                                <div className="w-1/3 flex flex-col gap-1 text-xs">
-                                    <div className="bg-slate-100 rounded px-2 py-1 flex justify-between items-center border border-slate-200">
-                                        <span className="text-slate-700 font-semibold">ขบวนเสด็จ</span>
-                                        <span className="font-bold text-red-600 text-lg">{safeCounts.convoyRoyal}</span>
+                            <div className="pt-2 border-t border-slate-200">
+                                <NodeCard color="bg-[#fbbf24]" label="ขบวน" value={safeCounts.convoyTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="" />
+                                <div className="grid grid-cols-2 gap-4 mt-2">
+                                    <div className="bg-slate-100 p-2 rounded border border-slate-200 text-center">
+                                        <div className="text-xl text-slate-600">เสด็จ</div>
+                                        <div className="text-3xl font-bold text-red-600">{safeCounts.convoyRoyal}</div>
                                     </div>
-                                    <div className="bg-slate-100 rounded px-2 py-1 flex justify-between items-center border border-slate-200">
-                                        <span className="text-slate-700 font-semibold">ขบวนทั่วไป</span>
-                                        <span className="font-bold text-red-600 text-lg">{safeCounts.convoyGeneral}</span>
+                                    <div className="bg-slate-100 p-2 rounded border border-slate-200 text-center">
+                                        <div className="text-xl text-slate-600">ทั่วไป</div>
+                                        <div className="text-3xl font-bold text-red-600">{safeCounts.convoyGeneral}</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
                         {/* Seized Items */}
-                        <div className="border border-blue-300 bg-blue-50/40 rounded-xl p-3">
-                            <h3 className="text-lg font-bold text-blue-800 mb-2 flex items-center gap-2">
-                                <span className="w-1 h-5 bg-blue-600 rounded"></span> ของกลาง (Seized Items)
+                        <div className="border border-blue-300 bg-blue-50/40 rounded-xl p-4">
+                            <h3 className="text-2xl font-bold text-blue-800 mb-3 flex items-center gap-2">
+                                <span className="w-2 h-6 bg-blue-600 rounded"></span> ของกลาง (Seized Items)
                             </h3>
-                            <div className="grid grid-cols-2 gap-2">
-                                <SeizedBox title="ยาเสพติด" items={[
+                            <div className="flex flex-col gap-4">
+                                <PrintSeizedBox title="ยาเสพติด" items={[
                                     { l: "ยาบ้า", v: safeCounts.seized.drugs.yaba.toLocaleString(), u: "เม็ด" },
-                                    { l: "ไอซ์", v: safeCounts.seized.drugs.ice.toLocaleString(), u: "กรัม" },
-                                    { l: "เคตามีน", v: safeCounts.seized.drugs.ketamine.toLocaleString(), u: "กรัม" }
+                                    { l: "ไอซ์", v: safeCounts.seized.drugs.ice.toLocaleString(), u: "กรัม" }
                                 ]} />
-                                <SeizedBox title="อาวุธปืน" items={[
+                                <PrintSeizedBox title="อาวุธปืน" items={[
                                     { l: "มีทะเบียน", v: safeCounts.seized.guns.registered.toLocaleString(), u: "กระบอก" },
-                                    { l: "ไม่มีทะเบียน", v: safeCounts.seized.guns.unregistered.toLocaleString(), u: "กระบอก" },
-                                    { l: "กระสุน", v: safeCounts.seized.guns.bullets.toLocaleString(), u: "นัด" }
+                                    { l: "ไม่มีทะเบียน", v: safeCounts.seized.guns.unregistered.toLocaleString(), u: "กระบอก" }
                                 ]} />
-                                <SeizedBox title="ยานพาหนะ" items={[
+                                <PrintSeizedBox title="ยานพาหนะ" items={[
                                     { l: "รถยนต์", v: safeCounts.seized.vehicles.car.toLocaleString(), u: "คัน" },
                                     { l: "จยย.", v: safeCounts.seized.vehicles.bike.toLocaleString(), u: "คัน" }
-                                ]} />
-                                <SeizedBox title="อื่นๆ" items={[
-                                    { l: "เงินสด", v: safeCounts.seized.others.money.toLocaleString(), u: "บาท" },
-                                    { l: "บัญชี", v: safeCounts.seized.others.account.toLocaleString(), u: "บช." },
-                                    { l: "มือถือ", v: safeCounts.seized.others.phone.toLocaleString(), u: "เครื่อง" }
                                 ]} />
                             </div>
                         </div>
