@@ -15,59 +15,48 @@ export const useStationData = (rawData) => {
         }
 
         rawData.stations.forEach(row => {
-            // New Schema: Station_Name, Rank, Full_Name, Position, etc.
-            const stationStr = row.Station_Name || row.Station || '';
-            const rank = row.Rank || '';
-            const fullName = row.Full_Name || row.Name || '';
-            const position = row.Position || '';
+            // Try multiple possible column names for station name
+            const stationStr = row.Station_Name || row.Station || row.station_name || row.station || '';
+            const rank = row.Rank || row.rank || '';
+            const fullName = row.Full_Name || row.Name || row.full_name || row.name || '';
+            const position = row.Position || row.position || '';
 
             if (!stationStr || !fullName) return;
 
-            // Combine Rank + Name
-            const commanderName = `${rank} ${fullName}`.trim();
-
-            // Parse ID
-            let unitId = null;
-            let stationId = null;
-            let key = null;
-
-            // 1. Try to get Unit ID from explicit column first
-            if (row.Unit_ID) {
-                // Remove non-digits just in case
-                const uMatch = row.Unit_ID.toString().match(/(\d+)/);
-                if (uMatch) {
-                    unitId = parseInt(uMatch[1], 10).toString();
-                }
-            }
+            // Combine Rank + Name + Position
+            const commanderName = `${rank} ${fullName}${position ? ' ' + position : ''}`.trim();
 
             const val = stationStr.trim();
 
-            // 2. Parse Station ID from Name (e.g. "ส.ทล.1 ...")
-            // Relaxed regex: Just look for S.TL followed by number
+            // 1. Parse Station ID from Name (e.g. "ส.ทล.1 ...")
+            let stationId = null;
             const stationMatch = val.match(/(?:ส\.?ทล\.?|สถานี.*?)\s*(\d+)/);
             if (stationMatch) {
                 stationId = parseInt(stationMatch[1], 10).toString();
             }
 
-            // 3. Fallback: Parse Unit ID from Name if missing
-            if (!unitId) {
-                const unitMatch = val.match(/(?:กก\.?|กอง.*?)\s*(\d+)/);
-                if (unitMatch) {
-                    unitId = parseInt(unitMatch[1], 10).toString();
-                }
+            // 2. Parse Unit ID (กก.) from the station name string — ALWAYS from name, not from Unit_ID column
+            //    because Unit_ID column contains station sequence number, not กก. number
+            let unitId = null;
+            const unitMatch = val.match(/(?:กก\.?|กอง.*?)\s*(\d+)/);
+            if (unitMatch) {
+                unitId = parseInt(unitMatch[1], 10).toString();
+            }
+
+            // 3. If no กก. in name, check for HQ
+            if (!unitId && (val.includes('บก.') || val.includes('ส่วนกลาง') || val.includes('Command'))) {
+                unitId = '0';
             }
 
             // Construct Key
-            if (unitId && stationId) {
+            let key = null;
+            if (unitId && stationId && unitId !== '0') {
                 key = `${unitId}-${stationId}`;
-            } else if (unitId) {
+            } else if (unitId && unitId !== '0') {
                 key = unitId;
-            } else if (val.includes('บก.') || val.includes('ส่วนกลาง') || val.includes('Command')) {
-                key = '0';
             }
 
-
-            if (key && key !== '0') {
+            if (key) {
                 map[key] = {
                     commander: commanderName,
                     unitName: stationStr,
@@ -77,6 +66,8 @@ export const useStationData = (rawData) => {
                 };
             }
         });
+
+        console.log('[useStationData] Built stationMap keys:', Object.keys(map));
 
         return map;
     }, [rawData]);
@@ -90,12 +81,18 @@ export const useStationData = (rawData) => {
             const sId = parseInt(stationId, 10).toString();
             const key = `${uId}-${sId}`;
             if (stationMap[key]) return stationMap[key];
+
+            // 2. Search all entries for matching BOTH unitId AND stationId
+            for (const k of Object.keys(stationMap)) {
+                const entry = stationMap[k];
+                if (entry.unitId === uId && entry.stationId === sId) return entry;
+            }
         }
 
-        // 2. Try Unit
+        // 3. Try Unit
         if (stationMap[uId]) return stationMap[uId];
 
-        // 3. Fallback to constant
+        // 4. Fallback to constant
         return UNIT_COMMANDERS[uId] || UNIT_COMMANDERS['0'];
     };
 

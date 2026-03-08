@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
-import { toPng } from 'html-to-image';
+import { toPng, toJpeg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
-import { Truck, Siren, Award, FileText, Zap, ChevronDown, BarChart as ChartIcon, Calendar, FileDown, Loader2 } from 'lucide-react';
+import { Truck, Siren, Award, FileText, Zap, ChevronDown, BarChart as ChartIcon, Calendar, FileDown, Loader2, Image as ImageIcon } from 'lucide-react';
 
-import { fetchDashboardData } from '../../services/GoogleSheetService';
+import { fetchDashboardData, fetchStationInfo } from '../../services/GoogleSheetService';
 import { UNIT_HIERARCHY } from '../../utils/helpers';
 
 // Import Tab Components
@@ -14,42 +14,79 @@ import TrafficComparisonTab from './tabs/TrafficComparisonTab';
 import TruckInspectionTab from './tabs/TruckInspectionTab';
 import PressReleaseTab from './tabs/PressReleaseTab';
 
-const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
+const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate }) => {
     // --- State ---
     const [sheetCounts, setSheetCounts] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [viewMode, setViewMode] = useState('default'); // 'default' | 'print_all'
-    const [dateRange, setDateRange] = useState({ start: '', end: '' });
     // Initialize from props if available, else default to now
-    const [selectedMonth, setSelectedMonth] = useState(
-        (filters && filters.selectedMonth !== undefined) ? filters.selectedMonth : new Date().getMonth()
-    );
+    const selectedMonth = (filters && filters.selectedMonth !== undefined) ? filters.selectedMonth : new Date().getMonth();
+    const selectedYear = (filters && filters.selectedYear !== undefined) ? filters.selectedYear : new Date().getFullYear();
+
+    // --- Thai month names (full) for header & export ---
+    const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+    const yearBE = Number(selectedYear) + 543;
+    const exportMonthName = (selectedMonth !== undefined && selectedMonth !== null && selectedMonth !== '') ? months[selectedMonth] : months[new Date().getMonth()];
 
     // Get initial values from URL if present
     const getInitialParams = () => {
         const params = new URLSearchParams(window.location.search);
         const tabParam = params.get('tab');
+        const kkParam = params.get('kk') || '';
+        const stlParam = params.get('stl') || '';
         return {
             tab: (tabParam && tabParam !== 'result') ? tabParam : 'overview',
-            kk: params.get('kk') || '',
-            stl: params.get('stl') || ''
+            kk: kkParam,
+            stl: stlParam
         };
     };
 
     const initialParams = getInitialParams();
     const [activeTab, setActiveTab] = useState(initialParams.tab);
-    const [selectedUnit, setSelectedUnit] = useState(initialParams.kk); // Division (KK)
-    const [selectedStation, setSelectedStation] = useState(initialParams.stl); // Station (S.TL)
 
     const [isPrintRequested, setIsPrintRequested] = useState(false); // Flag for print request
     const [isPdfExporting, setIsPdfExporting] = useState(false);
+    const [isJpgExporting, setIsJpgExporting] = useState(false);
+
+    // --- Local Filter State (กก. / ส.ทล.) ---
+    const [localUnitKK, setLocalUnitKK] = useState(initialParams.kk);
+    const [localUnitSTL, setLocalUnitSTL] = useState(initialParams.stl);
+    const maxStations = localUnitKK ? (UNIT_HIERARCHY[localUnitKK] || 6) : 0;
+
+    // --- Station/Commander Data ---
+    const [stationData, setStationData] = useState([]);
+
+    useEffect(() => {
+        fetchStationInfo().then(data => setStationData(data || [])).catch(err => console.error('Failed to fetch station info:', err));
+    }, []);
+
+    // Look up commander info based on selected kk/stl
+    const getCommanderInfo = () => {
+        if (!stationData.length) return null;
+        if (localUnitSTL && localUnitKK) {
+            // Find specific station: S{stl}_KK{kk}
+            const unitId = `S${localUnitSTL}_KK${localUnitKK}`;
+            return stationData.find(row => row.Unit_ID === unitId) || null;
+        }
+        if (localUnitKK) {
+            // Find division: KK{kk}
+            const unitId = `KK${localUnitKK}`;
+            return stationData.find(row => row.Unit_ID === unitId) || null;
+        }
+        // Default HQ
+        return stationData.find(row => row.Unit_ID === 'TOTAL_HQ') || null;
+    };
+    const commanderInfo = getCommanderInfo();
 
     // --- Effect: Sync State to URL ---
     const updateUrlParams = (tab, kk, stl) => {
         const params = new URLSearchParams(window.location.search);
         if (tab) params.set('tab', tab); else params.delete('tab');
-        if (kk) params.set('kk', kk); else params.delete('kk');
-        if (stl) params.set('stl', stl); else params.delete('stl');
+        // Sync kk/stl from arguments or current state
+        const kkVal = kk !== undefined ? kk : localUnitKK;
+        const stlVal = stl !== undefined ? stl : localUnitSTL;
+        if (kkVal) params.set('kk', kkVal); else params.delete('kk');
+        if (stlVal) params.set('stl', stlVal); else params.delete('stl');
 
         const newUrl = `${window.location.pathname}?${params.toString()}`;
         window.history.pushState({ path: newUrl }, '', newUrl);
@@ -58,32 +95,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
     const handleTabChange = (tab) => {
         setActiveTab(tab);
         setViewMode('default');
-        updateUrlParams(tab, selectedUnit, selectedStation);
-    };
-
-    const handleUnitSelect = (unitId) => {
-        const newUnit = selectedUnit === unitId ? '' : unitId;
-        setSelectedUnit(newUnit);
-        setSelectedStation(''); // Reset station when unit changes
-
-        // Sync with global App state if setFilters is provided
-        if (setFilters) {
-            setFilters(prev => ({ ...prev, unit_kk: newUnit ? [newUnit] : [], unit_s_tl: '' }));
-        }
-
-        updateUrlParams(activeTab, newUnit, '');
-    };
-
-    const handleStationSelect = (stationId) => {
-        const newStation = selectedStation === stationId ? '' : stationId;
-        setSelectedStation(newStation);
-
-        // Sync with global App state
-        if (setFilters) {
-            setFilters(prev => ({ ...prev, unit_s_tl: newStation }));
-        }
-
-        updateUrlParams(activeTab, selectedUnit, newStation);
+        updateUrlParams(tab);
     };
 
     // --- Effect: Handle Popstate (Browser Back/Forward) ---
@@ -91,38 +103,30 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
         const handlePopState = () => {
             const params = new URLSearchParams(window.location.search);
             const tab = params.get('tab') || 'overview';
-            const kk = params.get('kk') || '';
-            const stl = params.get('stl') || '';
-
             setActiveTab(tab);
-            setSelectedUnit(kk);
-            setSelectedStation(stl);
-
-            if (setFilters) {
-                setFilters(prev => ({
-                    ...prev,
-                    unit_kk: kk ? [kk] : [],
-                    unit_s_tl: stl
-                }));
-            }
+            setLocalUnitKK(params.get('kk') || '');
+            setLocalUnitSTL(params.get('stl') || '');
         };
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
-    }, [setFilters]);
+    }, []);
+
+    // --- Effect: Propagate sheetCounts to parent for copy report ---
+    useEffect(() => {
+        if (onStatsUpdate && sheetCounts) {
+            onStatsUpdate(sheetCounts);
+        }
+    }, [sheetCounts, onStatsUpdate]);
 
     // --- Effect: Fetch Google Sheet Data ---
     useEffect(() => {
         const loadData = async () => {
             setIsLoading(true);
             try {
-                // Combine App filters with local filters
-                const queryFilters = {
-                    ...filters, // contains unit_kk, etc. (if passed from App)
-                    dateRange,
-                    selectedMonth,
-                    unit_kk: selectedUnit || filters.unit_kk, // Local overrides App if present
-                    unit_s_tl: selectedStation
-                };
+                // Merge global filters with local unit filters
+                const queryFilters = { ...filters };
+                if (localUnitKK) queryFilters.unit_kk = localUnitKK;
+                if (localUnitSTL) queryFilters.unit_s_tl = localUnitSTL;
                 const data = await fetchDashboardData(queryFilters);
                 // Fix: GoogleSheetService now returns { counts, allCases }, but this view expects just counts
                 if (data && data.counts) {
@@ -143,7 +147,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [filters, dateRange, selectedMonth, selectedUnit, selectedStation]);
+    }, [filters, localUnitKK, localUnitSTL]);
 
     // --- Effect: Handle Export Request ---
     useEffect(() => {
@@ -174,7 +178,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
                             });
 
                             const link = document.createElement('a');
-                            link.download = `Dashboard_${section.name}_${new Date().toISOString().split('T')[0]}.png`;
+                            link.download = `ผลการปฏิบัติ บก.ทล. ประจำเดือน${exportMonthName} ${yearBE} - ${section.name}.png`;
                             link.href = canvas.toDataURL('image/png');
                             link.click();
 
@@ -223,19 +227,8 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
                 { id: 'print-press' }
             ];
 
-            // Build English date string
-            const engMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const now = new Date();
-            let pdfDateText = '';
-            if (dateRange.start && dateRange.end) {
-                const s = new Date(dateRange.start);
-                const e = new Date(dateRange.end);
-                pdfDateText = `${s.getDate()} ${engMonths[s.getMonth()]} ${s.getFullYear() + 543} - ${e.getDate()} ${engMonths[e.getMonth()]} ${e.getFullYear() + 543}`;
-            } else if (selectedMonth !== '') {
-                pdfDateText = `${engMonths[selectedMonth]} ${now.getFullYear() + 543}`;
-            } else {
-                pdfDateText = `${engMonths[now.getMonth()]} ${now.getFullYear() + 543}`;
-            }
+            // Build date string for PDF
+            const pdfDateText = `${exportMonthName} ${yearBE}`;
 
             // Capture Header Image
             let headerImgData = null;
@@ -352,7 +345,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
             }
 
             // Save
-            const fileName = `Dashboard_Report_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.pdf`;
+            const fileName = `ผลการปฏิบัติ บก.ทล. ประจำเดือน${exportMonthName} ${yearBE}.pdf`;
             pdf.save(fileName);
 
         } catch (error) {
@@ -363,6 +356,121 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
             setViewMode(prevViewMode);
             setActiveTab(prevTab);
             setIsPdfExporting(false);
+        }
+    };
+
+    // --- Portrait JPG Export Handler ---
+    const handleExportOverviewJPG = async () => {
+        if (isJpgExporting) return;
+        setIsJpgExporting(true);
+
+        // Ensure we're on overview tab
+        const prevTab = activeTab;
+        if (activeTab !== 'overview') {
+            setActiveTab('overview');
+            setViewMode('default');
+        }
+
+        // Wait for DOM render
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        try {
+            const headerEl = document.getElementById('print-header');
+            const contentEl = document.getElementById('overview-content');
+            const container = document.getElementById('dashboard-container');
+
+            if (!contentEl) throw new Error('Overview content not found in DOM');
+
+            // Temporarily remove overflow-hidden to prevent clipping
+            if (container) container.style.overflow = 'visible';
+
+            const filter = (node) => {
+                const exclusionClasses = ['exclude-from-export', 'animate-pulse'];
+                return !(node.classList && exclusionClasses.some(cls => node.classList.contains(cls)));
+            };
+
+            const captureOpts = {
+                quality: 1.0,
+                pixelRatio: 2,
+                backgroundColor: '#ffffff',
+                filter: filter,
+                cacheBust: true,
+            };
+
+            // Capture header and content separately
+            let headerDataUrl = null;
+            if (headerEl) {
+                headerDataUrl = await toPng(headerEl, captureOpts);
+            }
+            const contentDataUrl = await toPng(contentEl, captureOpts);
+
+            // Restore overflow
+            if (container) container.style.overflow = '';
+
+            // Load images
+            const loadImg = (src) => new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+
+            let headerImg = null;
+            if (headerDataUrl) headerImg = await loadImg(headerDataUrl);
+            const contentImg = await loadImg(contentDataUrl);
+
+            // Use the wider of header/content as the canvas width
+            const canvasWidth = Math.max(
+                headerImg ? headerImg.naturalWidth : 0,
+                contentImg.naturalWidth
+            );
+
+            // Scale each image to fill canvasWidth while maintaining aspect ratio
+            const headerH = headerImg ? Math.round((headerImg.naturalHeight / headerImg.naturalWidth) * canvasWidth) : 0;
+            const contentH = Math.round((contentImg.naturalHeight / contentImg.naturalWidth) * canvasWidth);
+            const footerH = 32; // footer bar
+
+            const canvas = document.createElement('canvas');
+            canvas.width = canvasWidth;
+            canvas.height = headerH + contentH + footerH;
+            const ctx = canvas.getContext('2d');
+
+            // White background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw header
+            let y = 0;
+            if (headerImg) {
+                ctx.drawImage(headerImg, 0, y, canvasWidth, headerH);
+                y += headerH;
+            }
+
+            // Draw content
+            ctx.drawImage(contentImg, 0, y, canvasWidth, contentH);
+            y += contentH;
+
+            // Draw footer bar
+            ctx.fillStyle = '#004aad';
+            ctx.fillRect(0, y, canvasWidth, footerH);
+
+            // Export as JPEG
+            const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+            // Download
+            const now = new Date();
+            const fileName = `ผลการปฏิบัติ บก.ทล. ประจำเดือน${exportMonthName} ${yearBE}.jpg`;
+            const link = document.createElement('a');
+            link.download = fileName;
+            link.href = jpegDataUrl;
+            link.click();
+
+        } catch (error) {
+            console.error('Portrait JPG Export failed:', error);
+            alert('Export JPG failed. See console for details.');
+        } finally {
+            setActiveTab(prevTab);
+            setIsJpgExporting(false);
         }
     };
 
@@ -479,28 +587,12 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
     };
 
     // --- Helper for Header Date ---
-    const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-
-    const formatThaiDate = (dateString) => {
-        if (!dateString) return "";
-        const date = new Date(dateString);
-        return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543} `;
-    };
-
     let headerDate = "";
-    if (dateRange.start && dateRange.end) {
-        headerDate = `${formatThaiDate(dateRange.start)} - ${formatThaiDate(dateRange.end)} `;
-    } else if (selectedMonth !== '') {
-        headerDate = `${months[selectedMonth]} ${new Date().getFullYear() + 543} `;
-    } else {
-        const yearStr = (new Date().getFullYear() + 543).toString();
-        const currentMonth = months[new Date().getMonth()];
-        headerDate = `${currentMonth} ${yearStr} `;
-    }
+    headerDate = `${exportMonthName} ${yearBE} `;
 
     return (
         <div className="h-full w-full overflow-y-auto bg-slate-100 font-sans p-4 sm:p-6 lg:p-10 print:p-0 print:bg-white">
-            <div className={`mx-auto min-h-[85vh] flex flex-col gap-6 bg-white shadow-2xl rounded-2xl md:rounded-[3rem] border border-slate-200 ${viewMode === 'print_all' ? 'max-w-[1920px] print-mode overflow-visible' : 'max-w-[1800px] overflow-hidden'} print:max-w-none print:w-full print:min-h-0 print:overflow-visible`}>
+            <div id="dashboard-container" className={`mx-auto min-h-[85vh] flex flex-col gap-6 bg-white shadow-2xl rounded-2xl md:rounded-[3rem] border border-slate-200 ${viewMode === 'print_all' ? 'max-w-[1920px] print-mode overflow-visible' : 'max-w-[1800px] overflow-hidden'} print:max-w-none print:w-full print:min-h-0 print:overflow-visible`}>
 
                 {/* --- Header Section --- */}
                 <div id="print-header" className="flex flex-col md:flex-row h-auto md:h-32 shadow-md relative overflow-hidden bg-white z-20">
@@ -521,85 +613,23 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
                     <div className="bg-[#0047ba] flex-1 flex flex-col md:flex-row items-center justify-center md:justify-end md:pr-8 lg:pr-16 py-4 md:py-6 px-4 md:pl-16 relative z-10 text-center md:text-right border-t md:border-t-0 border-white/10">
                         <div className="flex flex-col items-center md:items-end w-full">
                             <h1 className="text-xl md:text-xl lg:text-2xl xl:text-4xl font-bold text-white flex flex-col md:flex-row items-center md:justify-end gap-2">
-                                <span>ผลการปฏิบัติภาพรวม</span>
+                                <span>ผลการปฏิบัติประจำเดือน</span>
                                 <span className="text-[#fbbf24] font-extrabold bg-transparent text-xl md:text-xl lg:text-2xl xl:text-4xl shadow-none p-0 inline-block">{headerDate}</span>
                             </h1>
+                            {commanderInfo && (
+                                <p className="text-white/80 text-sm md:text-base lg:text-lg mt-1">
+                                    {commanderInfo.Rank}{commanderInfo.Full_Name} {commanderInfo.Position}
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>
 
-                {/* --- Filter Section (New Tab Design) --- */}
-                <div className="flex flex-col border-b border-slate-200 bg-slate-50">
-                    {/* Level 1: Divisions (KK) */}
-                    <div className="flex items-center gap-2 overflow-x-auto p-4 no-scrollbar">
-                        <button
-                            onClick={() => handleUnitSelect('')}
-                            className={`flex-shrink-0 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 shadow-sm ${selectedUnit === ''
-                                ? 'bg-blue-600 text-white shadow-blue-500/30'
-                                : 'bg-white text-slate-600 hover:bg-white hover:text-blue-600 border border-slate-200'
-                                }`}
-                        >
-                            ทุกกองกำกับการ
-                        </button>
-                        {[...Array(8)].map((_, i) => {
-                            const unitId = String(i + 1);
-                            const isActive = selectedUnit === unitId;
-                            return (
-                                <button
-                                    key={unitId}
-                                    onClick={() => handleUnitSelect(unitId)}
-                                    className={`flex-shrink-0 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 shadow-sm whitespace-nowrap ${isActive
-                                        ? 'bg-blue-600 text-white shadow-blue-500/30'
-                                        : 'bg-white text-slate-600 hover:bg-white hover:text-blue-600 border border-slate-200'
-                                        }`}
-                                >
-                                    กก.{unitId}
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    {/* Level 2: Stations (S.TL) - Only show if unit selected */}
-                    <div className={`overflow-hidden transition-all duration-300 ease-in-out bg-blue-50/50 ${selectedUnit ? 'max-h-20 opacity-100 border-t border-blue-100' : 'max-h-0 opacity-0'}`}>
-                        <div className="flex items-center gap-2 overflow-x-auto px-4 py-3 no-scrollbar">
-                            <div className="flex-shrink-0 text-sm font-bold text-blue-800 mr-2 flex items-center">
-                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
-                                เลือกสถานี:
-                            </div>
-                            <button
-                                onClick={() => handleStationSelect('')}
-                                className={`flex-shrink-0 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border ${selectedStation === ''
-                                    ? 'bg-blue-100 text-blue-700 border-blue-300'
-                                    : 'bg-white text-slate-500 hover:bg-blue-50 border-slate-200'
-                                    }`}
-                            >
-                                ทั้งหมดใน กก.{selectedUnit}
-                            </button>
-                            {selectedUnit && UNIT_HIERARCHY[selectedUnit] && [...Array(UNIT_HIERARCHY[selectedUnit])].map((_, i) => {
-                                const stationId = String(i + 1);
-                                const isActive = selectedStation === stationId;
-                                return (
-                                    <button
-                                        key={stationId}
-                                        onClick={() => handleStationSelect(stationId)}
-                                        className={`flex-shrink-0 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border ${isActive
-                                            ? 'bg-blue-500 text-white border-blue-600 shadow-sm'
-                                            : 'bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600 border-slate-200'
-                                            }`}
-                                    >
-                                        ส.ทล.{stationId}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
-
-                {/* --- Navigation & Calendar Filters --- */}
+                {/* --- Navigation Filters --- */}
                 <div className="px-4 md:px-10 py-4 flex flex-col xl:flex-row items-center justify-between gap-4 md:gap-6 border-b border-slate-100 print:hidden">
-                    {/* Tabs - Mobile Dropdown */}
-                    <div className="block xl:hidden w-full">
-                        <div className="relative">
+                    {/* Tabs - Mobile Dropdown + Export Icons */}
+                    <div className="flex xl:hidden w-full gap-2 items-center">
+                        <div className="relative flex-1">
                             <select
                                 value={activeTab}
                                 onChange={(e) => handleTabChange(e.target.value)}
@@ -615,6 +645,30 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
                                 <ChevronDown size={20} />
                             </div>
                         </div>
+                        {/* Mobile Export JPG Icon */}
+                        <button
+                            onClick={handleExportOverviewJPG}
+                            disabled={isJpgExporting}
+                            title="Export ภาพรวม"
+                            className={`flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-200 shadow-sm ${isJpgExporting
+                                ? 'bg-gray-300 text-gray-500 cursor-wait'
+                                : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-500/30'
+                                }`}
+                        >
+                            {isJpgExporting ? <Loader2 size={20} className="animate-spin" /> : <ImageIcon size={20} />}
+                        </button>
+                        {/* Mobile Export PDF Icon */}
+                        <button
+                            onClick={handleExportPDF}
+                            disabled={isPdfExporting}
+                            title="Export PDF"
+                            className={`flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-200 shadow-sm ${isPdfExporting
+                                ? 'bg-gray-300 text-gray-500 cursor-wait'
+                                : 'bg-red-600 text-white hover:bg-red-700 shadow-red-500/30'
+                                }`}
+                        >
+                            {isPdfExporting ? <Loader2 size={20} className="animate-spin" /> : <FileDown size={20} />}
+                        </button>
                     </div>
 
                     {/* Tabs - Desktop Buttons */}
@@ -650,6 +704,22 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
                             icon={<Zap size={18} />}
                         />
 
+                        {/* Export Portrait JPG Button */}
+                        <button
+                            onClick={handleExportOverviewJPG}
+                            disabled={isJpgExporting}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 shadow-sm whitespace-nowrap ${isJpgExporting
+                                ? 'bg-gray-300 text-gray-500 cursor-wait'
+                                : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-500/30'
+                                }`}
+                        >
+                            {isJpgExporting ? (
+                                <><Loader2 size={18} className="animate-spin" /> กำลัง Export...</>
+                            ) : (
+                                <><ImageIcon size={18} /> Export ภาพรวม</>
+                            )}
+                        </button>
+
                         {/* Export PDF Button */}
                         <button
                             onClick={handleExportPDF}
@@ -670,58 +740,32 @@ const ResultDashboardView = ({ filteredData, filters, setFilters }) => {
 
                 </div>
 
-                {/* Calendar Filter */}
-                <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm">
-                    <div className="flex items-center gap-2 text-slate-500 border-none sm:border-r sm:border-slate-200 pr-0 sm:pr-4 w-full sm:w-auto justify-between sm:justify-start">
-                        <span className="text-sm font-medium">เดือน:</span>
-                        <select
-                            className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer flex-1 sm:flex-none"
-                            value={selectedMonth}
-                            onChange={(e) => {
-                                const newMonth = parseInt(e.target.value);
-                                setSelectedMonth(newMonth);
-                                setDateRange({ start: '', end: '' }); // Clear manual range if month is picked
-                                if (setFilters) setFilters(prev => ({ ...prev, selectedMonth: newMonth, rangeStart: null, rangeEnd: null }));
-                            }}
-                        >
-                            {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
-                        </select>
-                    </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
-                        <div className="flex items-center gap-2 text-slate-500">
-                            <Calendar size={20} />
-                            <span className="text-sm font-medium hidden sm:inline">ช่วงเวลา:</span>
-                        </div>
-                        <div className="flex items-center gap-2 flex-1 sm:flex-none">
-                            <input
-                                type="date"
-                                className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
-                                value={dateRange.start}
-                                onChange={(e) => {
-                                    const newStart = e.target.value;
-                                    setDateRange({ ...dateRange, start: newStart });
-                                    setSelectedMonth(''); // Clear month selection if manual range is used
-                                    if (setFilters) setFilters(prev => ({ ...prev, selectedMonth: '', rangeStart: newStart ? new Date(newStart) : null, rangeEnd: dateRange.end ? new Date(dateRange.end) : null }));
-                                }}
-                            />
-                            <span className="text-slate-400">-</span>
-                            <input
-                                type="date"
-                                className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
-                                value={dateRange.end}
-                                onChange={(e) => {
-                                    const newEnd = e.target.value;
-                                    setDateRange({ ...dateRange, end: newEnd });
-                                    setSelectedMonth(''); // Clear month selection if manual range is used
-                                    if (setFilters) setFilters(prev => ({ ...prev, selectedMonth: '', rangeStart: dateRange.start ? new Date(dateRange.start) : null, rangeEnd: newEnd ? new Date(newEnd) : null }));
-                                }}
-                            />
-                        </div>
-                    </div>
+                {/* --- Local Unit Filters (กก. / ส.ทล.) --- */}
+                <div className="px-4 md:px-10 py-3 flex flex-wrap items-center gap-3 border-b border-slate-100 print:hidden bg-slate-50/50">
+                    <span className="text-sm font-semibold text-slate-500">กรองหน่วย:</span>
+                    <select
+                        value={localUnitKK}
+                        onChange={(e) => { const kk = e.target.value; setLocalUnitKK(kk); setLocalUnitSTL(''); updateUrlParams(activeTab, kk, ''); }}
+                        className="pl-3 pr-8 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer min-w-[140px]"
+                    >
+                        <option value="">🏢 ทุก กก.</option>
+                        {Object.keys(UNIT_HIERARCHY).map(kk => <option key={kk} value={kk}>กก.{kk}</option>)}
+                    </select>
+                    <select
+                        value={localUnitSTL}
+                        onChange={(e) => { const stl = e.target.value; setLocalUnitSTL(stl); updateUrlParams(activeTab, localUnitKK, stl); }}
+                        disabled={!localUnitKK}
+                        className={`pl-3 pr-8 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer min-w-[160px] ${!localUnitKK ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        <option value="">🏛️ ทุก ส.ทล.</option>
+                        {localUnitKK && Array.from({ length: maxStations }, (_, i) => i + 1).map(s => (
+                            <option key={s} value={s}>ส.ทล.{s}</option>
+                        ))}
+                    </select>
                 </div>
 
                 {/* --- Content Area --- */}
-                <div className="flex-1 bg-white min-h-[600px]">
+                <div id="overview-content" className="flex-1 bg-white min-h-[600px]">
                     {renderContent()}
                 </div>
 

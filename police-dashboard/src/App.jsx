@@ -60,7 +60,7 @@ export default function App() {
     dayOfWeekData,
     trendData,
     nextDayForecast
-  } = useAnalytics(data, filters); // Use filtered or raw data depending on requirement. Passing 'data' and applying filters inside hook is better for consistency.
+  } = useAnalytics(data, filters, rawData); // Use filtered or raw data depending on requirement. Passing 'data' and applying filters inside hook is better for consistency.
 
   // --- UI State ---
   const getInitialActiveTab = () => {
@@ -81,6 +81,7 @@ export default function App() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [resultStats, setResultStats] = useState(null); // Stats from ResultDashboardView's local filters
 
   // --- Dark Mode State ---
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -167,8 +168,9 @@ export default function App() {
 
   const handleCopyReport = () => {
     const today = new Date();
-    const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-    const thDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear() + 543} `;
+    const monthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    const monthsFull = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+    const thDate = `${today.getDate()} ${monthsShort[today.getMonth()]} ${today.getFullYear() + 543} `;
 
     // --- คำนวณวันที่สำหรับแสดงใน Header ---
     let headerDateText = "";
@@ -176,10 +178,15 @@ export default function App() {
     // ฟังก์ชันช่วยแปลงวันที่
     const formatThDate = (date) => {
       if (!date) return '-';
-      return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543} `;
+      return `${date.getDate()} ${monthsShort[date.getMonth()]} ${date.getFullYear() + 543} `;
     };
 
-    if (filters.period === 'today') {
+    // Prefer full month name format when a month is selected
+    if (filters.selectedMonth !== undefined && filters.selectedMonth !== null && filters.selectedMonth !== '') {
+      const selMonth = parseInt(filters.selectedMonth);
+      const yearBE = (filters.selectedYear ? parseInt(filters.selectedYear) : new Date().getFullYear()) + 543;
+      headerDateText = `ประจำเดือน ${monthsFull[selMonth]} พ.ศ.${yearBE} `;
+    } else if (filters.period === 'today') {
       headerDateText = `ประจำวันที่ ${formatThDate(new Date())} `;
     } else if (filters.period === 'yesterday') {
       const yest = new Date();
@@ -187,16 +194,17 @@ export default function App() {
       headerDateText = `ประจำวันที่ ${formatThDate(yest)} `;
     } else if (filters.rangeStart && filters.rangeEnd) {
       headerDateText = `ประจำห้วงวันที่ ${formatThDate(filters.rangeStart)} ถึง ${formatThDate(filters.rangeEnd)} `;
-    } else if (filters.selectedMonth !== undefined && filters.selectedMonth !== null && filters.selectedMonth !== '') {
-      const selMonth = parseInt(filters.selectedMonth);
-      const yearBE = new Date().getFullYear() + 543;
-      headerDateText = `ประจำเดือน ${months[selMonth]} ${yearBE} `;
     } else {
       headerDateText = `ข้อมูลทั้งหมด`;
     }
 
     // --- Use Detailed Stats if available ---
-    const s = detailedStats || {
+    // When on result tab with local filters (kk/stl in URL), use resultStats from ResultDashboardView
+    const urlParamsForStats = new URLSearchParams(window.location.search);
+    const hasLocalResultFilter = urlParamsForStats.get('kk') || '';
+    const useResultStats = hasLocalResultFilter && resultStats;
+
+    const s = (useResultStats ? resultStats : detailedStats) || {
       trafficTotal: 0, trafficNotKeepLeft: 0, trafficNotCovered: 0, trafficModify: 0,
       trafficNoPart: 0, trafficSign: 0, trafficLight: 0, trafficSpeed: 0,
       trafficTax: 0, trafficNoPlate: 0, trafficGeneral: 0, criminalTotal: 0,
@@ -212,16 +220,21 @@ export default function App() {
     };
 
     // --- Dynamic Header (Unit/Commander) ---
-    const unitId = (filters.unit_kk && filters.unit_kk.length > 0) ? filters.unit_kk[0] : '0';
-    // Assuming single unit selection for now, or default to 0 if multiple or none
-    // If multiple units selected (e.g. 1 and 2), we might want to stay at '0' (HQ) or pick first.
-    // Let's assume filters.unit_kk is array of strings. 
-    // If it is just a string in state, check usage. 
-    // useDashboardLogic: filters.unit_kk is initialized as ''.
-    // In UnitBarChart onBarClick: setFilters(prev => ({ ...prev, unit_kk: entry.name.replace('กก.', '') })) -> string.
+    // When on the result tab, read kk/stl from URL params (synced by ResultDashboardView local filters)
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlKK = urlParams.get('kk') || '';
+    const urlSTL = urlParams.get('stl') || '';
 
-    const currentUnitId = Array.isArray(filters.unit_kk) ? (filters.unit_kk[0] || '0') : (filters.unit_kk || '0');
-    const currentStationId = filters.unit_s_tl || '';
+    // Determine which unit to use: prefer URL params (result tab local filters), fallback to global filters
+    let currentUnitId;
+    let currentStationId;
+    if (urlKK) {
+        currentUnitId = urlKK;
+        currentStationId = urlSTL;
+    } else {
+        currentUnitId = Array.isArray(filters.unit_kk) ? (filters.unit_kk[0] || '0') : (filters.unit_kk || '0');
+        currentStationId = filters.unit_s_tl || '';
+    }
     const { commander, unitName } = getCommanderInfo(currentUnitId, currentStationId);
 
 
@@ -594,7 +607,7 @@ export default function App() {
           )}
 
           {activeTab === 'result' && (
-            <ResultDashboardView filteredData={filteredData} filters={filters} setFilters={setFilters} />
+            <ResultDashboardView filteredData={filteredData} filters={filters} setFilters={setFilters} onStatsUpdate={setResultStats} />
           )}
 
 

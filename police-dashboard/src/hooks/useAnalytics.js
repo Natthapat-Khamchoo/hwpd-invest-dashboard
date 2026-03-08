@@ -1,7 +1,40 @@
 import { useMemo } from 'react';
 
-export const useAnalytics = (data, filters) => {
+export const useAnalytics = (data, filters, rawData = null) => {
     return useMemo(() => {
+        // Helper: Parse date from string
+        const parseDate = (dateStr) => {
+            if (!dateStr) return null;
+            const ddmmyyyy = dateStr.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+            if (ddmmyyyy) return new Date(ddmmyyyy[3], ddmmyyyy[2] - 1, ddmmyyyy[1]);
+            const yyyymmdd = dateStr.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
+            if (yyyymmdd) return new Date(yyyymmdd[1], yyyymmdd[2] - 1, yyyymmdd[3]);
+            const d = new Date(dateStr);
+            return !isNaN(d.getTime()) ? d : null;
+        };
+
+        // Helper: Check date filter for a given date object
+        const matchDateFilter = (dateObj) => {
+            if (!dateObj) return false;
+            const itemDate = new Date(dateObj);
+            itemDate.setHours(0, 0, 0, 0);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (filters.selectedMonth !== undefined && filters.selectedMonth !== null && filters.selectedMonth !== '') {
+                return itemDate.getMonth() === parseInt(filters.selectedMonth) && itemDate.getFullYear() === today.getFullYear();
+            }
+            if (filters.period === 'all' || !filters.period) return true;
+            if (filters.period === 'today') return itemDate.getTime() === today.getTime();
+            if (filters.period === 'yesterday') {
+                const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+                return itemDate.getTime() === yesterday.getTime();
+            }
+            if (filters.period === 'this_month') return itemDate.getMonth() === today.getMonth() && itemDate.getFullYear() === today.getFullYear();
+            if (filters.period === 'custom' && filters.rangeStart && filters.rangeEnd) return dateObj >= filters.rangeStart && dateObj <= filters.rangeEnd;
+            return true;
+        };
+
         // 0. Filter Data based on global filters (same logic as dashboard)
         const filteredData = data.filter(item => {
             // Basic Filters
@@ -14,36 +47,7 @@ export const useAnalytics = (data, filters) => {
             const matchesUnitSTL = !filters.unit_s_tl || String(item.unit_s_tl) === String(filters.unit_s_tl);
 
             // Date Filter
-            let matchesDate = true;
-            if (filters.period !== 'all') {
-                if (!item.date_obj) {
-                    matchesDate = false;
-                } else {
-                    const itemDate = new Date(item.date_obj); // Clone to avoid mutation
-                    itemDate.setHours(0, 0, 0, 0);
-
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-
-                    if (filters.period === 'today') {
-                        matchesDate = itemDate.getTime() === today.getTime();
-                    } else if (filters.period === 'yesterday') {
-                        const yesterday = new Date(today);
-                        yesterday.setDate(yesterday.getDate() - 1);
-                        matchesDate = itemDate.getTime() === yesterday.getTime();
-                    } else if (filters.period === 'this_month') {
-                        matchesDate = itemDate.getMonth() === today.getMonth() && itemDate.getFullYear() === today.getFullYear();
-                    } else if (filters.period === 'custom' && filters.rangeStart && filters.rangeEnd) {
-                        // Range check needs original time or normalized time? 
-                        // useDashboardLogic uses raw timestamp comparison with rangeStart/End
-                        // Let's stick to simple day comparison for consistency with 'today' logic if strict mode
-                        // But for range, usually we compare timestamps. 
-                        // Re-using item.date_obj for range comparison (assuming rangeStart/End are set correctly)
-                        const d = item.date_obj;
-                        matchesDate = d >= filters.rangeStart && d <= filters.rangeEnd;
-                    }
-                }
-            }
+            const matchesDate = matchDateFilter(item.date_obj);
 
             return matchesTopic && matchesSearch && matchesUnitKK && matchesUnitSTL && matchesDate;
         });
@@ -95,11 +99,53 @@ export const useAnalytics = (data, filters) => {
         const warrantsBodyworn = filteredData.filter(item => item.topic === 'บุคคลตามหมายจับ' && item.warrant_source === 'bodyworn');
         const warrantsBodywornRankings = calculateTopUnits(warrantsBodyworn);
 
+        // Drug Seizure Ranking (from rawData.items)
+        let drugSeizureRankings = [];
+        if (rawData && rawData.items && Array.isArray(rawData.items)) {
+            const drugSeizureMap = {};
+            rawData.items.forEach(row => {
+                const itemName = (row.item_name || '').trim();
+                const amount = Number(row.amount) || 0;
+                if (!itemName || amount <= 0) return;
+
+                // Only count drug items
+                const isDrug = itemName.includes('ยาบ้า') || itemName.includes('ยาอี') ||
+                    itemName.includes('ไอซ์') || itemName.includes('เคตามีน') ||
+                    itemName.includes('โคเคน') || itemName.includes('ยาเสพติด') ||
+                    itemName.includes('กัญชา') || itemName.includes('เฮโรอีน');
+                if (!isDrug) return;
+
+                // Date filter
+                const rowDate = parseDate(row.date);
+                if (!matchDateFilter(rowDate)) return;
+
+                // Unit filter
+                const stationStr = row.station || row.subDiv || '';
+                const kkMatch = stationStr.match(/(?:กก\.?|กองกำกับการ)\s*(\d+)/);
+                const stlMatch = stationStr.match(/(?:ส\.?ทล\.?|สถานีตำรวจทางหลวง)\s*(\d+)/);
+                const unitKK = kkMatch ? kkMatch[1] : '';
+                const unitSTL = stlMatch ? stlMatch[1] : '';
+
+                if (filters.unit_kk && unitKK !== String(filters.unit_kk)) return;
+                if (filters.unit_s_tl && unitSTL !== String(filters.unit_s_tl)) return;
+
+                if (unitKK && unitSTL) {
+                    const unitName = `ส.ทล.${unitSTL} กก.${unitKK}`;
+                    drugSeizureMap[unitName] = (drugSeizureMap[unitName] || 0) + amount;
+                }
+            });
+            drugSeizureRankings = Object.entries(drugSeizureMap)
+                .map(([name, count]) => ({ name, count }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 5);
+        }
+
         const unitRankings = {
             overall: overallRankings,
             drugs: drugsRankings,
-            weapons: weaponsRankings, // Keeping it in data but won't display in view
-            warrants: warrantsRankings, // Total warrants
+            drugSeizure: drugSeizureRankings,
+            weapons: weaponsRankings,
+            warrants: warrantsRankings,
             warrantsBigData: warrantsBigDataRankings,
             warrantsBodyworn: warrantsBodywornRankings
         };
@@ -209,5 +255,5 @@ export const useAnalytics = (data, filters) => {
             nextDayForecast
         };
 
-    }, [data, filters]);
+    }, [data, filters, rawData]);
 };

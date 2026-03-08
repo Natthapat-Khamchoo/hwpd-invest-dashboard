@@ -84,7 +84,7 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false }) => {
     const PrintItem = ({ text, value }) => (
         <div className="grid grid-cols-2 items-center border-b border-dashed border-slate-300 py-2 last:border-0 gap-4">
             <span className="text-2xl text-slate-700 font-medium truncate">{text}</span>
-            <span className="text-3xl font-bold text-slate-900 text-right">{value}</span>
+            <span className="text-3xl font-bold text-slate-900 text-right">{typeof value === 'number' ? value.toLocaleString() : value}</span>
         </div>
     );
 
@@ -182,11 +182,11 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false }) => {
                                 <div className="grid grid-cols-2 gap-4 mt-2">
                                     <div className="bg-slate-100 p-2 rounded border border-slate-200 text-center">
                                         <div className="text-xl text-slate-600">จับเอง</div>
-                                        <div className="text-3xl font-bold text-red-600">{safeCounts.truckSelf}</div>
+                                        <div className="text-3xl font-bold text-red-600">{safeCounts.truckSelf.toLocaleString()}</div>
                                     </div>
                                     <div className="bg-slate-100 p-2 rounded border border-slate-200 text-center">
                                         <div className="text-xl text-slate-600">จับร่วม</div>
-                                        <div className="text-3xl font-bold text-red-600">{safeCounts.truckJoint}</div>
+                                        <div className="text-3xl font-bold text-red-600">{safeCounts.truckJoint.toLocaleString()}</div>
                                     </div>
                                 </div>
                             </div>
@@ -195,11 +195,11 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false }) => {
                                 <div className="grid grid-cols-2 gap-4 mt-2">
                                     <div className="bg-slate-100 p-2 rounded border border-slate-200 text-center">
                                         <div className="text-xl text-slate-600">เสด็จ</div>
-                                        <div className="text-3xl font-bold text-red-600">{safeCounts.convoyRoyal}</div>
+                                        <div className="text-3xl font-bold text-red-600">{safeCounts.convoyRoyal.toLocaleString()}</div>
                                     </div>
                                     <div className="bg-slate-100 p-2 rounded border border-slate-200 text-center">
                                         <div className="text-xl text-slate-600">ทั่วไป</div>
-                                        <div className="text-3xl font-bold text-red-600">{safeCounts.convoyGeneral}</div>
+                                        <div className="text-3xl font-bold text-red-600">{safeCounts.convoyGeneral.toLocaleString()}</div>
                                     </div>
                                 </div>
                             </div>
@@ -327,37 +327,17 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false }) => {
                         <div className="w-full flex justify-between mt-0 gap-2 px-1 pt-6 text-center">
                             <div className="bg-slate-200 rounded-xl px-4 py-2 flex flex-col items-center flex-1 shadow-sm border border-white">
                                 <span className="font-bold text-slate-700 text-lg xl:text-xl">ขบวนเสด็จ</span>
-                                <span className="text-[#dc2626] font-bold text-xl xl:text-2xl">{safeCounts.convoyRoyal}</span>
+                                <span className="text-[#dc2626] font-bold text-xl xl:text-2xl">{safeCounts.convoyRoyal.toLocaleString()}</span>
                             </div>
                             <div className="bg-slate-200 rounded-xl px-4 py-2 flex flex-col items-center flex-1 shadow-sm border border-white">
                                 <span className="font-bold text-slate-700 text-lg xl:text-xl">ขบวนทั่วไป</span>
-                                <span className="text-[#dc2626] font-bold text-xl xl:text-2xl">{safeCounts.convoyGeneral}</span>
+                                <span className="text-[#dc2626] font-bold text-xl xl:text-2xl">{safeCounts.convoyGeneral.toLocaleString()}</span>
                             </div>
                         </div>
                     </div>
                     <div className="hidden xl:block w-[2px] bg-slate-200 rounded-full h-auto"></div>
                     <div className="flex flex-col items-center flex-1 w-full transition-all duration-300">
-                        <NodeCard color="bg-[#fbbf24]" label="รถหนัก" value={safeCounts.truckTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="hover:scale-105" isInteractive onClick={() => setIsTruckExpanded(!isTruckExpanded)} />
-                        <div className={`w-full overflow-hidden transition-all duration-500 ease-in-out ${isTruckExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                            <div className="hidden xl:flex flex-col items-center w-full">
-                                <div className="h-6 w-1 bg-slate-300"></div>
-                                <div className="w-[85%] h-1 bg-slate-300 relative">
-                                    <div className="absolute left-0 top-0 h-6 w-1 bg-slate-300"></div>
-                                    <div className="absolute right-0 top-0 h-6 w-1 bg-slate-300"></div>
-                                </div>
-                            </div>
-                            <div className="w-full flex justify-between mt-0 gap-2 px-1 pt-6">
-                                <div className="bg-slate-200 rounded-xl px-4 py-2 flex flex-col items-center flex-1 shadow-sm border border-white">
-                                    <span className="font-bold text-slate-700 text-lg xl:text-xl">จับกุมเอง</span>
-                                    <span className="text-[#dc2626] font-bold text-xl xl:text-2xl">{safeCounts.truckSelf}</span>
-                                </div>
-                                <div className="bg-slate-200 rounded-xl px-4 py-2 flex flex-col items-center flex-1 shadow-sm border border-white">
-                                    <span className="font-bold text-slate-700 text-lg xl:text-xl">ร่วมจับกุม</span>
-                                    <span className="text-[#dc2626] font-bold text-xl xl:text-2xl">{safeCounts.truckJoint}</span>
-                                </div>
-                            </div>
-                        </div>
-                        {!isTruckExpanded && <div className="mt-2 text-slate-400 text-sm xl:text-base animate-pulse">กดเพื่อดูรายละเอียด</div>}
+                        <NodeCard color="bg-[#fbbf24]" label="รถหนัก" value={safeCounts.truckTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="hover:scale-105" />
                     </div>
                 </div>
             </div>

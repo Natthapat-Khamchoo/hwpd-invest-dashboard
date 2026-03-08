@@ -60,60 +60,75 @@ const SummaryDashboardView = ({ filteredData, filters, reportStats, getCommander
 
   // --- Calculate Stats ---
   const counts = {
-    trafficAct: 0, carAct: 0, transportAct: 0, highwayAct: 0, weight: 0,
+    trafficAct: 0, carAct: 0, transportAct: 0, highwayAct: 0, weight: reportStats ? reportStats.offenseWeight : 0,
     checkWeight: 0, checkSticker: 0,
-    warrantGeneral: 0, warrantBigData: 0, forgery: 0, drugs: 0, guns: 0, immigration: 0, others: 0,
-    accidents: 0, deaths: 0, injuries: 0, damages: 0
+    warrantGeneral: reportStats ? (reportStats.warrantGeneral + reportStats.warrantBodyworn) : 0, 
+    warrantBigData: reportStats ? reportStats.warrantBigData : 0, 
+    forgery: reportStats ? reportStats.offenseDocs : 0, 
+    drugs: reportStats ? reportStats.offenseDrugs : 0, 
+    guns: reportStats ? reportStats.offenseGuns : 0, 
+    immigration: reportStats ? reportStats.offenseImmig : 0, 
+    others: reportStats ? (reportStats.offenseOther + reportStats.offenseCustoms + reportStats.offenseDisease + reportStats.offenseProperty + reportStats.offenseSex + reportStats.offenseDrunk + reportStats.offenseLife + reportStats.offenseCom) : 0,
+    accidents: reportStats ? reportStats.accidentsTotal || 0 : 0, 
+    deaths: reportStats ? reportStats.accidentsDeath || 0 : 0, 
+    injuries: reportStats ? reportStats.accidentsInjured || 0 : 0, 
+    damages: 0
   };
 
+  if (!reportStats) {
+    // Fallback if no reportStats
+    filteredData.forEach(item => {
+      const topic = item.topic;
+      const textSearch = ((item.charge || "") + " " + (item.original_topic || "")).toLowerCase();
+      if (topic === 'รถบรรทุก/น้ำหนัก') counts.weight++;
+      else if (topic === 'บุคคลตามหมายจับ') counts.warrantGeneral++;
+      else if (topic === 'ยาเสพติด') counts.drugs++;
+      else if (topic === 'อาวุธปืน/วัตถุระเบิด') counts.guns++;
+      else if (topic === 'ต่างด้าว/ตม.') counts.immigration++;
+      else counts.others++;
+    });
+  }
+
+  // Always compute text-based traffic breakdown since reportStats doesn't track them all individually yet
   filteredData.forEach(item => {
     const topic = item.topic;
     const textSearch = ((item.charge || "") + " " + (item.original_topic || "")).toLowerCase();
-
-    if (topic === 'รถบรรทุก/น้ำหนัก') counts.weight++;
-    else if (topic === 'บุคคลตามหมายจับ') {
-      const source = (item.warrant_source || "").toLowerCase().replace(/\s/g, '');
-      if (source.includes('bigdata') || source.includes('big')) counts.warrantBigData++;
-      else counts.warrantGeneral++;
-    }
-    else if (topic === 'ยาเสพติด') counts.drugs++;
-    else if (topic === 'อาวุธปืน/วัตถุระเบิด') counts.guns++;
-    else if (topic === 'ต่างด้าว/ตม.') counts.immigration++;
-    else if (textSearch.includes('ปลอม')) counts.forgery++;
-    else if (topic === 'จราจร/ขนส่ง' || topic === 'เมาแล้วขับ') {
+    
+    if (topic === 'จราจร/ขนส่ง' || topic === 'เมาแล้วขับ') {
       if (textSearch.includes('รถยนต์') || textSearch.includes('ทะเบียน')) counts.carAct++;
       else if (textSearch.includes('ขนส่ง')) counts.transportAct++;
       else if (textSearch.includes('ทางหลวง')) counts.highwayAct++;
       else counts.trafficAct++;
-    } else if (textSearch.includes('ทางหลวง')) counts.highwayAct++;
-    else {
+    } else if (textSearch.includes('ทางหลวง') && topic !== 'รถบรรทุก/น้ำหนัก') counts.highwayAct++;
+    
+    if (topic !== 'รถบรรทุก/น้ำหนัก' && topic !== 'ยาเสพติด' && topic !== 'บุคคลตามหมายจับ' && topic !== 'อาวุธปืน/วัตถุระเบิด' && topic !== 'ต่างด้าว/ตม.') {
       if (textSearch.includes('ตรวจสอบน้ำหนัก')) counts.checkWeight++;
       else if (textSearch.includes('สติกเกอร์') || textSearch.includes('สัญลักษณ์')) counts.checkSticker++;
-      else counts.others++;
     }
   });
 
-  const totalWarrant = counts.warrantGeneral + counts.warrantBigData;
-  const totalTraffic = counts.trafficAct + counts.carAct + counts.transportAct + counts.highwayAct + counts.weight;
-  const totalCriminal = totalWarrant + counts.forgery + counts.drugs + counts.guns + counts.immigration + counts.others;
+  const totalWarrant = reportStats ? reportStats.warrantTotal : (counts.warrantGeneral + counts.warrantBigData);
+  const totalTraffic = reportStats ? reportStats.trafficTotal : (counts.trafficAct + counts.carAct + counts.transportAct + counts.highwayAct + counts.weight);
+  const totalCriminal = reportStats ? reportStats.criminalTotal : (totalWarrant + counts.forgery + counts.drugs + counts.guns + counts.immigration + counts.others);
   const grandTotal = totalCriminal + totalTraffic;
 
   // --- Date Helper ---
   const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+  const monthsFull = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
   const formatThDate = (date) => (!date ? '-' : `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`);
 
   let headerDateText = "";
-  if (filters.period === 'today') headerDateText = `ประจำวันที่ ${formatThDate(new Date())}`;
+  // Prefer full month name format when a month is selected
+  if (filters.selectedMonth !== undefined && filters.selectedMonth !== null && filters.selectedMonth !== '') {
+    const selMonth = parseInt(filters.selectedMonth);
+    const yearBE = (filters.selectedYear ? parseInt(filters.selectedYear) : new Date().getFullYear()) + 543;
+    headerDateText = `ประจำเดือน ${monthsFull[selMonth]} พ.ศ.${yearBE}`;
+  } else if (filters.period === 'today') headerDateText = `ประจำวันที่ ${formatThDate(new Date())}`;
   else if (filters.period === 'yesterday') {
     const yest = new Date();
     yest.setDate(yest.getDate() - 1);
     headerDateText = `(เมื่อวาน) ประจำวันที่ ${formatThDate(yest)}`;
   } else if (filters.rangeStart && filters.rangeEnd) headerDateText = `ประจำห้วงวันที่ ${formatThDate(filters.rangeStart)} ถึง ${formatThDate(filters.rangeEnd)}`;
-  else if (filters.selectedMonth !== undefined && filters.selectedMonth !== null && filters.selectedMonth !== '') {
-    const selMonth = parseInt(filters.selectedMonth);
-    const yearBE = new Date().getFullYear() + 543;
-    headerDateText = `ประจำเดือน ${months[selMonth]} ${yearBE}`;
-  }
   else headerDateText = `ข้อมูลทั้งหมด`;
 
   const todayDate = `${new Date().getDate()} ${months[new Date().getMonth()]} ${new Date().getFullYear() + 543}`;
@@ -137,8 +152,20 @@ const SummaryDashboardView = ({ filteredData, filters, reportStats, getCommander
     };
 
     // --- Dynamic Header (Unit/Commander) ---
-    const currentUnitId = Array.isArray(filters.unit_kk) ? (filters.unit_kk[0] || '0') : (filters.unit_kk || '0');
-    const currentStationId = filters.unit_s_tl || '';
+    // When on the result tab, read kk/stl from URL params (synced by ResultDashboardView local filters)
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlKK = urlParams.get('kk') || '';
+    const urlSTL = urlParams.get('stl') || '';
+
+    let currentUnitId;
+    let currentStationId;
+    if (urlKK) {
+        currentUnitId = urlKK;
+        currentStationId = urlSTL;
+    } else {
+        currentUnitId = Array.isArray(filters.unit_kk) ? (filters.unit_kk[0] || '0') : (filters.unit_kk || '0');
+        currentStationId = filters.unit_s_tl || '';
+    }
 
     // Use prop if available, otherwise fallback (though prop should be there)
     // Note: getMainCommander in utils/constants might not support stationId, so prefer getCommanderInfo

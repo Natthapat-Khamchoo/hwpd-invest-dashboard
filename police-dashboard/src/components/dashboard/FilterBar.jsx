@@ -1,6 +1,6 @@
 import React from 'react';
 import MultiSelectDropdown from '../ui/MultiSelectDropdown';
-import { UNIT_HIERARCHY, DATE_RANGES } from '../../utils/helpers';
+import { UNIT_HIERARCHY } from '../../utils/helpers';
 
 const FilterBar = ({
     show,
@@ -12,19 +12,20 @@ const FilterBar = ({
     if (!show) return null;
 
     // --- Filter Logic Moved from App.jsx ---
-    const handlePeriodChange = (period) => {
-        const now = new Date();
-        let start = new Date(); let end = new Date();
-        start.setHours(0, 0, 0, 0); end.setHours(23, 59, 59, 999);
+    const handleMonthChange = (monthVal) => {
+        setFilters(prev => ({ 
+            ...prev, 
+            selectedMonth: monthVal,
+            period: 'custom' // Override period logic
+        }));
+    };
 
-        if (period === 'yesterday') { start.setDate(now.getDate() - 1); end.setDate(now.getDate() - 1); }
-        else if (period === '7days') { start.setDate(now.getDate() - 7); }
-        else if (period === '30days') { start.setDate(now.getDate() - 30); }
-        else if (period === 'this_month') { start.setDate(1); }
-        else if (period === 'all') { start = null; end = null; }
-        else if (period === 'custom') { start = filters.rangeStart || start; end = filters.rangeEnd || end; }
-
-        setFilters(prev => ({ ...prev, period, rangeStart: start, rangeEnd: end }));
+    const handleYearChange = (yearVal) => {
+        setFilters(prev => ({ 
+            ...prev, 
+            selectedYear: yearVal,
+            period: 'custom'
+        }));
     };
 
     const handleCustomDateChange = (type, val) => {
@@ -34,13 +35,9 @@ const FilterBar = ({
         else { d.setHours(23, 59, 59, 999); setFilters(prev => ({ ...prev, rangeEnd: d, period: 'custom' })); }
     };
 
-    const formatDateForInput = (date) => {
-        if (!date) return '';
-        const y = date.getFullYear();
-        const m = (date.getMonth() + 1).toString().padStart(2, '0');
-        const d = date.getDate().toString().padStart(2, '0');
-        return `${y}-${m}-${d}`;
-    };
+    const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({length: 5}, (_, i) => currentYear - i);
 
     return (
         <div className="dark:bg-slate-800/60 bg-white/90 backdrop-blur-xl border-b dark:border-white/5 border-slate-200 p-4 animate-in slide-in-from-top-2 duration-200 shadow-xl z-20 relative">
@@ -75,18 +72,23 @@ const FilterBar = ({
                 <div>
                     <select
                         className="w-full pl-2 pr-2 py-2.5 dark:bg-slate-900/50 bg-slate-50 border dark:border-white/10 border-slate-300 rounded-lg text-base dark:text-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all dark:hover:bg-slate-800/80 hover:bg-slate-100 cursor-pointer"
-                        value={filters.period}
-                        onChange={(e) => handlePeriodChange(e.target.value)}
+                        value={filters.selectedMonth !== undefined ? filters.selectedMonth : ''}
+                        onChange={(e) => handleMonthChange(e.target.value)}
                     >
-                        {DATE_RANGES.map((r) => <option key={r.value} value={r.value} className="dark:bg-slate-900 bg-white">{r.label}</option>)}
+                        <option value="" className="dark:bg-slate-900 bg-white">📅 ทุกเดือน</option>
+                        {months.map((m, i) => <option key={i} value={i} className="dark:bg-slate-900 bg-white">{m}</option>)}
                     </select>
                 </div>
-                {filters.period === 'custom' && (
-                    <>
-                        <input type="date" className="w-full dark:bg-slate-900/50 bg-slate-50 border dark:border-white/10 border-slate-300 rounded-lg text-base dark:text-white text-slate-900 p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50" value={formatDateForInput(filters.rangeStart)} onChange={(e) => handleCustomDateChange('start', e.target.value)} />
-                        <input type="date" className="w-full dark:bg-slate-900/50 bg-slate-50 border dark:border-white/10 border-slate-300 rounded-lg text-base dark:text-white text-slate-900 p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50" value={formatDateForInput(filters.rangeEnd)} onChange={(e) => handleCustomDateChange('end', e.target.value)} />
-                    </>
-                )}
+                <div>
+                    <select
+                        className="w-full pl-2 pr-2 py-2.5 dark:bg-slate-900/50 bg-slate-50 border dark:border-white/10 border-slate-300 rounded-lg text-base dark:text-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all dark:hover:bg-slate-800/80 hover:bg-slate-100 cursor-pointer"
+                        value={filters.selectedYear || ''}
+                        onChange={(e) => handleYearChange(e.target.value)}
+                    >
+                        <option value="" className="dark:bg-slate-900 bg-white">🗓️ ทุกปี</option>
+                        {years.map((y) => <option key={y} value={y} className="dark:bg-slate-900 bg-white">{y + 543}</option>)}
+                    </select>
+                </div>
             </div>
         </div>
     );

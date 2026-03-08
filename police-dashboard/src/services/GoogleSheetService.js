@@ -143,10 +143,13 @@ const filterRow = (row, filters) => {
             start.setHours(0, 0, 0, 0);
             end.setHours(23, 59, 59, 999);
             if (rowDate < start || rowDate > end) return false;
-        } else if (filters.selectedMonth !== undefined && filters.selectedMonth !== null && filters.selectedMonth !== '') {
-            if (rowDate.getMonth() !== parseInt(filters.selectedMonth)) return false;
-            const currentYear = new Date().getFullYear();
-            if (rowDate.getFullYear() !== currentYear) return false;
+        } else {
+            if (filters.selectedMonth !== undefined && filters.selectedMonth !== null && filters.selectedMonth !== '') {
+                if (rowDate.getMonth() !== parseInt(filters.selectedMonth)) return false;
+            }
+            if (filters.selectedYear !== undefined && filters.selectedYear !== null && filters.selectedYear !== '') {
+                if (rowDate.getFullYear() !== parseInt(filters.selectedYear)) return false;
+            }
         }
     }
 
@@ -176,12 +179,12 @@ export const fetchDashboardData = async (filters) => {
             // Extract unit_kk from station or subDiv
             let unit_kk = '';
             const stationStr = row.station || row.subDiv || '';
-            const kkMatch = stationStr.match(/กก\.?\s*(\d+)/);
+            const kkMatch = stationStr.match(/(?:กก\.?|กองกำกับการ)\s*(\d+)/);
             if (kkMatch) unit_kk = kkMatch[1];
 
             // Extract unit_s_tl from station
             let unit_s_tl = '';
-            const stlMatch = stationStr.match(/ส\.?ทล\.?\s*(\d+)/);
+            const stlMatch = stationStr.match(/(?:ส\.?ทล\.?|สถานีตำรวจทางหลวง)\s*(\d+)/);
             if (stlMatch) unit_s_tl = stlMatch[1];
 
             // --- Flagrant offense columns (dir_f_*) → topic-based cases ---
@@ -238,6 +241,42 @@ export const fetchDashboardData = async (filters) => {
                         unit_s_tl,
                         topic: 'บุคคลตามหมายจับ',
                         warrant_source: source,
+                        station: row.station || '',
+                        subDiv: row.subDiv || '',
+                    });
+                }
+            });
+
+            // --- Warrant Offense Breakdown (dir_w_*) → topic-based cases ---
+            // We include these with a special flag so they can be counted when filtering by topic
+            // but skipped when calculating overall totals.
+            const warrantOffenseMap = [
+                { col: 'dir_w_drugs', topic: 'ยาเสพติด' },
+                { col: 'dir_w_gun', topic: 'อาวุธปืน/วัตถุระเบิด' },
+                { col: 'dir_w_weight', topic: 'รถบรรทุก/น้ำหนัก' },
+                { col: 'dir_w_immig', topic: 'อื่นๆ' },
+                { col: 'dir_w_drunk', topic: 'อื่นๆ' },
+                { col: 'dir_w_other', topic: 'อื่นๆ' },
+                { col: 'dir_w_life', topic: 'อื่นๆ' },
+                { col: 'dir_w_property', topic: 'อื่นๆ' },
+                { col: 'dir_w_sex', topic: 'อื่นๆ' },
+                { col: 'dir_w_com', topic: 'อื่นๆ' },
+                { col: 'dir_w_doc', topic: 'อื่นๆ' },
+                { col: 'dir_w_customs', topic: 'อื่นๆ' },
+                { col: 'dir_w_disease', topic: 'อื่นๆ' },
+                { col: 'dir_w_transport', topic: 'อื่นๆ' },
+            ];
+
+            warrantOffenseMap.forEach(({ col, topic }) => {
+                const count = Number(row[col]) || 0;
+                for (let i = 0; i < count; i++) {
+                    allCases.push({
+                        date_capture: row.date || '',
+                        date_obj: rowDate,
+                        unit_kk,
+                        unit_s_tl,
+                        topic,
+                        isWarrantOffense: true,
                         station: row.station || '',
                         subDiv: row.subDiv || '',
                     });
@@ -349,6 +388,15 @@ export const calculateDashboardStats = (rawData, filters) => {
         stationTotals: {}
     };
 
+    // Pre-fill stationTotals if a specific unit is filtered
+    if (filters.unit_kk && filters.unit_kk !== 'all') {
+        const hVal = typeof UNIT_HIERARCHY !== 'undefined' ? UNIT_HIERARCHY : { "1": 6, "2": 6, "3": 5, "4": 5, "5": 6, "6": 6, "7": 5, "8": 4 };
+        const maxStations = hVal[filters.unit_kk] || 6;
+        for (let i = 1; i <= maxStations; i++) {
+            counts.charts.stationTotals[`ส.ทล.${i}`] = 0;
+        }
+    }
+
     const getMonthKey = (date) => {
         if (!date) return null;
         const m = date.getMonth();
@@ -371,7 +419,7 @@ export const calculateDashboardStats = (rawData, filters) => {
 
     const getStationKey = (row) => {
         const stationStr = row.station || '';
-        const match = stationStr.match(/ส\.?ทล\.?\s*(\d+)/);
+        const match = stationStr.match(/(?:ส\.?ทล\.?|สถานีตำรวจทางหลวง)\s*(\d+)/);
         if (match) return `ส.ทล.${match[1]}`;
         return null;
     };
@@ -605,3 +653,9 @@ export const calculateDashboardStats = (rawData, filters) => {
     return { counts };
 };
 
+// --- Fetch station/commander info from Settings_Stations sheet ---
+export const fetchStationInfo = async () => {
+    const url = `https://docs.google.com/spreadsheets/d/18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk/export?format=csv&gid=1282713566`;
+    const data = await fetchCSV(url);
+    return data; // Array of { Unit_ID, Division_Name, Station_Name, Rank, Full_Name, Position, Dashboard_Link }
+};

@@ -10,7 +10,7 @@ const getRankIcon = (index) => {
     }
 };
 
-const RankingCard = ({ title, icon: Icon, data, colorClass, isPremium = false, onClick, isSelected = false, onClose, disableHover = false, isDarkMode = true }) => {
+const RankingCard = ({ title, icon: Icon, data, colorClass, isPremium = false, onClick, isSelected = false, onClose, disableHover = false, isDarkMode = true, unitLabel = 'เคส' }) => {
     return (
         <div
             onClick={onClick}
@@ -89,8 +89,8 @@ const RankingCard = ({ title, icon: Icon, data, colorClass, isPremium = false, o
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <span className={`text-2xl font-bold ${colorClass.replace('bg-', 'text-')}`}>{item.count}</span>
-                                    <span className="text-base dark:text-slate-400 text-slate-600 ml-1">เคส</span>
+                                    <span className={`text-2xl font-bold ${colorClass.replace('bg-', 'text-')}`}>{item.count.toLocaleString()}</span>
+                                    <span className="text-base dark:text-slate-400 text-slate-600 ml-1">{unitLabel}</span>
                                 </div>
                             </div>
                         ))
@@ -114,11 +114,12 @@ const RankingView = ({ unitRankings, isDarkMode = true }) => {
     const [isAnimating, setIsAnimating] = useState(false);
 
     if (!unitRankings) return null;
-    const { overall, drugs, warrantsBigData, warrantsBodyworn } = unitRankings;
+    const { overall, drugs, drugSeizure, warrantsBigData, warrantsBodyworn } = unitRankings;
 
     const cards = [
         { id: 'overall', title: "ยอดเยี่ยมรวม", icon: Crown, data: overall || [], colorClass: "bg-yellow-500", isPremium: true },
         { id: 'drugs', title: "ปราบปรามยาเสพติด", icon: Pill, data: drugs || [], colorClass: "bg-red-500" },
+        { id: 'drugSeizure', title: "ตรวจยึดยาเสพติด", icon: Shield, data: drugSeizure || [], colorClass: "bg-orange-500", unitLabel: "เม็ด" },
         { id: 'warrants_bigdata', title: "หมายจับ Big Data", icon: Target, data: warrantsBigData || [], colorClass: "bg-cyan-500" },
         { id: 'warrants_bodyworn', title: "หมายจับ Bodyworn", icon: Siren, data: warrantsBodyworn || [], colorClass: "bg-pink-500" }
     ];
@@ -183,7 +184,7 @@ const RankingView = ({ unitRankings, isDarkMode = true }) => {
                 </div>
 
                 {/* --- Grid View --- */}
-                <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-7xl mx-auto w-full transition-all duration-500 ${isAnimating ? 'blur-md opacity-40' : ''} ${selectedCategory ? 'pointer-events-none' : ''}`}>
+                <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-w-7xl mx-auto w-full transition-all duration-500 ${isAnimating ? 'blur-md opacity-40' : ''} ${selectedCategory ? 'pointer-events-none' : ''}`}>
                     {cards.map(card => (
                         <div
                             key={card.id}

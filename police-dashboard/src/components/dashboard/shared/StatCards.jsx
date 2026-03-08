@@ -29,14 +29,14 @@ export const ListItem = ({ label, value, highlight }) => (
     <div className="flex items-center gap-3 text-slate-600 py-1.5 pr-4">
         <div className={`w-4 h-4 rounded-full ${highlight ? 'bg-[#dc2626]' : 'bg-slate-400'}`}></div>
         <span className={`text-xl xl:text-2xl ${highlight ? 'font-bold text-slate-900' : ''}`}>{label}</span>
-        <span className={`ml-auto font-bold text-xl xl:text-2xl ${highlight ? 'text-[#dc2626]' : 'text-slate-500'} whitespace-nowrap`}>{value}</span>
+        <span className={`ml-auto font-bold text-xl xl:text-2xl ${highlight ? 'text-[#dc2626]' : 'text-slate-500'} whitespace-nowrap`}>{safeNumber(value)}</span>
     </div>
 );
 
 export const SimpleItem = ({ text, value }) => (
     <div className="flex justify-between items-center py-1.5 pr-4">
         <span className="text-slate-700 font-medium text-xl xl:text-2xl">• {text}</span>
-        <span className="text-[#dc2626] font-bold text-xl xl:text-2xl whitespace-nowrap">{value}</span>
+        <span className="text-[#dc2626] font-bold text-xl xl:text-2xl whitespace-nowrap">{safeNumber(value)}</span>
     </div>
 );
 
