@@ -47,6 +47,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
     const [isPrintRequested, setIsPrintRequested] = useState(false); // Flag for print request
     const [isPdfExporting, setIsPdfExporting] = useState(false);
     const [isJpgExporting, setIsJpgExporting] = useState(false);
+    const [isExportAllJpg, setIsExportAllJpg] = useState(false);
 
     // --- Local Filter State (กก. / ส.ทล.) ---
     const [localUnitKK, setLocalUnitKK] = useState(initialParams.kk);
@@ -507,6 +508,209 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
         }
     };
 
+    // --- Export All JPG (Long Strip) Handler ---
+    const handleExportAllJPG = async () => {
+        if (isExportAllJpg) return;
+        setIsExportAllJpg(true);
+
+        const prevViewMode = viewMode;
+        const prevTab = activeTab;
+
+        try {
+            // STEP 1: Capture the First Page (Overview) in Default Mode (Portrait)
+            if (activeTab !== 'overview' || viewMode !== 'default') {
+                setActiveTab('overview');
+                setViewMode('default');
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            } else {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            const headerEl = document.getElementById('print-header');
+            const contentEl = document.getElementById('overview-content');
+            const container = document.getElementById('dashboard-container');
+
+            if (container) container.style.overflow = 'visible';
+
+            const filter = (node) => {
+                const exclusionClasses = ['exclude-from-export', 'animate-pulse'];
+                return !(node.classList && exclusionClasses.some(cls => node.classList.contains(cls)));
+            };
+
+            const captureOptsOverview = {
+                quality: 1.0,
+                pixelRatio: 2, // High quality
+                backgroundColor: '#ffffff',
+                filter: filter,
+                cacheBust: true,
+            };
+
+            let headerDataUrl = null;
+            if (headerEl) {
+                headerDataUrl = await toPng(headerEl, captureOptsOverview);
+            }
+            const overviewDataUrl = await toPng(contentEl, captureOptsOverview);
+
+            if (container) container.style.overflow = '';
+
+            const loadImg = (src) => new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+
+            let headerImgObj = null;
+            if (headerDataUrl) headerImgObj = await loadImg(headerDataUrl);
+            const overviewImgObj = await loadImg(overviewDataUrl);
+
+            const canvasWidth = Math.max(
+                headerImgObj ? headerImgObj.naturalWidth : 0,
+                overviewImgObj.naturalWidth
+            );
+
+            const headerH = (headerImgObj && headerImgObj.naturalWidth > 0) ? Math.round((headerImgObj.naturalHeight / headerImgObj.naturalWidth) * canvasWidth) : 0;
+            const contentH = Math.round((overviewImgObj.naturalHeight / overviewImgObj.naturalWidth) * canvasWidth);
+            const footerH = 32;
+
+            // Render first page onto temporary canvas to get scaled data
+            const firstPageCanvas = document.createElement('canvas');
+            firstPageCanvas.width = canvasWidth;
+            firstPageCanvas.height = headerH + contentH + footerH;
+            const fpCtx = firstPageCanvas.getContext('2d');
+            
+            fpCtx.fillStyle = '#ffffff';
+            fpCtx.fillRect(0, 0, firstPageCanvas.width, firstPageCanvas.height);
+            let fpY = 0;
+            if (headerImgObj) {
+                fpCtx.drawImage(headerImgObj, 0, fpY, canvasWidth, headerH);
+                fpY += headerH;
+            }
+            fpCtx.drawImage(overviewImgObj, 0, fpY, canvasWidth, contentH);
+            fpY += contentH;
+            fpCtx.fillStyle = '#004aad';
+            fpCtx.fillRect(0, fpY, canvasWidth, footerH);
+
+            const page1DataUrl = firstPageCanvas.toDataURL('image/jpeg', 0.92);
+
+            // Calculate Landscape target dimensions
+            const targetWidthLandscape = 1920;
+            const targetHeightLandscape = 1080;
+
+            // Trigger Download for Page 1
+            const link1 = document.createElement('a');
+            link1.download = `1_ผลการปฏิบัติภาพรวม_${exportMonthName}_${yearBE}.jpg`;
+            link1.href = page1DataUrl;
+            link1.click();
+
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            // STEP 2: Render remaining sections in print_all mode
+            setViewMode('print_all');
+            await new Promise(resolve => setTimeout(resolve, 2500));
+
+            const remainingSections = [
+                { id: 'print-comparison', title: 'สถิติการจับกุมอาญา' },
+                { id: 'print-traffic', title: 'สถิติจราจร' },
+                { id: 'print-truck', title: 'สถิติรถบรรทุก' },
+                { id: 'print-press', title: 'แถลงข่าวและประชาสัมพันธ์' }
+            ];
+            
+            let landscapeHeaderImg = null;
+            if (headerDataUrl) {
+                landscapeHeaderImg = await loadImg(headerDataUrl);
+            }
+
+            // 2. Draw Remaining Sections
+            for (let i = 0; i < remainingSections.length; i++) {
+                const section = remainingSections[i];
+                const element = document.getElementById(section.id);
+                if (!element) continue;
+
+                const dataUrl = await toPng(element, {
+                    quality: 1.0,
+                    pixelRatio: 1.0,
+                    backgroundColor: '#ffffff',
+                    filter: filter,
+                    cacheBust: true,
+                    width: 1920,
+                    windowWidth: 1920,
+                });
+
+                const contentImg = await loadImg(dataUrl);
+
+                const imgWidth = contentImg.naturalWidth;
+                const imgHeight = contentImg.naturalHeight;
+
+                const headerH_Landscape = 130;
+                const bottomMargin = 20;
+                const sideMargin = 20;
+                const contentW = targetWidthLandscape - (sideMargin * 2);
+                const contentH_Landscape = targetHeightLandscape - headerH_Landscape - bottomMargin;
+
+                const scaleX = contentW / imgWidth;
+                const scaleY = contentH_Landscape / imgHeight;
+                const scale = Math.min(scaleX, scaleY);
+
+                const drawW = imgWidth * scale;
+                const drawH = imgHeight * scale;
+
+                const offsetX = sideMargin + (contentW - drawW) / 2;
+                const offsetY = headerH_Landscape + (contentH_Landscape - drawH) / 2;
+
+                // Create Canvas for THIS section
+                const sectionCanvas = document.createElement('canvas');
+                sectionCanvas.width = targetWidthLandscape;
+                sectionCanvas.height = targetHeightLandscape;
+                const ctx = sectionCanvas.getContext('2d');
+
+                // Section Background
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, targetWidthLandscape, targetHeightLandscape);
+
+                // Section Content
+                ctx.drawImage(contentImg, offsetX, offsetY, drawW, drawH);
+
+                // Section Header
+                if (landscapeHeaderImg) {
+                    try {
+                        ctx.drawImage(landscapeHeaderImg, 0, 0, targetWidthLandscape, headerH_Landscape);
+                    } catch (e) { }
+                }
+
+                // Header Separator Line
+                ctx.strokeStyle = '#004aad';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, headerH_Landscape);
+                ctx.lineTo(targetWidthLandscape, headerH_Landscape);
+                ctx.stroke();
+
+                // Section Footer
+                ctx.fillStyle = '#004aad';
+                ctx.fillRect(0, targetHeightLandscape - 10, targetWidthLandscape, 10);
+
+                // Trigger Download for this section
+                const sectionDataUrl = sectionCanvas.toDataURL('image/jpeg', 0.90);
+                const fileName = `${i + 2}_${section.title}_${exportMonthName}_${yearBE}.jpg`;
+                const link = document.createElement('a');
+                link.download = fileName;
+                link.href = sectionDataUrl;
+                link.click();
+
+                await new Promise(resolve => setTimeout(resolve, 800));
+            }
+
+        } catch (error) {
+            console.error('Export All JPG failed:', error);
+            alert('Export JPG failed. See console for details.');
+        } finally {
+            setViewMode(prevViewMode);
+            setActiveTab(prevTab);
+            setIsExportAllJpg(false);
+        }
+    };
+
     // --- Tab Components ---
     const renderContent = () => {
         if (viewMode === 'print_all') {
@@ -689,6 +893,18 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
                         >
                             {isJpgExporting ? <Loader2 size={20} className="animate-spin" /> : <ImageIcon size={20} />}
                         </button>
+                        {/* Mobile Export All JPG Icon */}
+                        <button
+                            onClick={handleExportAllJPG}
+                            disabled={isExportAllJpg}
+                            title="Export ทั้งหมด 5 ภาพ"
+                            className={`flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-200 shadow-sm ${isExportAllJpg
+                                ? 'bg-gray-300 text-gray-500 cursor-wait'
+                                : 'bg-purple-600 text-white hover:bg-purple-700 shadow-purple-500/30'
+                                }`}
+                        >
+                            {isExportAllJpg ? <Loader2 size={20} className="animate-spin" /> : <ImageIcon size={20} />}
+                        </button>
                         {/* Mobile Export PDF Icon */}
                         <button
                             onClick={handleExportPDF}
@@ -749,6 +965,22 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
                                 <><Loader2 size={18} className="animate-spin" /> กำลัง Export...</>
                             ) : (
                                 <><ImageIcon size={18} /> Export ภาพรวม</>
+                            )}
+                        </button>
+
+                        {/* Export Long Strip JPG Button */}
+                        <button
+                            onClick={handleExportAllJPG}
+                            disabled={isExportAllJpg}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 shadow-sm whitespace-nowrap ${isExportAllJpg
+                                ? 'bg-gray-300 text-gray-500 cursor-wait'
+                                : 'bg-purple-600 text-white hover:bg-purple-700 shadow-purple-500/30'
+                                }`}
+                        >
+                            {isExportAllJpg ? (
+                                <><Loader2 size={18} className="animate-spin" /> กำลัง Export...</>
+                            ) : (
+                                <><ImageIcon size={18} /> Export 5 ภาพ</>
                             )}
                         </button>
 
