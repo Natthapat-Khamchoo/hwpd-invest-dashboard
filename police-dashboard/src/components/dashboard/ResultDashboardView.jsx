@@ -207,152 +207,185 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
         const prevViewMode = viewMode;
         const prevTab = activeTab;
 
-        // Switch to print_all mode to render all sections
-        setViewMode('print_all');
-
-        // Wait for DOM render
-        await new Promise(resolve => setTimeout(resolve, 2500));
-
         try {
-            // Use fixed 1920x1080 px format
-            const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [1920, 1080] });
-            const pageWidth = 1920;
-            const pageHeight = 1080;
+            // STEP 1: Capture the First Page (Overview) in Default Mode (Portrait)
+            if (activeTab !== 'overview' || viewMode !== 'default') {
+                setActiveTab('overview');
+                setViewMode('default');
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            } else {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
 
-            const sections = [
-                { id: 'print-overview' },
+            const headerEl = document.getElementById('print-header');
+            const contentEl = document.getElementById('overview-content');
+            const container = document.getElementById('dashboard-container');
+
+            if (container) container.style.overflow = 'visible';
+
+            const filter = (node) => {
+                const exclusionClasses = ['exclude-from-export', 'animate-pulse'];
+                return !(node.classList && exclusionClasses.some(cls => node.classList.contains(cls)));
+            };
+
+            const captureOptsOverview = {
+                quality: 1.0,
+                pixelRatio: 2, // Match JPG export quality
+                backgroundColor: '#ffffff',
+                filter: filter,
+                cacheBust: true,
+            };
+
+            let headerDataUrl = null;
+            if (headerEl) {
+                headerDataUrl = await toPng(headerEl, captureOptsOverview);
+            }
+            const overviewDataUrl = await toPng(contentEl, captureOptsOverview);
+
+            if (container) container.style.overflow = '';
+
+            const loadImg = (src) => new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+
+            let headerImgObj = null;
+            if (headerDataUrl) headerImgObj = await loadImg(headerDataUrl);
+            const overviewImgObj = await loadImg(overviewDataUrl);
+
+            const canvasWidth = Math.max(
+                headerImgObj ? headerImgObj.naturalWidth : 0,
+                overviewImgObj.naturalWidth
+            );
+
+            const headerH = (headerImgObj && headerImgObj.naturalWidth > 0) ? Math.round((headerImgObj.naturalHeight / headerImgObj.naturalWidth) * canvasWidth) : 0;
+            const contentH = (overviewImgObj && overviewImgObj.naturalWidth > 0) ? Math.round((overviewImgObj.naturalHeight / overviewImgObj.naturalWidth) * canvasWidth) : 0;
+            const footerH = 32;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = canvasWidth;
+            canvas.height = headerH + contentH + footerH;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            let y = 0;
+            if (headerImgObj) {
+                ctx.drawImage(headerImgObj, 0, y, canvasWidth, headerH);
+                y += headerH;
+            }
+
+            ctx.drawImage(overviewImgObj, 0, y, canvasWidth, contentH);
+            y += contentH;
+
+            ctx.fillStyle = '#004aad';
+            ctx.fillRect(0, y, canvasWidth, footerH);
+
+            const page1DataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+            // Scale the PDF first page to have a uniform width of 1920 units 
+            // so it matches all subsequent landscape pages exactly.
+            const pdfPageWidth = 1920;
+            const pdfHeightRatio = pdfPageWidth / canvas.width;
+            const pdfPageHeight = canvas.height * pdfHeightRatio;
+
+            let pdf = new jsPDF({ 
+                orientation: pdfPageWidth > pdfPageHeight ? 'landscape' : 'portrait', 
+                unit: 'px', 
+                format: [pdfPageWidth, pdfPageHeight] 
+            });
+
+            pdf.addImage(page1DataUrl, 'JPEG', 0, 0, pdfPageWidth, pdfPageHeight);
+
+            // STEP 2: Render remaining sections in print_all mode
+            setViewMode('print_all');
+            await new Promise(resolve => setTimeout(resolve, 2500));
+
+            const remainingSections = [
                 { id: 'print-comparison' },
                 { id: 'print-traffic' },
                 { id: 'print-truck' },
                 { id: 'print-press' }
             ];
 
-            // Build date string for PDF
-            const pdfDateText = `${exportMonthName} ${yearBE}`;
+            const pageWidth = 1920;
+            const pageHeight = 1080;
 
-            // Capture Header Image
-            let headerImgData = null;
-            const headerElement = document.getElementById('print-header');
-            if (headerElement) {
-                try {
-                    headerImgData = await toPng(headerElement, {
-                        quality: 1.0,
-                        pixelRatio: 1.0, // Reduced to 1.0 for ~10-20MB size
-                        width: 1920,
-                        windowWidth: 1920
-                    });
-                } catch (err) {
-                    console.error("Failed to capture header:", err);
-                }
-            }
-
-            // Helper: draw page header (using captured image)
-            const drawHeader = (doc, pageNum, totalPages) => {
-                const headerH = 130; // Increased height for visual header
-
-                if (headerImgData) {
-                    try {
-                        doc.addImage(headerImgData, 'PNG', 0, 0, 1920, headerH);
-                    } catch (e) {
-                        // Fallback simple header if image fails
-                        doc.setFillColor(255, 255, 255);
-                        doc.rect(0, 0, pageWidth, headerH, 'F');
-                        doc.setFontSize(24);
-                        doc.setTextColor(0, 0, 0);
-                        doc.text('Highway Police Bureau', 30, 48);
-                    }
-                }
-
-                // (Page number removed as per request)
-
-                // Bottom line
-                doc.setDrawColor(0, 74, 173);
-                doc.setLineWidth(2);
-                doc.line(0, headerH, pageWidth, headerH);
-            };
-
-            let isFirstPage = true;
-
-            for (let i = 0; i < sections.length; i++) {
-                const section = sections[i];
+            for (let i = 0; i < remainingSections.length; i++) {
+                const section = remainingSections[i];
                 const element = document.getElementById(section.id);
                 if (!element) continue;
 
-                // Capture section
-                const filter = (node) => {
-                    const exclusionClasses = ['exclude-from-export', 'animate-pulse'];
-                    return !(node.classList && exclusionClasses.some(cls => node.classList.contains(cls)));
-                };
-
                 const dataUrl = await toPng(element, {
                     quality: 1.0,
-                    pixelRatio: 1.0, // Reduced to 1.0 for ~10-20MB size
+                    pixelRatio: 1.0,
                     backgroundColor: '#ffffff',
                     filter: filter,
                     cacheBust: true,
-                    width: 1920, // Match target width
-                    windowWidth: 1920, // Enforce desktop media queries
+                    width: 1920,
+                    windowWidth: 1920,
                 });
 
-                const img = await new Promise((resolve, reject) => {
-                    const image = new Image();
-                    image.onload = () => resolve(image);
-                    image.onerror = reject;
-                    image.src = dataUrl;
-                });
+                const contentImg = await loadImg(dataUrl);
 
-                const imgWidth = img.naturalWidth;
-                const imgHeight = img.naturalHeight;
+                pdf.addPage([pageWidth, pageHeight], 'landscape');
 
-                // Available area (1920x1080)
-                const headerH = 130;
+                const imgWidth = contentImg.naturalWidth;
+                const imgHeight = contentImg.naturalHeight;
+
+                const headerH_Landscape = 130;
                 const bottomMargin = 20;
                 const sideMargin = 20;
-                const contentWidth = pageWidth - (sideMargin * 2);
-                const contentHeight = pageHeight - headerH - bottomMargin;
+                const contentW = pageWidth - (sideMargin * 2);
+                const contentH_Landscape = pageHeight - headerH_Landscape - bottomMargin;
 
-                // Fit to page
-                const scaleX = contentWidth / imgWidth;
-                const scaleY = contentHeight / imgHeight;
+                const scaleX = contentW / imgWidth;
+                const scaleY = contentH_Landscape / imgHeight;
                 const scale = Math.min(scaleX, scaleY);
 
                 const drawW = imgWidth * scale;
                 const drawH = imgHeight * scale;
 
-                const offsetX = sideMargin + (contentWidth - drawW) / 2;
-                const offsetY = headerH + (contentHeight - drawH) / 2;
-
-                if (!isFirstPage) {
-                    pdf.addPage();
-                }
-                isFirstPage = false;
+                const offsetX = sideMargin + (contentW - drawW) / 2;
+                const offsetY = headerH_Landscape + (contentH_Landscape - drawH) / 2;
 
                 pdf.addImage(dataUrl, 'PNG', offsetX, offsetY, drawW, drawH);
-            }
 
-            // Fix page numbers
-            const totalPages = pdf.internal.getNumberOfPages();
-            for (let p = 1; p <= totalPages; p++) {
-                pdf.setPage(p);
-                drawHeader(pdf, p, totalPages);
-            }
+                if (headerDataUrl) {
+                    try {
+                        pdf.addImage(headerDataUrl, 'PNG', 0, 0, pageWidth, headerH_Landscape);
+                    } catch (e) {
+                        pdf.setFillColor(255, 255, 255);
+                        pdf.rect(0, 0, pageWidth, headerH_Landscape, 'F');
+                        pdf.setFontSize(24);
+                        pdf.setTextColor(0, 0, 0);
+                        pdf.text('Highway Police Bureau', 30, 48);
+                    }
+                } else {
+                    pdf.setFillColor(255, 255, 255);
+                    pdf.rect(0, 0, pageWidth, headerH_Landscape, 'F');
+                }
 
-            // Footer line
-            for (let p = 1; p <= totalPages; p++) {
-                pdf.setPage(p);
+                pdf.setDrawColor(0, 74, 173);
+                pdf.setLineWidth(2);
+                pdf.line(0, headerH_Landscape, pageWidth, headerH_Landscape);
+
                 pdf.setFillColor(0, 74, 173);
                 pdf.rect(0, pageHeight - 10, pageWidth, 10, 'F');
             }
 
-            // Save
             const fileName = `ผลการปฏิบัติ บก.ทล. ประจำเดือน${exportMonthName} ${yearBE}.pdf`;
-            pdf.save(fileName);
+            if (pdf) {
+                pdf.save(fileName);
+            }
 
         } catch (error) {
             console.error('PDF Export failed:', error);
             alert('Export PDF failed. See console for details.');
         } finally {
-            // Restore previous view
             setViewMode(prevViewMode);
             setActiveTab(prevTab);
             setIsPdfExporting(false);
@@ -523,54 +556,53 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
                     `}</style>
 
                     {/* --- ส่วนที่ 1: Overview --- */}
-                    <div className="print-section" id="print-overview">
-                        <div className="bg-blue-100 p-2 rounded-xl mb-4 text-center font-bold text-xl text-blue-800 border border-blue-200">
+                    <div className="print-section flex flex-col items-center justify-center w-full" id="print-overview">
+                        <div className="bg-blue-100 p-2 rounded-xl mb-2 text-center font-bold text-xl text-blue-800 border border-blue-200 w-full">
                             ส่วนที่ 1: ภาพรวม (Overview)
                         </div>
-                        {/* Remove 'print-grid-force' to prevent left-aligning the component in a grid cell */}
                         <div className="w-full">
                             <OverviewTab counts={sheetCounts} isPrint={true} isLoading={isLoading} />
                         </div>
                     </div>
 
                     {/* --- ส่วนที่ 2: Comparison --- */}
-                    <div className="print-section" id="print-comparison">
-                        <div className="bg-blue-100 p-2 rounded-xl mb-6 text-center font-bold text-xl text-blue-800 border border-blue-200">
-                            ส่วนที่ 2: เปรียบเทียบสถิติการจับกุม (3 เดือน)
+                    <div className="print-section flex flex-col items-center justify-center w-full" id="print-comparison">
+                        <div className="bg-blue-100 p-2 rounded-xl mb-2 text-center font-bold text-xl text-blue-800 border border-blue-200 w-full">
+                            ส่วนที่ 2: เปรียบเทียบสถิติการจับกุม (2 เดือน)
                         </div>
-                        {/* Remove fixed height to allow auto-expansion */}
-                        <div className="w-full border border-slate-100 rounded-xl p-4 min-h-[600px]">
-                            <ComparisonTab data={sheetCounts?.charts?.comparison} monthNames={sheetCounts?.charts?.monthNames} />
+                        <div className="w-full">
+                            <ComparisonTab data={sheetCounts?.charts?.comparison} monthNames={sheetCounts?.charts?.monthNames} isPrint={true} />
                         </div>
                     </div>
 
                     {/* --- ส่วนที่ 3: Traffic --- */}
-                    <div className="print-section" id="print-traffic">
-                        <div className="bg-blue-100 p-2 rounded-xl mb-6 text-center font-bold text-xl text-blue-800 border border-blue-200">
-                            ส่วนที่ 3: เปรียบเทียบสถิติจราจร (3 เดือน)
+                    <div className="print-section flex flex-col items-center justify-center w-full" id="print-traffic">
+                        <div className="bg-blue-100 p-2 rounded-xl mb-2 text-center font-bold text-xl text-blue-800 border border-blue-200 w-full">
+                            ส่วนที่ 3: เปรียบเทียบสถิติจราจร (2 เดือน)
                         </div>
-                        <div className="w-full border border-slate-100 rounded-xl p-4 min-h-[600px]">
-                            <TrafficComparisonTab data={sheetCounts?.charts?.traffic} monthNames={sheetCounts?.charts?.monthNames} />
+                        <div className="w-full">
+                            <TrafficComparisonTab data={sheetCounts?.charts?.traffic} monthNames={sheetCounts?.charts?.monthNames} isPrint={true} />
                         </div>
                     </div>
 
-                    {/* --- ส่วนที่ 4: Truck (ปรับลดความสูงพิเศษ) --- */}
-                    <div className="print-section" id="print-truck">
-                        <div className="bg-blue-100 p-2 rounded-xl mb-6 text-center font-bold text-xl text-blue-800 border border-blue-200">
+                    {/* --- ส่วนที่ 4: Truck --- */}
+                    <div className="print-section flex flex-col items-center justify-center w-full" id="print-truck">
+                        <div className="bg-blue-100 p-2 rounded-xl mb-2 text-center font-bold text-xl text-blue-800 border border-blue-200 w-full">
                             ส่วนที่ 4: สถิติรถบรรทุก
                         </div>
-                        {/* ลดกราฟเหลือ 350px เพื่อให้เหลือที่ใส่การ์ดสรุปด้านล่างในหน้าเดียวกัน */}
-                        <div className="w-full border border-slate-100 rounded-xl p-4 mb-4 min-h-[500px]">
-                            <TruckInspectionTab data={sheetCounts?.charts?.truck} />
+                        <div className="w-full">
+                            <TruckInspectionTab data={sheetCounts?.charts?.truck} isPrint={true} />
                         </div>
                     </div>
 
                     {/* --- ส่วนที่ 5: Press --- */}
-                    <div className="print-section" id="print-press">
-                        <div className="bg-blue-100 p-2 rounded-xl text-center font-bold text-xl text-blue-800 border border-blue-200">
+                    <div className="print-section flex flex-col items-center justify-center w-full" id="print-press">
+                        <div className="bg-blue-100 p-2 rounded-xl mb-2 text-center font-bold text-xl text-blue-800 border border-blue-200 w-full">
                             ส่วนที่ 5: แถลงข่าวและสื่อประชาสัมพันธ์
                         </div>
-                        <PressReleaseTab qualityWork={sheetCounts?.charts?.qualityWork} media={sheetCounts?.charts?.media} />
+                        <div className="w-full">
+                            <PressReleaseTab qualityWork={sheetCounts?.charts?.qualityWork} media={sheetCounts?.charts?.media} isPrint={true} />
+                        </div>
                     </div>
                 </div>
             );

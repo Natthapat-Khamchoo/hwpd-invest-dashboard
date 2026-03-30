@@ -1,13 +1,15 @@
 import Papa from 'papaparse';
 
+const SHEET_ID = import.meta.env.VITE_GOOGLE_SHEET_ID || '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk';
+
 const SHEETS = {
     CRIME: {
-        id: '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk',
+        id: SHEET_ID,
         gid: '684351662',
         name: 'crime'
     },
     VOLUNTEER: {
-        id: '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk',
+        id: SHEET_ID,
         gid: '0', // TODO: User needs to provide GID for Volunteer if different? User didn't specify GID for these but listed them. Assuming same Sheet ID.
         // Wait, user provided GIDs in previous turns or I can assume they are in main SHEET_ID.
         // User didn't give GIDs for these in the prompt "date ... " list, but they are sheets. 
@@ -16,37 +18,37 @@ const SHEETS = {
         // The file already has definitions for CRIME, TRAFFIC etc. 
         // It does NOT have VOLUNTEER or SERVICE.
         // I will add them.
-        id: '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk',
+        id: SHEET_ID,
         gid: '1925338272', // Placeholder
         name: 'volunteer'
     },
     SERVICE: {
-        id: '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk',
+        id: SHEET_ID,
         gid: '1435884266', // Placeholder
         name: 'service'
     },
     TRAFFIC: {
-        id: '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk',
+        id: SHEET_ID,
         gid: '1718714301',
         name: 'traffic'
     },
     ITEMS: {
-        id: '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk',
+        id: SHEET_ID,
         gid: '716805288',
         name: 'items'
     },
     ACCIDENTS: {
-        id: '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk',
+        id: SHEET_ID,
         gid: '985244759',
         name: 'accidents'
     },
     CONVOY: {
-        id: '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk',
+        id: SHEET_ID,
         gid: '1914089424',
         name: 'convoy'
     },
     STATIONS: {
-        id: '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk',
+        id: SHEET_ID,
         gid: '1282713566',
         name: 'stations'
     }
@@ -55,18 +57,24 @@ const SHEETS = {
 const fetchCSV = async (url) => {
     try {
         const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+        }
         const csvText = await response.text();
+        if (!csvText || csvText.trim().length === 0) {
+            return [];
+        }
         return new Promise((resolve, reject) => {
             Papa.parse(csvText, {
                 header: true,
                 skipEmptyLines: true,
                 dynamicTyping: true, // Auto convert numbers
                 complete: (results) => resolve(results.data),
-                error: (err) => reject(err)
+                error: (err) => reject(new Error(`CSV Parse Error: ${err.message}`))
             });
         });
     } catch (error) {
-        console.error(`Error fetching CSV from ${url}:`, error);
+        console.error(`🚨 Error fetching CSV from ${url}:`, error.message);
         return [];
     }
 };
@@ -366,11 +374,11 @@ export const calculateDashboardStats = (rawData, filters) => {
         targetMonth = parseInt(filters.selectedMonth);
     }
 
-    const last3Months = [];
+    const last2Months = [];
     const _thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-    for (let i = 2; i >= 0; i--) {
+    for (let i = 1; i >= 0; i--) {
         const d = new Date(targetYear, targetMonth - i, 1);
-        last3Months.push({
+        last2Months.push({
             monthIndex: d.getMonth(),
             year: d.getFullYear(),
             name: _thaiMonths[d.getMonth()]
@@ -378,10 +386,10 @@ export const calculateDashboardStats = (rawData, filters) => {
     }
 
     counts.charts = {
-        comparison: units.map(u => ({ name: u, month1: 0, month2: 0, month3: 0 })),
-        traffic: units.map(u => ({ name: u, month1: 0, month2: 0, month3: 0 })),
+        comparison: units.map(u => ({ name: u, month1: 0, month2: 0 })),
+        traffic: units.map(u => ({ name: u, month1: 0, month2: 0 })),
         truck: units.map(u => ({ name: u, inspected: 0, arrested: 0 })),
-        monthNames: last3Months.map(m => m.name),
+        monthNames: last2Months.map(m => m.name),
         qualityWork: units.map(u => ({ division: u, count: 0, details: [] })),
         media: units.map(u => ({ label: `ส.ทล.${u.split('.')[1] || '?'}`, values: Array(8).fill(0) })),
         unitTotals: units.map(u => ({ name: u, value: 0 })),
@@ -401,10 +409,9 @@ export const calculateDashboardStats = (rawData, filters) => {
         if (!date) return null;
         const m = date.getMonth();
         const y = date.getFullYear();
-        const idx = last3Months.findIndex(lm => lm.monthIndex === m && lm.year === y);
+        const idx = last2Months.findIndex(lm => lm.monthIndex === m && lm.year === y);
         if (idx === 0) return 'month1';
         if (idx === 1) return 'month2';
-        if (idx === 2) return 'month3';
         return null;
     };
 
@@ -655,7 +662,7 @@ export const calculateDashboardStats = (rawData, filters) => {
 
 // --- Fetch station/commander info from Settings_Stations sheet ---
 export const fetchStationInfo = async () => {
-    const url = `https://docs.google.com/spreadsheets/d/18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk/export?format=csv&gid=1282713566`;
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1282713566`;
     const data = await fetchCSV(url);
     return data; // Array of { Unit_ID, Division_Name, Station_Name, Rank, Full_Name, Position, Dashboard_Link }
 };

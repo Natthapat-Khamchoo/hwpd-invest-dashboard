@@ -68,7 +68,7 @@ export const StatCard = ({ title, value, icon: Icon, colorClass, delay, onClick,
       className={`
         relative overflow-hidden rounded-xl flex items-center space-x-4 transition-all duration-300 group animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards
         glass-liquid
-        ${onClick ? 'cursor-pointer hover:scale-[1.03] hover:-translate-y-1' : ''}
+        ${onClick ? 'cursor-pointer transform hover:scale-[1.02] hover:-translate-y-1 hover:shadow-2xl active:scale-95' : ''}
         ${isActive
           ? `${activeGlow[colorName] || activeGlow.blue} bg-slate-800/80 ring-1`
           : `${glowClasses[colorName] || glowClasses.blue}`
@@ -129,10 +129,10 @@ export const SplitStatCard = ({ title, icon: Icon, subValues, colorClass, delay 
               if (item.onClick) item.onClick();
             }}
             className={`
-              cursor-pointer rounded-lg py-1 transition-all duration-200 group/item relative overflow-hidden
+              cursor-pointer rounded-lg py-1 transition-all duration-300 group/item relative overflow-hidden
               ${item.isActive
-                ? `bg-${colorName}-500/20 ring-1 ring-${colorName}-400 shadow-[0_0_10px_rgba(0,0,0,0.2)] transform scale-105`
-                : 'hover:bg-white/5'
+                ? `bg-${colorName}-500/20 ring-1 ring-${colorName}-400 shadow-[0_0_15px_rgba(0,0,0,0.3)] transform scale-105`
+                : 'hover:bg-white/10 hover:shadow-md hover:-translate-y-0.5 active:scale-95'
               }
             `}
           >

@@ -22,6 +22,10 @@ import TrendView from './components/dashboard/TrendView';
 import SummaryDashboardView from './components/dashboard/SummaryDashboardView';
 import ResultDashboardView from './components/dashboard/ResultDashboardView';
 
+// Import UI Components
+import ReportModal from './components/ui/ReportModal';
+import CaseDetailModal from './components/ui/CaseDetailModal';
+
 // Import Hooks
 import { usePoliceData } from './hooks/usePoliceData';
 import { useDashboardLogic } from './hooks/useDashboardLogic';
@@ -252,12 +256,13 @@ export default function App() {
 - พ.ร.บ.คนเข้าเมือง  ${s.offenseImmig} ราย
 - รถบรรทุกน้ำหนักเกินฯ ${s.offenseWeight} ราย
 - ขับรถขณะเมาสุรา ${s.offenseDrunk} ราย
-- อื่นๆ ${s.offenseOther} ราย
+- อื่นๆ ${s.offenseCustoms + s.offenseDisease + s.offenseTransport + s.offenseDocs + s.offenseProperty + s.offenseSex + s.offenseLife + s.offenseCom + s.offenseOther} ราย
 
 2. ผลการจับกุมคดีจราจร รวม ${s.trafficTotal} ราย
 - ไม่ชิดขอบทางด้านซ้าย ${s.trafficNotKeepLeft} ราย
 - ไม่ปกคลุม ${s.trafficNotCovered} ราย
 - ดัดแปลงสภาพรถ ${s.trafficModify} ราย
+- อุปกรณ์ส่วนควบไม่ครบ ${s.trafficNoPart} ราย
 - ฝ่าฝืนเครื่องหมายจราจร ${s.trafficSign} ราย
 - ฝ่าฝืนเครื่องสัญญาณไฟจราจร ${s.trafficLight} ราย
 - ขับรถเร็วเกินกำหนด ${s.trafficSpeed} ราย
@@ -661,89 +666,24 @@ export default function App() {
       </main >
 
       {/* Report Preview Modal */}
-      {
-        showReportModal && (
-          <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="glass-liquid w-full max-w-2xl rounded-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-              <div className="p-6 border-b border-white/10 flex justify-between items-center">
-                <div><h2 className="text-xl font-bold text-white flex items-center gap-2"><ClipboardCopy className="w-5 h-5 text-blue-400" /> ตัวอย่างรายงาน</h2><p className="text-sm text-slate-400">ตรวจสอบความถูกต้องก่อนคัดลอก</p></div>
-                <button onClick={() => setShowReportModal(false)} className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-full transition-colors"><X className="w-6 h-6" /></button>
-              </div>
+      <ReportModal 
+        show={showReportModal} 
+        reportText={reportText} 
+        onClose={() => setShowReportModal(false)}
+        onCopy={(text) => {
+          navigator.clipboard.writeText(text).then(() => {
+            alert("คัดลอกรายงานเรียบร้อยแล้ว");
+            setShowReportModal(false);
+          });
+        }}
+      />
 
-              <div className="p-6">
-                <div className="bg-slate-900/50 rounded-xl border border-white/5 p-4 max-h-[60vh] overflow-y-auto">
-                  <pre className="whitespace-pre-wrap font-sans text-sm text-slate-300 leading-relaxed">{reportText}</pre>
-                </div>
-              </div>
+      {/* Case Detail Modal */}
+      <CaseDetailModal 
+        selectedCase={selectedCase} 
+        onClose={() => setSelectedCase(null)} 
+      />
 
-              <div className="p-6 border-t border-white/10 flex justify-end gap-3 bg-slate-900/30">
-                <button
-                  onClick={() => setShowReportModal(false)}
-                  className="px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-sm font-medium"
-                >
-                  ปิดหน้าต่าง
-                </button>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(reportText).then(() => {
-                      alert("คัดลอกรายงานเรียบร้อยแล้ว");
-                      setShowReportModal(false);
-                    });
-                  }}
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-lg shadow-blue-500/20 transition-all hover:-translate-y-0.5"
-                >
-                  <ClipboardCopy className="w-4 h-4 mr-2" />
-                  คัดลอกรายงาน
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      }
-
-      {
-        selectedCase && (
-          <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="glass-liquid w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 rounded-2xl">
-              <div className="p-6 border-b border-white/10 flex justify-between items-center sticky top-0 bg-slate-900/80 backdrop-blur z-10">
-                <div><h2 className="text-xl font-bold text-white">รายละเอียดการจับกุม</h2><p className="text-sm text-slate-400">Case ID: #{selectedCase.id}</p></div>
-                <button onClick={() => setSelectedCase(null)} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-full"><X className="w-6 h-6" /></button>
-              </div>
-              <div className="p-6 space-y-6">
-                <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-500/30">
-                  <h3 className="text-sm font-semibold text-blue-400 mb-2 uppercase tracking-wider">หน่วยงานรับผิดชอบ</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><p className="text-xs text-slate-400 mb-1">กองกำกับการ</p><p className="text-lg font-bold text-white flex items-center gap-2"><Building2 className="w-5 h-5 text-blue-500" />กก.{selectedCase.unit_kk} บก.ทล.</p></div>
-                    <div><p className="text-xs text-slate-400 mb-1">สถานีตำรวจทางหลวง</p><p className="text-lg font-bold text-white">ส.ทล.{selectedCase.unit_s_tl}</p></div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-200 border-b border-slate-700 pb-2 mb-3 flex items-center"><Calendar className="w-4 h-4 mr-2 text-yellow-500" />ข้อมูลเหตุการณ์</h3>
-                    <dl className="space-y-3 text-sm">
-                      <div><dt className="text-slate-500 text-xs">วัน/เวลา</dt><dd className="text-slate-200 font-medium">{selectedCase.date_capture} เวลา {selectedCase.time_capture || '-'} น.</dd></div>
-                      <div><dt className="text-slate-500 text-xs">สถานที่</dt><dd className="text-slate-200">{selectedCase.location || 'ไม่ระบุ'}</dd></div>
-                      <div><dt className="text-slate-500 text-xs">พิกัด</dt><dd className="text-slate-200 font-mono text-xs">{selectedCase.lat && selectedCase.long ? `${selectedCase.lat}, ${selectedCase.long} ` : '-'}</dd></div>
-                      <div><dt className="text-slate-500 text-xs">หัวข้อเรื่อง</dt><dd className="inline-block px-2 py-1 rounded text-xs font-bold text-white mt-1" style={{ backgroundColor: getCrimeColor(selectedCase.topic) }}>{selectedCase.topic}</dd></div>
-                      {/* แสดงรายละเอียดจับกุมเพิ่มเติม */}
-                      {selectedCase.arrest_type && (<div><dt className="text-slate-500 text-xs mt-2">ประเภทการจับกุม</dt><dd className="text-emerald-400">{selectedCase.arrest_type}</dd></div>)}
-                      {selectedCase.captured_by && (<div><dt className="text-slate-500 text-xs mt-2">จับโดย</dt><dd className="text-emerald-400">{selectedCase.captured_by}</dd></div>)}
-                    </dl>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-200 border-b border-slate-700 pb-2 mb-3 flex items-center"><Users className="w-4 h-4 mr-2 text-yellow-500" />ข้อมูลผู้ต้องหา</h3>
-                    <dl className="space-y-3 text-sm">
-                      <div><dt className="text-slate-500 text-xs">ชื่อ-สกุล</dt><dd className="text-slate-200 font-medium text-lg">{selectedCase.suspect_name}</dd></div>
-                      <div><dt className="text-slate-500 text-xs">ข้อหา</dt><dd className="text-slate-200 bg-slate-800 p-2 rounded border border-slate-700 mt-1">{selectedCase.charge || '-'}</dd></div>
-                      {selectedCase.warrant_source && (<div><dt className="text-slate-500 text-xs mt-2">ประเภทหมายจับ/ที่มา</dt><dd className="text-pink-400">{selectedCase.warrant_source}</dd></div>)}
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      }
-    </div >
+    </div>
   );
 }
