@@ -19,14 +19,17 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
     const [sheetCounts, setSheetCounts] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [viewMode, setViewMode] = useState('default'); // 'default' | 'print_all'
-    // Initialize from props if available, else default to now
-    const selectedMonth = (filters && filters.selectedMonth !== undefined) ? filters.selectedMonth : new Date().getMonth();
-    const selectedYear = (filters && filters.selectedYear !== undefined) ? filters.selectedYear : new Date().getFullYear();
+    let startD = new Date();
+    if (filters && filters.dateRange && filters.dateRange.startDate) {
+        startD = new Date(filters.dateRange.startDate);
+    }
+    const selectedYear = startD.getFullYear();
+    const selectedMonth = startD.getMonth();
 
     // --- Thai month names (full) for header & export ---
     const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
     const yearBE = Number(selectedYear) + 543;
-    const exportMonthName = (selectedMonth !== undefined && selectedMonth !== null && selectedMonth !== '') ? months[selectedMonth] : months[new Date().getMonth()];
+    const exportMonthName = months[selectedMonth];
 
     // Get initial values from URL if present
     const getInitialParams = () => {

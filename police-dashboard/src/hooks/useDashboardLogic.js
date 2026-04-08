@@ -17,12 +17,12 @@ export const useDashboardLogic = (data, rawData) => {
         return {
             search: '',
             period: 'this_month',
-            rangeStart: startOfMonth,
-            rangeEnd: endOfMonth,
+            dateRange: { 
+                startDate: startOfMonth, 
+                endDate: endOfMonth 
+            },
             unit_kk: '', unit_s_tl: '', topic: [], charge: '',
             subFilter: null,
-            selectedMonth: now.getMonth(),
-            selectedYear: now.getFullYear()
         };
     });
 
@@ -45,12 +45,12 @@ export const useDashboardLogic = (data, rawData) => {
         setFilters({
             search: '',
             period: 'this_month',
-            rangeStart: startOfMonth,
-            rangeEnd: endOfMonth,
+            dateRange: { 
+                startDate: startOfMonth, 
+                endDate: endOfMonth 
+            },
             unit_kk: '', unit_s_tl: '', topic: [], charge: '',
             subFilter: null,
-            selectedMonth: now.getMonth(),
-            selectedYear: now.getFullYear()
         });
         setLocalSearch('');
         setComparisonYear(new Date().getFullYear().toString());
@@ -74,24 +74,21 @@ export const useDashboardLogic = (data, rawData) => {
 
             let dateMatch = true;
             if (item.date_obj) {
-                // If selectedMonth and selectedYear are explicitly set, prioritize them
-                if (filters.selectedMonth !== undefined && filters.selectedMonth !== null && filters.selectedMonth !== '') {
-                    if (item.date_obj.getMonth() !== parseInt(filters.selectedMonth)) dateMatch = false;
+                if (filters.dateRange && filters.dateRange.startDate && filters.dateRange.endDate) {
+                    const startObj = new Date(filters.dateRange.startDate);
+                    startObj.setHours(0, 0, 0, 0);
+                    const endObj = new Date(filters.dateRange.endDate);
+                    endObj.setHours(23, 59, 59, 999);
+                    
+                    if (item.date_obj < startObj || item.date_obj > endObj) {
+                        dateMatch = false;
+                    }
                 }
-                if (filters.selectedYear !== undefined && filters.selectedYear !== null && filters.selectedYear !== '') {
-                    if (item.date_obj.getFullYear() !== parseInt(filters.selectedYear)) dateMatch = false;
-                }
-                
-                // Fallback to range checks for compatibility if period is not 'all'
-                if (filters.period !== 'all' && (filters.selectedMonth === '' || filters.selectedYear === '')) {
-                    if (filters.rangeStart && item.date_obj < filters.rangeStart) dateMatch = false;
-                    if (filters.rangeEnd && item.date_obj > filters.rangeEnd) dateMatch = false;
-                }
-            } else { if (filters.period !== 'all') dateMatch = false; }
+            }
 
             return searchMatch && kkMatch && stlMatch && dateMatch;
         });
-    }, [filters.search, filters.unit_kk, filters.unit_s_tl, filters.period, filters.rangeStart, filters.rangeEnd, filters.selectedMonth, filters.selectedYear, data]);
+    }, [filters.search, filters.unit_kk, filters.unit_s_tl, filters.dateRange, data]);
 
     /* --- 2. Final Filter (For Charts/Lists) --- */
     const filteredData = useMemo(() => {
@@ -180,7 +177,7 @@ export const useDashboardLogic = (data, rawData) => {
             unitChartData = allKK.map(num => ({ name: `กก.${num}`, value: unitData[`กก.${num}`] || 0 }));
         }
 
-        const targetYear = comparisonYear || filters.selectedYear || new Date().getFullYear();
+        const targetYear = comparisonYear || (filters.dateRange?.startDate ? new Date(filters.dateRange.startDate).getFullYear() : new Date().getFullYear());
         const targetYearInt = parseInt(targetYear);
         const monthlyStats = Array(12).fill(0);
 

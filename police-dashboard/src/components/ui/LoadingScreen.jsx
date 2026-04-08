@@ -25,16 +25,19 @@ const LoadingScreen = ({ onFinished }) => {
     }, [onFinished]);
 
     return (
-        <div className={`fixed top-0 left-0 w-full h-[100dvh] z-[99999] bg-[#0f172a] flex flex-col items-center justify-center overflow-hidden font-sans transition-all duration-700 ease-in-out touch-none overscroll-none ${isExiting ? 'opacity-0 scale-110 filter blur-sm pointer-events-none' : 'opacity-100 scale-100'}`} style={{ backgroundColor: '#0f172a' }}>
+        <div className={`fixed top-0 left-0 w-full h-[100dvh] z-[99999] bg-[#0f172a] flex flex-col items-center justify-center overflow-hidden font-sans transition-all duration-700 ease-in-out touch-none overscroll-none ${isExiting ? 'opacity-0 scale-110 blur-xl pointer-events-none' : 'opacity-100 scale-100'}`} style={{ backgroundColor: '#0f172a' }}>
 
             {/* Cyber Frame / Border Overlay */}
-            <div className="absolute inset-0 z-[100000] pointer-events-none p-2 sm:p-4">
-                <div className="w-full h-full border-2 border-blue-500/30 rounded-lg relative">
-                    {/* Corners */}
-                    <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-400 rounded-tl-lg"></div>
-                    <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-400 rounded-tr-lg"></div>
-                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-400 rounded-bl-lg"></div>
-                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-blue-400 rounded-br-lg"></div>
+            <div className="absolute inset-0 z-[100000] pointer-events-none p-4 sm:p-8">
+                <div className="w-full h-full border-2 border-blue-500/20 rounded-3xl relative overflow-hidden backdrop-blur-[2px]">
+                    {/* Glass Reflective Effect */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-30"></div>
+                    
+                    {/* Corners - Premium rounded-2xl style */}
+                    <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-blue-400/80 rounded-tl-2xl shadow-[0_0_15px_rgba(96,165,250,0.3)]"></div>
+                    <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-blue-400/80 rounded-tr-2xl shadow-[0_0_15px_rgba(96,165,250,0.3)]"></div>
+                    <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-blue-400/80 rounded-bl-2xl shadow-[0_0_15px_rgba(96,165,250,0.3)]"></div>
+                    <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-blue-400/80 rounded-br-2xl shadow-[0_0_15px_rgba(96,165,250,0.3)]"></div>
                 </div>
             </div>
 
@@ -106,15 +109,15 @@ const LoadingScreen = ({ onFinished }) => {
                     </div>
                 </div>
 
-                {/* Active Progress Bar */}
-                <div className="relative w-[85%] max-w-[300px] sm:max-w-md h-2 bg-slate-800/50 rounded-full overflow-hidden border border-slate-700/50 backdrop-blur-sm">
+                {/* Active Progress Bar - Premium Rounded */}
+                <div className="relative w-[85%] max-w-[300px] sm:max-w-md h-3 bg-slate-900/80 rounded-2xl overflow-hidden border border-white/10 backdrop-blur-md shadow-inner">
                     {/* Moving Gradient Bar */}
                     <div
-                        className="h-full bg-gradient-to-r from-blue-600 via-purple-500 to-red-600 transition-all duration-100 ease-linear shadow-[0_0_15px_currentColor]"
+                        className="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-red-600 transition-all duration-100 ease-linear shadow-[0_0_20px_rgba(59,130,246,0.5)]"
                         style={{ width: `${Math.min(progress, 100)}%` }}
                     >
                         {/* Leading Edge Highlight */}
-                        <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-white shadow-[0_0_8px_#ffffff]"></div>
+                        <div className="absolute right-0 top-0 bottom-0 w-1 bg-white shadow-[0_0_12px_#ffffff] animate-pulse"></div>
                     </div>
                 </div>
 

@@ -185,19 +185,22 @@ export default function App() {
       return `${date.getDate()} ${monthsShort[date.getMonth()]} ${date.getFullYear() + 543} `;
     };
 
-    // Prefer full month name format when a month is selected
-    if (filters.selectedMonth !== undefined && filters.selectedMonth !== null && filters.selectedMonth !== '') {
-      const selMonth = parseInt(filters.selectedMonth);
-      const yearBE = (filters.selectedYear ? parseInt(filters.selectedYear) : new Date().getFullYear()) + 543;
-      headerDateText = `ประจำเดือน ${monthsFull[selMonth]} พ.ศ.${yearBE} `;
-    } else if (filters.period === 'today') {
-      headerDateText = `ประจำวันที่ ${formatThDate(new Date())} `;
-    } else if (filters.period === 'yesterday') {
-      const yest = new Date();
-      yest.setDate(yest.getDate() - 1);
-      headerDateText = `ประจำวันที่ ${formatThDate(yest)} `;
-    } else if (filters.rangeStart && filters.rangeEnd) {
-      headerDateText = `ประจำห้วงวันที่ ${formatThDate(filters.rangeStart)} ถึง ${formatThDate(filters.rangeEnd)} `;
+    if (filters.dateRange && filters.dateRange.startDate && filters.dateRange.endDate) {
+      const start = new Date(filters.dateRange.startDate);
+      const end = new Date(filters.dateRange.endDate);
+      const isFirstDay = start.getDate() === 1;
+      const lastDayOfMonth = new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate();
+      const isLastDay = end.getDate() === lastDayOfMonth;
+      const isSameMonth = start.getMonth() === end.getMonth();
+      const isSameYear = start.getFullYear() === end.getFullYear();
+
+      if (isFirstDay && isLastDay && isSameMonth && isSameYear) {
+         headerDateText = `ประจำเดือน ${monthsFull[start.getMonth()]} พ.ศ.${start.getFullYear() + 543} `;
+      } else if (start.getTime() === end.getTime() || (start.getDate() === end.getDate() && start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear())) {
+         headerDateText = `ประจำวันที่ ${formatThDate(start)} `;
+      } else {
+         headerDateText = `ประจำห้วงวันที่ ${formatThDate(start)} ถึง ${formatThDate(end)} `;
+      }
     } else {
       headerDateText = `ข้อมูลทั้งหมด`;
     }

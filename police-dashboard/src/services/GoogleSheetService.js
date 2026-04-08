@@ -54,28 +54,44 @@ const SHEETS = {
     }
 };
 
+/**
+ * Standard API Response Pattern based on @antigravity-skills
+ */
+const apiResponse = (status, data = null, error = null) => ({
+    status,
+    data,
+    error,
+    timestamp: new Date().toISOString()
+});
+
+/**
+ * Fetch and Parse CSV from Google Sheets with professional error handling
+ */
 const fetchCSV = async (url) => {
     try {
         const response = await fetch(url);
+        
         if (!response.ok) {
             throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
         }
+
         const csvText = await response.text();
         if (!csvText || csvText.trim().length === 0) {
-            return [];
+            return apiResponse('success', []);
         }
-        return new Promise((resolve, reject) => {
+
+        return new Promise((resolve) => {
             Papa.parse(csvText, {
                 header: true,
                 skipEmptyLines: true,
-                dynamicTyping: true, // Auto convert numbers
-                complete: (results) => resolve(results.data),
-                error: (err) => reject(new Error(`CSV Parse Error: ${err.message}`))
+                dynamicTyping: true,
+                complete: (results) => resolve(apiResponse('success', results.data)),
+                error: (err) => resolve(apiResponse('error', null, `CSV Parse Error: ${err.message}`))
             });
         });
     } catch (error) {
-        console.error(`🚨 Error fetching CSV from ${url}:`, error.message);
-        return [];
+        console.error(`🚨 [GoogleSheetService] Fetch failure for ${url}:`, error.message);
+        return apiResponse('error', [], error.message);
     }
 };
 
@@ -145,9 +161,9 @@ const filterRow = (row, filters) => {
         const rowDate = parseDate(row.date);
         if (!rowDate) return false;
 
-        if (filters.dateRange && filters.dateRange.start && filters.dateRange.end) {
-            const start = new Date(filters.dateRange.start);
-            const end = new Date(filters.dateRange.end);
+        if (filters.dateRange && filters.dateRange.startDate && filters.dateRange.endDate) {
+            const start = new Date(filters.dateRange.startDate);
+            const end = new Date(filters.dateRange.endDate);
             start.setHours(0, 0, 0, 0);
             end.setHours(23, 59, 59, 999);
             if (rowDate < start || rowDate > end) return false;
@@ -167,7 +183,10 @@ const filterRow = (row, filters) => {
 export const fetchDashboardData = async (filters) => {
     const promises = Object.values(SHEETS).map(sheet => {
         const url = `https://docs.google.com/spreadsheets/d/${sheet.id}/export?format=csv&gid=${sheet.gid}`;
-        return fetchCSV(url).then(data => ({ type: sheet.name, data }));
+        return fetchCSV(url).then(res => ({ 
+            type: sheet.name, 
+            data: res.status === 'success' ? res.data : [] 
+        }));
     });
 
     const results = await Promise.all(promises);
@@ -370,7 +389,11 @@ export const calculateDashboardStats = (rawData, filters) => {
     const now = new Date();
     let targetMonth = now.getMonth();
     let targetYear = now.getFullYear();
-    if (filters.selectedMonth !== undefined && filters.selectedMonth !== '') {
+    if (filters.dateRange && filters.dateRange.startDate) {
+        const d = new Date(filters.dateRange.startDate);
+        targetMonth = d.getMonth();
+        targetYear = d.getFullYear();
+    } else if (filters.selectedMonth !== undefined && filters.selectedMonth !== '') {
         targetMonth = parseInt(filters.selectedMonth);
     }
 
@@ -663,6 +686,6 @@ export const calculateDashboardStats = (rawData, filters) => {
 // --- Fetch station/commander info from Settings_Stations sheet ---
 export const fetchStationInfo = async () => {
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1282713566`;
-    const data = await fetchCSV(url);
-    return data; // Array of { Unit_ID, Division_Name, Station_Name, Rank, Full_Name, Position, Dashboard_Link }
+    const res = await fetchCSV(url);
+    return res.status === 'success' ? res.data : [];
 };
