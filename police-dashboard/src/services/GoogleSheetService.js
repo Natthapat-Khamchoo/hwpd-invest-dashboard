@@ -411,7 +411,7 @@ export const calculateDashboardStats = (rawData, filters) => {
     counts.charts = {
         comparison: units.map(u => ({ name: u, month1: 0, month2: 0 })),
         traffic: units.map(u => ({ name: u, month1: 0, month2: 0 })),
-        truck: units.map(u => ({ name: u, inspected: 0, arrested: 0 })),
+        truck: units.map(u => ({ name: u, month1: 0, month2: 0 })),
         monthNames: last2Months.map(m => m.name),
         qualityWork: units.map(u => ({ division: u, count: 0, details: [] })),
         media: units.map(u => ({ label: `ส.ทล.${u.split('.')[1] || '?'}`, values: Array(8).fill(0) })),
@@ -534,12 +534,13 @@ export const calculateDashboardStats = (rawData, filters) => {
                 }
             }
 
-            // Truck Chart (from Crime/Flagrant sheet?)
-            if (unitIdx !== -1) {
-                if (filterRow(row, filters)) {
-                    const f_truck = (Number(row.dir_f_weight) || 0) + (Number(row.dir_w_weight) || 0);
-                    if (f_truck > 0) {
-                        counts.charts.truck[unitIdx].arrested += f_truck;
+            // Truck Chart Chart Aggregation (Comparison 2 months)
+            if (unitIdx !== -1 && rowDate) {
+                const f_truck = (Number(row.dir_f_weight) || 0) + (Number(row.dir_w_weight) || 0);
+                if (f_truck > 0) {
+                    const monthKey = getMonthKey(rowDate);
+                    if (monthKey) {
+                        counts.charts.truck[unitIdx][monthKey] += f_truck;
                     }
                 }
             }

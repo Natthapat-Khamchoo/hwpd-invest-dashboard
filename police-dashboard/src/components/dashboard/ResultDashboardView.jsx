@@ -798,7 +798,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
                             ส่วนที่ 4: สถิติรถบรรทุก
                         </div>
                         <div className="w-full">
-                            <TruckInspectionTab data={sheetCounts?.charts?.truck} isPrint={true} />
+                            <TruckInspectionTab data={sheetCounts?.charts?.truck} monthNames={sheetCounts?.charts?.monthNames} isPrint={true} />
                         </div>
                     </div>
 
@@ -820,7 +820,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
             case 'comparison': return <ComparisonTab data={sheetCounts?.charts?.comparison} monthNames={sheetCounts?.charts?.monthNames} />;
             case 'traffic-comparison': return <TrafficComparisonTab data={sheetCounts?.charts?.traffic} monthNames={sheetCounts?.charts?.monthNames} />;
             case 'press': return <PressReleaseTab qualityWork={sheetCounts?.charts?.qualityWork} media={sheetCounts?.charts?.media} />;
-            case 'truck': return <TruckInspectionTab data={sheetCounts?.charts?.truck} />;
+            case 'truck': return <TruckInspectionTab data={sheetCounts?.charts?.truck} monthNames={sheetCounts?.charts?.monthNames} />;
             default: return <OverviewTab counts={sheetCounts} isLoading={isLoading} />;
         }
     };
