@@ -285,12 +285,12 @@ export default function App() {
 - บาดเจ็บ ${fmt(s.accidentsInjured)} ราย
 
 🔻5. ตรวจยึดของกลาง
-  . ยาเสพติด (ยาบ้า ${fmt(s.seized.drugs.yaba)} เม็ด, ไอซ์ ${fmt(s.seized.drugs.ice)} กรัม)
-  . อาวุธปืนและเครื่องกระสุน (ปืน ${fmt(s.seized.guns.registered + s.seized.guns.unregistered)} กระบอก, กระสุน ${fmt(s.seized.guns.bullets)} นัด)
-  . รถยนต์ ${fmt(s.seized.vehicles.car)} คัน
-  . อุปกรณ์อิเล็กทรอนิกส์ ${fmt((s.seized.others.phone || 0) + (s.seized.others.electronics || 0))} รายการ (โทรศัพท์มือถือ ${fmt(s.seized.others.phone)} เครื่อง, คอมพิวเตอร์/อุปกรณ์อื่น ${fmt(s.seized.others.electronics)} เครื่อง)
-  . เงินสด ${fmt(s.seized.others.money)} บาท
-  . บัญชี ${fmt(s.seized.others.account)} บัญชี
+- ยาเสพติด (ยาบ้า ${fmt(s.seized.drugs.yaba)} เม็ด, ไอซ์ ${fmt(s.seized.drugs.ice)} กรัม)
+- อาวุธปืนและเครื่องกระสุน (ปืน ${fmt(s.seized.guns.registered + s.seized.guns.unregistered)} กระบอก, กระสุน ${fmt(s.seized.guns.bullets)} นัด)
+- รถยนต์ ${fmt(s.seized.vehicles.car)} คัน
+- อุปกรณ์อิเล็กทรอนิกส์ ${fmt((s.seized.others.phone || 0) + (s.seized.others.electronics || 0))} รายการ (โทรศัพท์มือถือ ${fmt(s.seized.others.phone)} เครื่อง, คอมพิวเตอร์/อุปกรณ์อื่น ${fmt(s.seized.others.electronics)} เครื่อง)
+- เงินสด ${fmt(s.seized.others.money)} บาท
+- บัญชี ${fmt(s.seized.others.account)} บัญชี
 
 🔻6. กิจกรรมจิตอาสา ${fmt(s.volunteerTotal)} ครั้ง
 🔻7. ช่วยเหลือ/บริการประชาชน ${fmt(s.serviceTotal)} ครั้ง
