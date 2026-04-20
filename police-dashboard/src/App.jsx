@@ -195,11 +195,11 @@ export default function App() {
       const isSameYear = start.getFullYear() === end.getFullYear();
 
       if (isFirstDay && isLastDay && isSameMonth && isSameYear) {
-         headerDateText = `ประจำเดือน ${monthsFull[start.getMonth()]} พ.ศ.${start.getFullYear() + 543} `;
+        headerDateText = `ประจำเดือน ${monthsFull[start.getMonth()]} พ.ศ.${start.getFullYear() + 543} `;
       } else if (start.getTime() === end.getTime() || (start.getDate() === end.getDate() && start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear())) {
-         headerDateText = `ประจำวันที่ ${formatThDate(start)} `;
+        headerDateText = `ประจำวันที่ ${formatThDate(start)} `;
       } else {
-         headerDateText = `ประจำห้วงวันที่ ${formatThDate(start)} ถึง ${formatThDate(end)} `;
+        headerDateText = `ประจำห้วงวันที่ ${formatThDate(start)} ถึง ${formatThDate(end)} `;
       }
     } else {
       headerDateText = `ข้อมูลทั้งหมด`;
@@ -236,61 +236,63 @@ export default function App() {
     let currentUnitId;
     let currentStationId;
     if (urlKK) {
-        currentUnitId = urlKK;
-        currentStationId = urlSTL;
+      currentUnitId = urlKK;
+      currentStationId = urlSTL;
     } else {
-        currentUnitId = Array.isArray(filters.unit_kk) ? (filters.unit_kk[0] || '0') : (filters.unit_kk || '0');
-        currentStationId = filters.unit_s_tl || '';
+      currentUnitId = Array.isArray(filters.unit_kk) ? (filters.unit_kk[0] || '0') : (filters.unit_kk || '0');
+      currentStationId = filters.unit_s_tl || '';
     }
     const { commander, unitName } = getCommanderInfo(currentUnitId, currentStationId);
 
 
+    // สร้างฟังก์ชันสั้นๆ สำหรับจัดรูปแบบตัวเลข และป้องกันค่าที่ไม่ได้กำหนด
+    const fmt = (num) => Number(num || 0).toLocaleString('en-US');
     const reportText = `เรียน ผู้บังคับบัญชา
 
-ภายใต้การอำนวยการของ ${commander}
-ขอรายงานผลการปฏิบัติงานของ ${unitName} ${headerDateText.trim()}
+📍ภายใต้การอำนวยการของ ${commander}
+ขอรายงานผลการปฏิบัติงานของ ${unitName}🗓️ ${headerDateText.trim()}
 
-1. ผลการจับกุมคดีอาญา รวม ${s.criminalTotal} ราย
-- ความผิดซึ่งหน้า ${s.flagrantTotal} ราย
-- หมายจับ ${s.warrantTotal} ราย
+🔻1. ผลการจับกุมคดีอาญา รวม ${fmt(s.criminalTotal)} ราย
+- ความผิดซึ่งหน้า ${fmt(s.flagrantTotal)} ราย
+- หมายจับ ${fmt(s.warrantTotal)} ราย
 แบ่งเป็นประเภทฐานความผิด ดังนี้
-- พ.ร.บ.ยาเสพติด  ${s.offenseDrugs} ราย
-- พ.ร.บ.อาวุธปืน   ${s.offenseGuns} ราย
-- พ.ร.บ.คนเข้าเมือง  ${s.offenseImmig} ราย
-- รถบรรทุกน้ำหนักเกินฯ ${s.offenseWeight} ราย
-- ขับรถขณะเมาสุรา ${s.offenseDrunk} ราย
-- อื่นๆ ${s.offenseCustoms + s.offenseDisease + s.offenseTransport + s.offenseDocs + s.offenseProperty + s.offenseSex + s.offenseLife + s.offenseCom + s.offenseOther} ราย
+- พ.ร.บ.ยาเสพติด  ${fmt(s.offenseDrugs)} ราย
+- พ.ร.บ.อาวุธปืน   ${fmt(s.offenseGuns)} ราย
+- พ.ร.บ.คนเข้าเมือง  ${fmt(s.offenseImmig)} ราย
+- รถบรรทุกน้ำหนักเกินฯ ${fmt(s.offenseWeight)} ราย
+- ขับรถขณะเมาสุรา ${fmt(s.offenseDrunk)} ราย
+- อื่นๆ ${fmt(s.offenseCustoms + s.offenseDisease + s.offenseTransport + s.offenseDocs + s.offenseProperty + s.offenseSex + s.offenseLife + s.offenseCom + s.offenseOther)} ราย
 
-2. ผลการจับกุมคดีจราจร รวม ${s.trafficTotal} ราย
-- ไม่ชิดขอบทางด้านซ้าย ${s.trafficNotKeepLeft} ราย
-- ไม่ปกคลุม ${s.trafficNotCovered} ราย
-- ดัดแปลงสภาพรถ ${s.trafficModify} ราย
-- อุปกรณ์ส่วนควบไม่ครบ ${s.trafficNoPart} ราย
-- ฝ่าฝืนเครื่องหมายจราจร ${s.trafficSign} ราย
-- ฝ่าฝืนเครื่องสัญญาณไฟจราจร ${s.trafficLight} ราย
-- ขับรถเร็วเกินกำหนด ${s.trafficSpeed} ราย
-- ไม่ติดแผ่นป้ายทะเบียน ${s.trafficNoPlate} ราย
-- ขาดต่อภาษี/พ.ร.บ.ฯ ${s.trafficTax} ราย
-- อื่นๆ ${s.trafficGeneral} ราย
+🔻2. ผลการจับกุมคดีจราจร รวม ${fmt(s.trafficTotal)} ราย
+- ไม่ชิดขอบทางด้านซ้าย ${fmt(s.trafficNotKeepLeft)} ราย
+- ไม่ปกคลุม ${fmt(s.trafficNotCovered)} ราย
+- ดัดแปลงสภาพรถ ${fmt(s.trafficModify)} ราย
+- อุปกรณ์ส่วนควบไม่ครบ ${fmt(s.trafficNoPart)} ราย
+- ฝ่าฝืนเครื่องหมายจราจร ${fmt(s.trafficSign)} ราย
+- ฝ่าฝืนเครื่องสัญญาณไฟจราจร ${fmt(s.trafficLight)} ราย
+- ขับรถเร็วเกินกำหนด ${fmt(s.trafficSpeed)} ราย
+- ไม่ติดแผ่นป้ายทะเบียน ${fmt(s.trafficNoPlate)} ราย
+- ขาดต่อภาษี/พ.ร.บ.ฯ ${fmt(s.trafficTax)} ราย
+- อื่นๆ ${fmt(s.trafficGeneral)} ราย
 
-3. นำขบวน รวม ${s.convoyTotal} ขบวน
-- ขบวนเสด็จ ${s.convoyRoyal} ขบวน
-- ขบวนทั่วไป ${s.convoyGeneral} ขบวน
+🔻3. นำขบวน รวม ${fmt(s.convoyTotal)} ขบวน
+- ขบวนเสด็จ ${fmt(s.convoyRoyal)} ขบวน
+- ขบวนทั่วไป ${fmt(s.convoyGeneral)} ขบวน
 
-4. รับแจ้งอุบัติเหตุ รวม ${s.accidentsTotal} ครั้ง
-- เสียชีวิต ${s.accidentsDeath} ราย
-- บาดเจ็บ ${s.accidentsInjured} ราย
+🔻4. รับแจ้งอุบัติเหตุ รวม ${fmt(s.accidentsTotal)} ครั้ง
+- เสียชีวิต ${fmt(s.accidentsDeath)} ราย
+- บาดเจ็บ ${fmt(s.accidentsInjured)} ราย
 
-5. ตรวจยึดของกลาง
-  . ยาเสพติด (ยาบ้า ${s.seized.drugs.yaba.toLocaleString()} เม็ด, ไอซ์ ${s.seized.drugs.ice.toLocaleString()} กรัม)
-  . อาวุธปืนและเครื่องกระสุน (ปืน ${s.seized.guns.registered + s.seized.guns.unregistered} กระบอก, กระสุน ${s.seized.guns.bullets} นัด)
-  . รถยนต์ ${s.seized.vehicles.car} คัน
-  . อุปกรณ์อิเล็กทรอนิกส์ ${(s.seized.others.phone || 0) + (s.seized.others.electronics || 0)} รายการ (โทรศัพท์มือถือ ${s.seized.others.phone || 0} เครื่อง, คอมพิวเตอร์/อุปกรณ์อื่น ${s.seized.others.electronics || 0} เครื่อง)
-  . เงินสด ${s.seized.others.money.toLocaleString()} บาท
-  . บัญชี ${s.seized.others.account} บัญชี
+🔻5. ตรวจยึดของกลาง
+  . ยาเสพติด (ยาบ้า ${fmt(s.seized.drugs.yaba)} เม็ด, ไอซ์ ${fmt(s.seized.drugs.ice)} กรัม)
+  . อาวุธปืนและเครื่องกระสุน (ปืน ${fmt(s.seized.guns.registered + s.seized.guns.unregistered)} กระบอก, กระสุน ${fmt(s.seized.guns.bullets)} นัด)
+  . รถยนต์ ${fmt(s.seized.vehicles.car)} คัน
+  . อุปกรณ์อิเล็กทรอนิกส์ ${fmt((s.seized.others.phone || 0) + (s.seized.others.electronics || 0))} รายการ (โทรศัพท์มือถือ ${fmt(s.seized.others.phone)} เครื่อง, คอมพิวเตอร์/อุปกรณ์อื่น ${fmt(s.seized.others.electronics)} เครื่อง)
+  . เงินสด ${fmt(s.seized.others.money)} บาท
+  . บัญชี ${fmt(s.seized.others.account)} บัญชี
 
-6. กิจกรรมจิตอาสา ${s.volunteerTotal} ครั้ง
-7. ช่วยเหลือ/บริการประชาชน ${s.serviceTotal} ครั้ง
+🔻6. กิจกรรมจิตอาสา ${fmt(s.volunteerTotal)} ครั้ง
+🔻7. ช่วยเหลือ/บริการประชาชน ${fmt(s.serviceTotal)} ครั้ง
 
 จึงเรียนมาเพื่อโปรดทราบ`;
 
@@ -669,9 +671,9 @@ export default function App() {
       </main >
 
       {/* Report Preview Modal */}
-      <ReportModal 
-        show={showReportModal} 
-        reportText={reportText} 
+      <ReportModal
+        show={showReportModal}
+        reportText={reportText}
         onClose={() => setShowReportModal(false)}
         onCopy={(text) => {
           navigator.clipboard.writeText(text).then(() => {
@@ -682,9 +684,9 @@ export default function App() {
       />
 
       {/* Case Detail Modal */}
-      <CaseDetailModal 
-        selectedCase={selectedCase} 
-        onClose={() => setSelectedCase(null)} 
+      <CaseDetailModal
+        selectedCase={selectedCase}
+        onClose={() => setSelectedCase(null)}
       />
 
     </div>
