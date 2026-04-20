@@ -250,7 +250,8 @@ export default function App() {
     const reportText = `เรียน ผู้บังคับบัญชา
 
 📍ภายใต้การอำนวยการของ ${commander}
-ขอรายงานผลการปฏิบัติงานของ ${unitName}🗓️ ${headerDateText.trim()}
+ขอรายงานผลการปฏิบัติงานของ ${unitName}
+🗓️ ${headerDateText.trim()}
 
 🔻1. ผลการจับกุมคดีอาญา รวม ${fmt(s.criminalTotal)} ราย
 - ความผิดซึ่งหน้า ${fmt(s.flagrantTotal)} ราย
