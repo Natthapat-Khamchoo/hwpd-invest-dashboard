@@ -379,6 +379,15 @@ export const calculateDashboardStats = (rawData, filters) => {
         accidentsTotal: 0,
         accidentsDeath: 0,
         accidentsInjured: 0,
+        accidentsDamage: 0,
+        accidents1to7Total: 0,
+        accidents1to7Death: 0,
+        accidents1to7Injured: 0,
+        accidents1to7Damage: 0,
+        accidents8Total: 0,
+        accidents8Death: 0,
+        accidents8Injured: 0,
+        accidents8Damage: 0,
 
         volunteerTotal: 0,
         serviceTotal: 0
@@ -653,11 +662,22 @@ export const calculateDashboardStats = (rawData, filters) => {
         rawData.accidents.forEach(row => {
             if (filterRow(row, filters)) {
                 counts.accidentsTotal++;
-                // Assuming columns: dead, injured (need to verify mapping if possible, else generic)
-                // If columns are different, this will need adjustment. 
-                // Common names: 'dead', 'death', 'injured', 'injury'
                 counts.accidentsDeath += (Number(row.acc_dead) || 0);
                 counts.accidentsInjured += (Number(row.acc_injured) || 0);
+                counts.accidentsDamage += (parseFloat(String(row.acc_lost).replace(/,/g, '')) || 0);
+
+                const unitIdx = getUnitIndex(row);
+                if (unitIdx === 7) {
+                    counts.accidents8Total++;
+                    counts.accidents8Death += (Number(row.acc_dead) || 0);
+                    counts.accidents8Injured += (Number(row.acc_injured) || 0);
+                    counts.accidents8Damage += (parseFloat(String(row.acc_lost).replace(/,/g, '')) || 0);
+                } else {
+                    counts.accidents1to7Total++;
+                    counts.accidents1to7Death += (Number(row.acc_dead) || 0);
+                    counts.accidents1to7Injured += (Number(row.acc_injured) || 0);
+                    counts.accidents1to7Damage += (parseFloat(String(row.acc_lost).replace(/,/g, '')) || 0);
+                }
             }
         });
     }

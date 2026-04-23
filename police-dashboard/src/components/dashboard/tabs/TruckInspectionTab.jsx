@@ -13,14 +13,14 @@ const TruckInspectionTab = ({ data = [], monthNames = ["ม.ค.", "ก.พ."], 
                 </div>
                 <div className={`w-full ${isPrint ? 'h-[600px] md:h-[650px]' : 'h-[600px] md:h-[850px]'}`}>
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart layout="vertical" data={data} margin={{ top: 20, right: 80, left: 40, bottom: 20 }}>
-                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                            <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 18, fill: '#64748b', fontWeight: 500 }} tickFormatter={(val) => val.toLocaleString()} />
-                            <YAxis type="category" dataKey="name" width={70} tick={{ fontSize: 22, fill: '#334155', fontWeight: '700' }} axisLine={false} tickLine={false} />
+                        <BarChart data={data} margin={{ top: 40, right: 20, left: 20, bottom: 20 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                            <XAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 18, fill: '#334155', fontWeight: '700' }} />
+                            <YAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 16, fill: '#64748b', fontWeight: 500 }} tickFormatter={(val) => val.toLocaleString()} width={60} />
                             <Tooltip formatter={(value) => value.toLocaleString()} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', color: '#1e293b' }} cursor={{ fill: '#f1f5f9' }} />
                             <Legend wrapperStyle={{ paddingTop: '20px' }} formatter={(value) => <span className="text-slate-700 font-bold text-lg ml-2">{value}</span>} />
-                            <Bar dataKey="month1" name={monthNames[0]} fill="#cbd5e1" radius={[0, 8, 8, 0]} barSize={40} label={{ position: 'right', fill: '#475569', fontSize: 24, fontWeight: 'bold', formatter: (val) => val.toLocaleString() }} />
-                            <Bar dataKey="month2" name={monthNames[1]} fill="#dc2626" radius={[0, 8, 8, 0]} barSize={40} label={{ position: 'right', fill: '#991b1b', fontSize: 24, fontWeight: 'bold', formatter: (val) => val.toLocaleString() }} />
+                            <Bar dataKey="month1" name={monthNames[0]} fill="#cbd5e1" radius={[8, 8, 0, 0]} barSize={40} label={{ position: 'top', fill: '#475569', fontSize: 16, fontWeight: 'bold', formatter: (val) => val.toLocaleString() }} />
+                            <Bar dataKey="month2" name={monthNames[1]} fill="#dc2626" radius={[8, 8, 0, 0]} barSize={40} label={{ position: 'top', fill: '#991b1b', fontSize: 16, fontWeight: 'bold', formatter: (val) => val.toLocaleString() }} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>

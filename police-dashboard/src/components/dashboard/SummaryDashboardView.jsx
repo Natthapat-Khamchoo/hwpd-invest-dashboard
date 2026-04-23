@@ -62,16 +62,16 @@ const SummaryDashboardView = ({ filteredData, filters, reportStats, getCommander
   const counts = {
     trafficAct: 0, carAct: 0, transportAct: 0, highwayAct: 0, weight: reportStats ? reportStats.offenseWeight : 0,
     checkWeight: 0, checkSticker: 0,
-    warrantGeneral: reportStats ? (reportStats.warrantGeneral + reportStats.warrantBodyworn) : 0, 
-    warrantBigData: reportStats ? reportStats.warrantBigData : 0, 
-    forgery: reportStats ? reportStats.offenseDocs : 0, 
-    drugs: reportStats ? reportStats.offenseDrugs : 0, 
-    guns: reportStats ? reportStats.offenseGuns : 0, 
-    immigration: reportStats ? reportStats.offenseImmig : 0, 
+    warrantGeneral: reportStats ? (reportStats.warrantGeneral + reportStats.warrantBodyworn) : 0,
+    warrantBigData: reportStats ? reportStats.warrantBigData : 0,
+    forgery: reportStats ? reportStats.offenseDocs : 0,
+    drugs: reportStats ? reportStats.offenseDrugs : 0,
+    guns: reportStats ? reportStats.offenseGuns : 0,
+    immigration: reportStats ? reportStats.offenseImmig : 0,
     others: reportStats ? (reportStats.offenseOther + reportStats.offenseCustoms + reportStats.offenseDisease + reportStats.offenseProperty + reportStats.offenseSex + reportStats.offenseDrunk + reportStats.offenseLife + reportStats.offenseCom) : 0,
-    accidents: reportStats ? reportStats.accidentsTotal || 0 : 0, 
-    deaths: reportStats ? reportStats.accidentsDeath || 0 : 0, 
-    injuries: reportStats ? reportStats.accidentsInjured || 0 : 0, 
+    accidents: reportStats ? reportStats.accidentsTotal || 0 : 0,
+    deaths: reportStats ? reportStats.accidentsDeath || 0 : 0,
+    injuries: reportStats ? reportStats.accidentsInjured || 0 : 0,
     damages: 0
   };
 
@@ -93,14 +93,14 @@ const SummaryDashboardView = ({ filteredData, filters, reportStats, getCommander
   filteredData.forEach(item => {
     const topic = item.topic;
     const textSearch = ((item.charge || "") + " " + (item.original_topic || "")).toLowerCase();
-    
+
     if (topic === 'จราจร/ขนส่ง' || topic === 'เมาแล้วขับ') {
       if (textSearch.includes('รถยนต์') || textSearch.includes('ทะเบียน')) counts.carAct++;
       else if (textSearch.includes('ขนส่ง')) counts.transportAct++;
       else if (textSearch.includes('ทางหลวง')) counts.highwayAct++;
       else counts.trafficAct++;
     } else if (textSearch.includes('ทางหลวง') && topic !== 'รถบรรทุก/น้ำหนัก') counts.highwayAct++;
-    
+
     if (topic !== 'รถบรรทุก/น้ำหนัก' && topic !== 'ยาเสพติด' && topic !== 'บุคคลตามหมายจับ' && topic !== 'อาวุธปืน/วัตถุระเบิด' && topic !== 'ต่างด้าว/ตม.') {
       if (textSearch.includes('ตรวจสอบน้ำหนัก')) counts.checkWeight++;
       else if (textSearch.includes('สติกเกอร์') || textSearch.includes('สัญลักษณ์')) counts.checkSticker++;
@@ -135,7 +135,6 @@ const SummaryDashboardView = ({ filteredData, filters, reportStats, getCommander
 
   // --- Actions ---
   const handleCopyReport = async () => {
-    // Use reportStats if available, otherwise fallback to basic counts (though reportStats is preferred for detailed breakdown)
     const s = reportStats || {
       trafficTotal: 0, trafficNotKeepLeft: 0, trafficNotCovered: 0, trafficModify: 0,
       trafficNoPart: 0, trafficSign: 0, trafficLight: 0, trafficSpeed: 0,
@@ -147,9 +146,24 @@ const SummaryDashboardView = ({ filteredData, filters, reportStats, getCommander
       offenseLife: 0, offenseCom: 0, offenseOther: 0,
       convoyTotal: 0, convoyRoyal: 0, convoyGeneral: 0,
       seized: { drugs: { yaba: 0, ice: 0, ketamine: 0, other: 0 }, guns: { registered: 0, unregistered: 0, bullets: 0, explosives: 0 }, vehicles: { car: 0, bike: 0 }, others: { money: 0, account: 0, phone: 0, electronics: 0, items: 0 } },
-      accidentsTotal: 0, accidentsDeath: 0, accidentsInjured: 0,
+      accidentsTotal: 0, accidentsDeath: 0, accidentsInjured: 0, accidentsDamage: 0,
+      accidents1to7Total: 0, accidents1to7Death: 0, accidents1to7Injured: 0, accidents1to7Damage: 0,
+      accidents8Total: 0, accidents8Death: 0, accidents8Injured: 0, accidents8Damage: 0,
       volunteerTotal: 0, serviceTotal: 0
     };
+
+    const isAllUnits = !filters.unit_kk || filters.unit_kk === 'all' || filters.unit_kk === '0' || (Array.isArray(filters.unit_kk) && (filters.unit_kk[0] === 'all' || filters.unit_kk.length === 0));
+
+    const fmt = (num) => Number(num || 0).toLocaleString('en-US');
+
+    const accidentReportSection = isAllUnits 
+      ? `4. รับแจ้งอุบัติเหตุ รวม ${fmt(s.accidentsTotal)} ครั้ง
+- พื้นที่ กก.1-7: เกิดเหตุ ${fmt(s.accidents1to7Total || 0)} ครั้ง (เสียชีวิต ${fmt(s.accidents1to7Death || 0)}, บาดเจ็บ ${fmt(s.accidents1to7Injured || 0)}, เสียหาย ${fmt(s.accidents1to7Damage || 0)})
+- พื้นที่ กก.8: เกิดเหตุ ${fmt(s.accidents8Total || 0)} ครั้ง (เสียชีวิต ${fmt(s.accidents8Death || 0)}, บาดเจ็บ ${fmt(s.accidents8Injured || 0)}, เสียหาย ${fmt(s.accidents8Damage || 0)})`
+      : `4. รับแจ้งอุบัติเหตุ รวม ${fmt(s.accidentsTotal)} ครั้ง
+- เสียชีวิต ${fmt(s.accidentsDeath)} ราย
+- บาดเจ็บ ${fmt(s.accidentsInjured)} ราย
+- มูลค่าความเสียหาย ${fmt(s.accidentsDamage || 0)} บาท`;
 
     // --- Dynamic Header (Unit/Commander) ---
     // When on the result tab, read kk/stl from URL params (synced by ResultDashboardView local filters)
@@ -160,11 +174,11 @@ const SummaryDashboardView = ({ filteredData, filters, reportStats, getCommander
     let currentUnitId;
     let currentStationId;
     if (urlKK) {
-        currentUnitId = urlKK;
-        currentStationId = urlSTL;
+      currentUnitId = urlKK;
+      currentStationId = urlSTL;
     } else {
-        currentUnitId = Array.isArray(filters.unit_kk) ? (filters.unit_kk[0] || '0') : (filters.unit_kk || '0');
-        currentStationId = filters.unit_s_tl || '';
+      currentUnitId = Array.isArray(filters.unit_kk) ? (filters.unit_kk[0] || '0') : (filters.unit_kk || '0');
+      currentStationId = filters.unit_s_tl || '';
     }
 
     // Use prop if available, otherwise fallback (though prop should be there)
@@ -202,10 +216,7 @@ const SummaryDashboardView = ({ filteredData, filters, reportStats, getCommander
 - ขบวนเสด็จ ${s.convoyRoyal}
 - ขบวนทั่วไป ${s.convoyGeneral}
 
-4. รับแจ้งอุบัติเหตุ รวม ${s.accidentsTotal} ครั้ง
-- เสียชีวิต ${s.accidentsDeath}
-- บาดเจ็บ ${s.accidentsInjured}
-
+${accidentReportSection}
 5. ตรวจยึดของกลาง
   . ยาเสพติด (ยาบ้า ${s.seized.drugs.yaba.toLocaleString()} เม็ด, ไอซ์ ${s.seized.drugs.ice.toLocaleString()} กรัม)
   . อาวุธปืนและเครื่องกระสุน (ปืน ${s.seized.guns.registered + s.seized.guns.unregistered} กระบอก, กระสุน ${s.seized.guns.bullets} นัด)

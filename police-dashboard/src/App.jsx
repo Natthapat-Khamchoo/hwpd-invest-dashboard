@@ -247,6 +247,21 @@ export default function App() {
 
     // สร้างฟังก์ชันสั้นๆ สำหรับจัดรูปแบบตัวเลข และป้องกันค่าที่ไม่ได้กำหนด
     const fmt = (num) => Number(num || 0).toLocaleString('en-US');
+
+    const isAllUnits = currentUnitId === 'all' || currentUnitId === '0' || !currentUnitId;
+    const accidentReportSection = isAllUnits 
+      ? `🔻4. รับแจ้งอุบัติเหตุ รวม ${fmt(s.accidentsTotal)} ครั้ง
+- พื้นที่ กก.1-7: เกิดเหตุ ${fmt(s.accidents1to7Total || 0)} ครั้ง 
+  (เสียชีวิต ${fmt(s.accidents1to7Death || 0)}, บาดเจ็บ ${fmt(s.accidents1to7Injured || 0)})
+  มูลค่าความเสียหาย ${fmt(s.accidents1to7Damage || 0)} บาท
+- พื้นที่ กก.8: เกิดเหตุ ${fmt(s.accidents8Total || 0)} ครั้ง 
+  (เสียชีวิต ${fmt(s.accidents8Death || 0)}, บาดเจ็บ ${fmt(s.accidents8Injured || 0)})
+  มูลค่าความเสียหาย ${fmt(s.accidents8Damage || 0)} บาท`
+      : `🔻4. รับแจ้งอุบัติเหตุ รวม ${fmt(s.accidentsTotal)} ครั้ง
+- เสียชีวิต ${fmt(s.accidentsDeath)} ราย
+- บาดเจ็บ ${fmt(s.accidentsInjured)} ราย
+- มูลค่าความเสียหาย ${fmt(s.accidentsDamage || 0)} บาท`;
+
     const reportText = `เรียน ผู้บังคับบัญชา
 
 📍ภายใต้การอำนวยการของ ${commander}
@@ -280,9 +295,7 @@ export default function App() {
 - ขบวนเสด็จ ${fmt(s.convoyRoyal)} ขบวน
 - ขบวนทั่วไป ${fmt(s.convoyGeneral)} ขบวน
 
-🔻4. รับแจ้งอุบัติเหตุ รวม ${fmt(s.accidentsTotal)} ครั้ง
-- เสียชีวิต ${fmt(s.accidentsDeath)} ราย
-- บาดเจ็บ ${fmt(s.accidentsInjured)} ราย
+${accidentReportSection}
 
 🔻5. ตรวจยึดของกลาง
 - ยาเสพติด (ยาบ้า ${fmt(s.seized.drugs.yaba)} เม็ด, ไอซ์ ${fmt(s.seized.drugs.ice)} กรัม)
