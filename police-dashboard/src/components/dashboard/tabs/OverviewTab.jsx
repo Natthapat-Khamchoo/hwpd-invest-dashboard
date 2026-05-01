@@ -3,7 +3,7 @@ import { Zap, ShieldAlert, Truck, FileText } from 'lucide-react';
 import { NodeCard, SubNodeHeader, ListItem, SimpleItem, SimpleItemCompact } from '../shared/StatCards';
 import { SeizedItem, SeizedBox } from '../shared/SeizedItems';
 
-const OverviewTab = ({ counts, isPrint = false, isLoading = false }) => {
+const OverviewTab = ({ counts, isPrint = false, isLoading = false, forceDesktop = false }) => {
     const [isTruckExpanded, setIsTruckExpanded] = useState(true);
 
     const defaultCounts = {
@@ -233,32 +233,32 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false }) => {
 
     // --- Original Layout (For Screen) ---
     return (
-        <div className="flex flex-col gap-10">
+        <div className="flex flex-col gap-10 w-full">
             {/* --- Main Grid Content --- */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6 lg:gap-10 p-4 md:p-6 xl:p-10 items-start flex-1">
+            <div className={`grid ${forceDesktop ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-2'} gap-6 lg:gap-10 p-4 md:p-6 xl:p-10 items-start`}>
                 {/* 1. Criminal */}
-                <div className="flex flex-col items-center w-full">
-                    <NodeCard color="bg-[#fbbf24]" label="จับกุมทั้งหมด (คดี)" value={safeCounts.criminalTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="hover:scale-105" />
+                <div className="flex flex-col w-full">
+                    <NodeCard color="bg-[#fbbf24]" label="จับกุมทั้งหมด (คดี)" value={safeCounts.criminalTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="hover:scale-105" forceDesktop={forceDesktop} />
 
                     <div className="w-full flex flex-col mt-0 gap-4 relative px-0">
                         {/* Top Row: Warrant & Flagrant */}
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 w-full">
-                            <div className="flex flex-col items-center w-full pt-8 relative">
+                        <div className={`grid ${forceDesktop ? 'grid-cols-2' : 'grid-cols-1 xl:grid-cols-2'} gap-8 w-full`}>
+                            <div className="flex flex-col w-full pt-8 relative">
                                 {/* Connecting Line Top (Left) */}
-                                <div className="absolute top-0 left-1/2 w-[calc(50%+1rem)] h-8 border-t-4 border-l-4 border-slate-300 rounded-tl-3xl hidden xl:block"></div>
+                                <div className={`absolute top-0 left-1/2 w-[calc(50%+1rem)] h-8 border-t-4 border-l-4 border-slate-300 rounded-tl-3xl ${forceDesktop ? 'block' : 'hidden xl:block'}`}></div>
 
-                                <SubNodeHeader label="หมายจับ" value={safeCounts.warrantTotal} badgeColor="bg-[#dc2626]" />
+                                <SubNodeHeader label="หมายจับ" value={safeCounts.warrantTotal} badgeColor="bg-[#dc2626]" forceDesktop={forceDesktop} />
                                 <div className="flex flex-col gap-3 w-full mt-4 pl-2 md:pl-6 border-l-0 md:border-l-[3px] border-slate-200 ml-0 md:ml-8">
-                                    <ListItem label="Bodyworn" value={safeCounts.warrantBodyworn || 0} highlight />
-                                    <ListItem label="Bigdata" value={safeCounts.warrantBigData} highlight />
-                                    <ListItem label="ทั่วไป" value={safeCounts.warrantGeneral} />
+                                    <ListItem label="Bodyworn" value={safeCounts.warrantBodyworn || 0} highlight forceDesktop={forceDesktop} />
+                                    <ListItem label="Bigdata" value={safeCounts.warrantBigData} highlight forceDesktop={forceDesktop} />
+                                    <ListItem label="ทั่วไป" value={safeCounts.warrantGeneral} forceDesktop={forceDesktop} />
                                 </div>
                             </div>
-                            <div className="flex flex-col items-center w-full pt-8 relative">
+                            <div className="flex flex-col w-full pt-8 relative">
                                 {/* Connecting Line Top (Right) */}
-                                <div className="absolute top-0 right-1/2 w-[calc(50%+1rem)] h-8 border-t-4 border-r-4 border-slate-300 rounded-tr-3xl hidden xl:block"></div>
+                                <div className={`absolute top-0 right-1/2 w-[calc(50%+1rem)] h-8 border-t-4 border-r-4 border-slate-300 rounded-tr-3xl ${forceDesktop ? 'block' : 'hidden xl:block'}`}></div>
 
-                                <SubNodeHeader label="ความผิดซึ่งหน้า" value={safeCounts.flagrantTotal} badgeColor="bg-[#dc2626]" />
+                                <SubNodeHeader label="ความผิดซึ่งหน้า" value={safeCounts.flagrantTotal} badgeColor="bg-[#dc2626]" forceDesktop={forceDesktop} />
                                 <div className="flex flex-col gap-3 w-full mt-4 pl-2 md:pl-6 border-l-0 md:border-l-[3px] border-slate-200 ml-0 md:ml-8">
                                     <span className="text-slate-400 text-sm italic">รวมสถิติการจับกุมซึ่งหน้าทั้งหมด</span>
                                 </div>
@@ -266,42 +266,38 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false }) => {
                         </div>
 
                         {/* Bottom Row: Offense Base */}
-                        <div className="flex flex-col items-center w-full mt-4 pt-4 border-t-2 border-dashed border-slate-100 relative">
-                            <SubNodeHeader label="ฐานความผิด" value={null} badgeColor="bg-slate-500" />
-                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-8 gap-y-3 w-full mt-4 pl-2 md:pl-6 border-l-0 md:border-l-[3px] border-slate-200 ml-0 md:ml-8">
-                                <ListItem label="พ.ร.บ.ยาเสพติด" value={safeCounts.offenseDrugs} highlight />
-                                <ListItem label="พ.ร.บ.อาวุธปืน" value={safeCounts.offenseGuns} highlight />
-                                <ListItem label="พ.ร.บ.คนเข้าเมือง" value={safeCounts.offenseImmig} highlight />
-                                <ListItem label="พ.ร.บ.ศุลกากร" value={safeCounts.offenseCustoms} highlight />
-                                <ListItem label="พ.ร.บ.โรคติดต่อ" value={safeCounts.offenseDisease} highlight />
-                                <ListItem label="พ.ร.บ.ขนส่ง" value={safeCounts.offenseTransport} highlight />
-                                <ListItem label="ความผิดเกี่ยวกับเอกสาร" value={safeCounts.offenseDocs} highlight />
-                                <ListItem label="ความผิดเกี่ยวกับทรัพย์" value={safeCounts.offenseProperty} highlight />
-                                <ListItem label="ความผิดเกี่ยวกับเพศ" value={safeCounts.offenseSex} highlight />
-                                <ListItem label="รถหนัก" value={safeCounts.offenseWeight} highlight />
-                                <ListItem label="ขับรถขณะเมาสุรา" value={safeCounts.offenseDrunk} highlight />
-                                <ListItem label="ความผิดเกี่ยวกับชีวิตและร่างกาย" value={safeCounts.offenseLife} highlight />
-                                <ListItem label="ความผิดเกี่ยวกับคอมพิวเตอร์" value={safeCounts.offenseCom} highlight />
-                                <ListItem label="อื่นๆ" value={safeCounts.offenseOther} highlight />
+                        <div className="flex flex-col w-full mt-4 pt-4 border-t-2 border-dashed border-slate-100 relative">
+                            <SubNodeHeader label="ฐานความผิด" value={null} badgeColor="bg-slate-500" forceDesktop={forceDesktop} />
+                            <div className={`grid ${forceDesktop ? 'grid-cols-2' : 'grid-cols-1 xl:grid-cols-2'} gap-x-8 gap-y-3 w-full mt-4 pl-2 md:pl-6 border-l-0 md:border-l-[3px] border-slate-200 ml-0 md:ml-8`}>
+                                <ListItem label="พ.ร.บ.ยาเสพติด" value={safeCounts.offenseDrugs} highlight forceDesktop={forceDesktop} />
+                                <ListItem label="พ.ร.บ.อาวุธปืน" value={safeCounts.offenseGuns} highlight forceDesktop={forceDesktop} />
+                                <ListItem label="พ.ร.บ.คนเข้าเมือง" value={safeCounts.offenseImmig} highlight forceDesktop={forceDesktop} />
+                                <ListItem label="พ.ร.บ.ศุลกากร" value={safeCounts.offenseCustoms} highlight forceDesktop={forceDesktop} />
+                                <ListItem label="พ.ร.บ.โรคติดต่อ" value={safeCounts.offenseDisease} highlight forceDesktop={forceDesktop} />
+                                <ListItem label="พ.ร.บ.ขนส่ง" value={safeCounts.offenseTransport} highlight forceDesktop={forceDesktop} />
+                                <ListItem label="ความผิดเกี่ยวกับเอกสาร" value={safeCounts.offenseDocs} highlight forceDesktop={forceDesktop} />
+                                <ListItem label="ความผิดเกี่ยวกับทรัพย์" value={safeCounts.offenseProperty} highlight forceDesktop={forceDesktop} />
+                                <ListItem label="ความผิดเกี่ยวกับเพศ" value={safeCounts.offenseSex} highlight forceDesktop={forceDesktop} />
+                                <ListItem label="รถหนัก" value={safeCounts.offenseWeight} highlight forceDesktop={forceDesktop} />
+                                <ListItem label="ขับรถขณะเมาสุรา" value={safeCounts.offenseDrunk} highlight forceDesktop={forceDesktop} />
+                                <ListItem label="ความผิดเกี่ยวกับชีวิตและร่างกาย" value={safeCounts.offenseLife} highlight forceDesktop={forceDesktop} />
+                                <ListItem label="ความผิดเกี่ยวกับคอมพิวเตอร์" value={safeCounts.offenseCom} highlight forceDesktop={forceDesktop} />
+                                <ListItem label="อื่นๆ" value={safeCounts.offenseOther} highlight forceDesktop={forceDesktop} />
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* 2. Traffic */}
-                <div className="flex flex-col items-center w-full">
-                    <NodeCard color="bg-[#fbbf24]" label="จับกุมคดีจราจร" value={safeCounts.trafficTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="hover:scale-105" />
-                    <div className="hidden xl:flex flex-col items-center w-full relative">
+                <div className="flex flex-col w-full">
+                    <NodeCard color="bg-[#fbbf24]" label="จับกุมคดีจราจร" value={safeCounts.trafficTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="hover:scale-105" forceDesktop={forceDesktop} />
+                    <div className={`${forceDesktop ? 'flex' : 'hidden xl:flex'} flex-col w-full relative`}>
                         <div className="h-8 w-1 bg-slate-300"></div>
                         <div className="absolute top-8 bottom-0 left-1/2 -translate-x-1/2 w-1 bg-slate-300 -z-10"></div>
                     </div>
-                    <div className="w-full flex flex-col items-center mt-0 px-0 relative z-10">
-                        <div className="flex flex-col items-center flex-1 w-full pt-8">
+                    <div className="w-full flex flex-col mt-0 px-0 relative z-10">
+                        <div className="flex flex-col flex-1 w-full pt-8">
                             <div className="flex flex-col gap-3 w-full pl-2 md:pl-6 border-l-0 md:border-l-[3px] border-slate-200 ml-0 md:ml-8">
-                                <SimpleItem text="ไม่ชิดซ้าย" value={safeCounts.trafficNotKeepLeft} />
-                                <SimpleItem text="ไม่ปกคลุม" value={safeCounts.trafficNotCovered} />
-                                <SimpleItem text="ดัดแปลงสภาพรถ" value={safeCounts.trafficModify} />
-                                <SimpleItem text="อุปกรณ์ส่วนควบไม่ครบ" value={safeCounts.trafficNoPart} />
                                 <SimpleItem text="ฝ่าฝืนเครื่องหมายจราจร" value={safeCounts.trafficSign} />
                                 <SimpleItem text="ฝ่าฝืนเครื่องสัญญาณไฟจราจร" value={safeCounts.trafficLight} />
                                 <SimpleItem text="ขับรถเร็วเกินกำหนด" value={safeCounts.trafficSpeed} />
@@ -314,10 +310,10 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false }) => {
                 </div>
 
                 {/* 3. Convoy & Heavy Truck */}
-                <div className="col-span-1 md:col-span-2 xl:col-span-2 bg-white/50 rounded-[2.5rem] border-2 border-slate-200 shadow-sm p-4 xl:p-8 flex flex-col xl:flex-row gap-8 xl:gap-16">
-                    <div className="flex flex-col items-center flex-1 w-full">
-                        <NodeCard color="bg-[#fbbf24]" label="ขบวน" value={safeCounts.convoyTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="hover:scale-105" />
-                        <div className="hidden xl:flex flex-col items-center w-full">
+                <div className={`${forceDesktop ? 'col-span-2 flex-row' : 'col-span-1 md:col-span-2 xl:col-span-2 flex-col xl:flex-row'} bg-white/50 rounded-[2.5rem] border-2 border-slate-200 shadow-sm p-4 xl:p-8 flex gap-8 xl:gap-16`}>
+                    <div className="flex flex-col flex-1 w-full">
+                        <NodeCard color="bg-[#fbbf24]" label="ขบวน" value={safeCounts.convoyTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="hover:scale-105" forceDesktop={forceDesktop} />
+                        <div className={`${forceDesktop ? 'flex' : 'hidden xl:flex'} flex-col w-full`}>
                             <div className="h-6 w-1 bg-slate-300"></div>
                             <div className="w-[85%] h-1 bg-slate-300 relative">
                                 <div className="absolute left-0 top-0 h-6 w-1 bg-slate-300"></div>
@@ -335,9 +331,9 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false }) => {
                             </div>
                         </div>
                     </div>
-                    <div className="hidden xl:block w-[2px] bg-slate-200 rounded-full h-auto"></div>
-                    <div className="flex flex-col items-center flex-1 w-full transition-all duration-300">
-                        <NodeCard color="bg-[#fbbf24]" label="รถหนัก" value={safeCounts.truckTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="hover:scale-105" />
+                    <div className={`${forceDesktop ? 'block' : 'hidden xl:block'} w-[2px] bg-slate-200 rounded-full h-auto`}></div>
+                    <div className="flex flex-col flex-1 w-full transition-all duration-300">
+                        <NodeCard color="bg-[#fbbf24]" label="รถหนัก" value={safeCounts.truckTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="hover:scale-105" forceDesktop={forceDesktop} />
                     </div>
                 </div>
             </div>
@@ -350,7 +346,7 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false }) => {
                     <div className="w-2 h-10 bg-[#004aad] rounded-full"></div>
                     ของกลาง (Seized Items)
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+                <div className={`grid ${forceDesktop ? 'grid-cols-4' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4'} gap-8`}>
                     <div className="bg-white rounded-3xl p-6 shadow-xl border border-blue-50/50 flex flex-col relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-blue-100 to-transparent rounded-bl-[4rem] group-hover:scale-110 transition-transform"></div>
                         <h4 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2"><span className="bg-blue-100 p-2 rounded-xl text-blue-600"><Zap size={24} /></span>ยาเสพติด</h4>

@@ -202,6 +202,41 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
         }
     }, [isPrintRequested, viewMode]);
 
+    // --- Viewport Helpers to force Desktop layout on mobile during export ---
+    const setDesktopViewport = () => {
+        const viewport = document.querySelector("meta[name=viewport]");
+        if (viewport) {
+            if (!window.__originalViewport) window.__originalViewport = viewport.getAttribute("content");
+            viewport.setAttribute("content", "width=1920, initial-scale=1.0");
+        }
+        document.body.style.minWidth = '1920px';
+        document.documentElement.style.minWidth = '1920px';
+
+        // FORCE container to 1920px in the REAL DOM
+        const container = document.getElementById('dashboard-container');
+        if (container) {
+            container.style.setProperty('width', '1920px', 'important');
+            container.style.setProperty('max-width', '1920px', 'important');
+            container.style.setProperty('min-width', '1920px', 'important');
+        }
+    };
+
+    const restoreViewport = () => {
+        const viewport = document.querySelector("meta[name=viewport]");
+        if (viewport && window.__originalViewport) {
+            viewport.setAttribute("content", window.__originalViewport);
+        }
+        document.body.style.minWidth = '';
+        document.documentElement.style.minWidth = '';
+
+        const container = document.getElementById('dashboard-container');
+        if (container) {
+            container.style.removeProperty('width');
+            container.style.removeProperty('max-width');
+            container.style.removeProperty('min-width');
+        }
+    };
+
     // --- PDF Export Handler ---
     const handleExportPDF = async () => {
         if (isPdfExporting) return;
@@ -211,14 +246,16 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
         const prevViewMode = viewMode;
         const prevTab = activeTab;
 
+        setDesktopViewport();
+
         try {
             // STEP 1: Capture the First Page (Overview) in Default Mode (Portrait)
             if (activeTab !== 'overview' || viewMode !== 'default') {
                 setActiveTab('overview');
                 setViewMode('default');
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                await new Promise(resolve => setTimeout(resolve, 2000));
             } else {
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 2000));
             }
 
             const headerEl = document.getElementById('print-header');
@@ -238,6 +275,9 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
                 backgroundColor: '#ffffff',
                 filter: filter,
                 cacheBust: true,
+                width: 1920,
+                windowWidth: 1920,
+                style: { width: '1920px' }
             };
 
             let headerDataUrl = null;
@@ -331,6 +371,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
                     cacheBust: true,
                     width: 1920,
                     windowWidth: 1920,
+                    style: { width: '1920px' }
                 });
 
                 const contentImg = await loadImg(dataUrl);
@@ -390,6 +431,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
             console.error('PDF Export failed:', error);
             alert('Export PDF failed. See console for details.');
         } finally {
+            restoreViewport();
             setViewMode(prevViewMode);
             setActiveTab(prevTab);
             setIsPdfExporting(false);
@@ -403,13 +445,17 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
 
         // Ensure we're on overview tab
         const prevTab = activeTab;
+        
+        setDesktopViewport();
+
         if (activeTab !== 'overview') {
             setActiveTab('overview');
             setViewMode('default');
+            await new Promise(resolve => setTimeout(resolve, 2500));
+        } else {
+            // Wait for viewport DOM render
+            await new Promise(resolve => setTimeout(resolve, 2000));
         }
-
-        // Wait for DOM render
-        await new Promise(resolve => setTimeout(resolve, 1000));
 
         try {
             const headerEl = document.getElementById('print-header');
@@ -432,6 +478,9 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
                 backgroundColor: '#ffffff',
                 filter: filter,
                 cacheBust: true,
+                width: 1920,
+                windowWidth: 1920,
+                style: { width: '1920px' }
             };
 
             // Capture header and content separately
@@ -506,6 +555,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
             console.error('Portrait JPG Export failed:', error);
             alert('Export JPG failed. See console for details.');
         } finally {
+            restoreViewport();
             setActiveTab(prevTab);
             setIsJpgExporting(false);
         }
@@ -519,14 +569,16 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
         const prevViewMode = viewMode;
         const prevTab = activeTab;
 
+        setDesktopViewport();
+
         try {
             // STEP 1: Capture the First Page (Overview) in Default Mode (Portrait)
             if (activeTab !== 'overview' || viewMode !== 'default') {
                 setActiveTab('overview');
                 setViewMode('default');
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                await new Promise(resolve => setTimeout(resolve, 2500));
             } else {
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 2000));
             }
 
             const headerEl = document.getElementById('print-header');
@@ -546,6 +598,9 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
                 backgroundColor: '#ffffff',
                 filter: filter,
                 cacheBust: true,
+                width: 1920,
+                windowWidth: 1920,
+                style: { width: '1920px' }
             };
 
             let headerDataUrl = null;
@@ -638,6 +693,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
                     cacheBust: true,
                     width: 1920,
                     windowWidth: 1920,
+                    style: { width: '1920px' }
                 });
 
                 const contentImg = await loadImg(dataUrl);
@@ -708,6 +764,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
             console.error('Export All JPG failed:', error);
             alert('Export JPG failed. See console for details.');
         } finally {
+            restoreViewport();
             setViewMode(prevViewMode);
             setActiveTab(prevTab);
             setIsExportAllJpg(false);
@@ -816,12 +873,12 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
         }
 
         switch (activeTab) {
-            case 'overview': return <OverviewTab counts={sheetCounts} isLoading={isLoading} />;
+            case 'overview': return <OverviewTab counts={sheetCounts} isLoading={isLoading} forceDesktop={isPdfExporting || isJpgExporting || isExportAllJpg} />;
             case 'comparison': return <ComparisonTab data={sheetCounts?.charts?.comparison} monthNames={sheetCounts?.charts?.monthNames} />;
             case 'traffic-comparison': return <TrafficComparisonTab data={sheetCounts?.charts?.traffic} monthNames={sheetCounts?.charts?.monthNames} />;
             case 'press': return <PressReleaseTab qualityWork={sheetCounts?.charts?.qualityWork} media={sheetCounts?.charts?.media} />;
             case 'truck': return <TruckInspectionTab data={sheetCounts?.charts?.truck} monthNames={sheetCounts?.charts?.monthNames} />;
-            default: return <OverviewTab counts={sheetCounts} isLoading={isLoading} />;
+            default: return <OverviewTab counts={sheetCounts} isLoading={isLoading} forceDesktop={isPdfExporting || isJpgExporting || isExportAllJpg} />;
         }
     };
 
@@ -1032,7 +1089,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
                 </div>
 
                 {/* --- Content Area --- */}
-                <div id="overview-content" className="flex-1 bg-white min-h-[600px]">
+                <div id="overview-content" className={`${isPdfExporting || isJpgExporting || isExportAllJpg ? '' : 'flex-1'} w-full bg-white min-h-[600px]`}>
                     {renderContent()}
                 </div>
 
