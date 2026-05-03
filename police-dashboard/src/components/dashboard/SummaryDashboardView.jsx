@@ -68,7 +68,7 @@ const SummaryDashboardView = ({ filteredData, filters, reportStats, getCommander
     drugs: reportStats ? reportStats.offenseDrugs : 0,
     guns: reportStats ? reportStats.offenseGuns : 0,
     immigration: reportStats ? reportStats.offenseImmig : 0,
-    others: reportStats ? (reportStats.offenseOther + reportStats.offenseCustoms + reportStats.offenseDisease + reportStats.offenseProperty + reportStats.offenseSex + reportStats.offenseDrunk + reportStats.offenseLife + reportStats.offenseCom) : 0,
+    others: reportStats ? (reportStats.offenseOther + reportStats.offenseCustoms + reportStats.offenseDisease + reportStats.offenseProperty + reportStats.offenseSex + reportStats.offenseDrunk + reportStats.offenseLife + reportStats.offenseCom + reportStats.offenseTransport + reportStats.offenseDocs) : 0,
     accidents: reportStats ? reportStats.accidentsTotal || 0 : 0,
     deaths: reportStats ? reportStats.accidentsDeath || 0 : 0,
     injuries: reportStats ? reportStats.accidentsInjured || 0 : 0,
@@ -185,6 +185,8 @@ const SummaryDashboardView = ({ filteredData, filters, reportStats, getCommander
     // Note: getMainCommander in utils/constants might not support stationId, so prefer getCommanderInfo
     const { commander, unitName } = getCommanderInfo ? getCommanderInfo(currentUnitId, currentStationId) : getMainCommander(currentUnitId);
 
+    const otherCriminal = (s.offenseOther || 0) + (s.offenseCustoms || 0) + (s.offenseDisease || 0) + (s.offenseTransport || 0) + (s.offenseDocs || 0) + (s.offenseProperty || 0) + (s.offenseSex || 0) + (s.offenseLife || 0) + (s.offenseCom || 0);
+
     const fullReportText = `เรียน ผู้บังคับบัญชา
 
 ภายใต้การอำนวยการของ ${commander}
@@ -199,7 +201,7 @@ const SummaryDashboardView = ({ filteredData, filters, reportStats, getCommander
 - พ.ร.บ.คนเข้าเมือง  ${s.offenseImmig}
 - รถบรรทุกน้ำหนักเกินฯ ${s.offenseWeight}
 - ขับรถขณะเมาสุรา ${s.offenseDrunk}
-- อื่นๆ ${s.offenseOther}
+- อื่นๆ ${otherCriminal}
 
 2. ผลการจับกุมคดีจราจร รวม ${s.trafficTotal} ราย
 - ไม่ชิดขอบทางด้านซ้าย ${s.trafficNotKeepLeft}
@@ -210,6 +212,7 @@ const SummaryDashboardView = ({ filteredData, filters, reportStats, getCommander
 - ขับรถเร็วเกินกำหนด ${s.trafficSpeed}
 - ไม่ติดแผ่นป้ายทะเบียน ${s.trafficNoPlate}
 - ขาดต่อภาษี/พ.ร.บ.ฯ ${s.trafficTax}
+- อุปกรณ์ไม่ครบ ${s.trafficNoPart}
 - อื่นๆ ${s.trafficGeneral}
 
 3. นำขบวน รวม ${s.convoyTotal} ขบวน
@@ -525,11 +528,11 @@ const DefaultLayout = ({ counts, headerDateText, grandTotal, totalTraffic, total
             <span className="text-5xl font-bold text-blue-100 bg-blue-600/20 border border-blue-500/30 px-6 py-3 rounded-xl shadow-[0_0_15px_rgba(59,130,246,0.2)]">รวม {totalTraffic}</span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6 flex-1">
-            <StatCardModern label="พ.ร.บ.จราจรฯ" value={counts.trafficAct} />
-            <StatCardModern label="พ.ร.บ.รถยนต์ฯ" value={counts.carAct} />
-            <StatCardModern label="พ.ร.บ.ขนส่งฯ" value={counts.transportAct} />
-            <StatCardModern label="พ.ร.บ.ทางหลวง" value={counts.highwayAct} />
-            <StatCardModern label="น้ำหนักเกินฯ" value={counts.weight} />
+            <StatCardModern label="ขับรถเร็ว" value={reportStats ? reportStats.trafficSpeed : 0} />
+            <StatCardModern label="ฝ่าฝืนป้าย/ไฟ" value={reportStats ? (reportStats.trafficSign + reportStats.trafficLight) : 0} />
+            <StatCardModern label="ดัดแปลง/อุปกรณ์" value={reportStats ? (reportStats.trafficModify + reportStats.trafficNoPart) : 0} />
+            <StatCardModern label="ชิดซ้าย/ปกคลุม" value={reportStats ? (reportStats.trafficNotKeepLeft + reportStats.trafficNotCovered) : 0} />
+            <StatCardModern label="ภาษี/ป้าย/อื่นๆ" value={reportStats ? (reportStats.trafficTax + reportStats.trafficNoPlate + reportStats.trafficGeneral) : 0} />
           </div>
         </div>
 
@@ -575,10 +578,11 @@ const DefaultLayout = ({ counts, headerDateText, grandTotal, totalTraffic, total
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 h-full">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-6 h-full">
             <MiniStatBox label="ยาเสพติด" value={counts.drugs} color="text-red-400" borderColor="border-red-500/10" icon={<Pill />} />
             <MiniStatBox label="อาวุธปืน" value={counts.guns} color="text-orange-400" borderColor="border-orange-500/10" icon={<Crosshair />} />
             <MiniStatBox label="ต่างด้าว" value={counts.immigration} color="text-yellow-400" borderColor="border-yellow-500/10" icon={<User />} />
+            <MiniStatBox label="รถหนัก" value={counts.weight} color="text-blue-400" borderColor="border-blue-500/10" icon={<Truck />} />
             <MiniStatBox label="อื่นๆ" value={counts.others} color="text-slate-300" borderColor="border-slate-500/10" icon={<FileText />} />
           </div>
         </div>
@@ -637,13 +641,17 @@ const InfographicLayout = ({ counts, headerDateText, grandTotal, totalTraffic, t
             <h3 className="text-5xl font-bold text-white">คดีจราจร</h3>
             <span className="ml-4 px-6 py-2 bg-blue-600 rounded-xl text-3xl font-bold">{totalTraffic}</span>
           </div>
-          <div className="grid grid-cols-2 gap-6 mb-8">
-            <StatCardModern label="จราจรฯ" value={counts.trafficAct} />
-            <StatCardModern label="รถยนต์" value={counts.carAct} />
-            <StatCardModern label="ขนส่งฯ" value={counts.transportAct} />
-            <StatCardModern label="ทางหลวง" value={counts.highwayAct} />
-            <StatCardModern label="น้ำหนัก" value={counts.weight} />
-            <StatCardModern label="ตรวจสอบ" value={counts.checkWeight + counts.checkSticker} />
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+            <StatCardModern label="ไม่ชิดซ้าย" value={reportStats ? reportStats.trafficNotKeepLeft : 0} />
+            <StatCardModern label="ไม่ปกคลุม" value={reportStats ? reportStats.trafficNotCovered : 0} />
+            <StatCardModern label="ดัดแปลงสภาพรถ" value={reportStats ? reportStats.trafficModify : 0} />
+            <StatCardModern label="อุปกรณ์ส่วนควบไม่ครบ" value={reportStats ? reportStats.trafficNoPart : 0} />
+            <StatCardModern label="ฝ่าฝืนเครื่องหมายจราจร" value={reportStats ? reportStats.trafficSign : 0} />
+            <StatCardModern label="ฝ่าฝืนสัญญาณไฟ" value={reportStats ? reportStats.trafficLight : 0} />
+            <StatCardModern label="ขับรถเร็ว" value={reportStats ? reportStats.trafficSpeed : 0} />
+            <StatCardModern label="ภาษี/พรบ" value={reportStats ? reportStats.trafficTax : 0} />
+            <StatCardModern label="ไม่ติดป้ายทะเบียน" value={reportStats ? reportStats.trafficNoPlate : 0} />
+            <StatCardModern label="อื่นๆ" value={reportStats ? reportStats.trafficGeneral : 0} />
           </div>
         </div>
 
@@ -662,10 +670,11 @@ const InfographicLayout = ({ counts, headerDateText, grandTotal, totalTraffic, t
               </div>
               <span className="text-6xl font-bold text-white">{totalWarrant}</span>
             </div>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-5 gap-4">
               <MiniStatBox label="ยาเสพติด" value={counts.drugs} color="text-red-400" borderColor="border-red-500/10" icon={<Pill />} />
               <MiniStatBox label="อาวุธปืน" value={counts.guns} color="text-orange-400" borderColor="border-orange-500/10" icon={<Crosshair />} />
               <MiniStatBox label="ต่างด้าว" value={counts.immigration} color="text-yellow-400" borderColor="border-yellow-500/10" icon={<User />} />
+              <MiniStatBox label="รถหนัก" value={counts.weight} color="text-blue-400" borderColor="border-blue-500/10" icon={<Truck />} />
               <MiniStatBox label="อื่นๆ" value={counts.others} color="text-slate-300" borderColor="border-slate-500/10" icon={<FileText />} />
             </div>
           </div>
@@ -744,16 +753,16 @@ const SquareLayout = ({ counts, headerDateText, grandTotal, totalTraffic, totalC
                   <span className="text-3xl text-blue-300 font-semibold">ข้อหาหลัก</span>
                 </div>
                 <div className="grid grid-cols-2 gap-4 flex-1">
-                  <StatCardCompact label="พ.ร.บ.จราจรฯ" value={counts.trafficAct} />
-                  <StatCardCompact label="พ.ร.บ.รถยนต์ฯ" value={counts.carAct} />
-                  <StatCardCompact label="พ.ร.บ.ขนส่งฯ" value={counts.transportAct} />
-                  <StatCardCompact label="พ.ร.บ.ทางหลวง" value={counts.highwayAct} />
+                  <StatCardCompact label="ขับรถเร็ว" value={reportStats ? reportStats.trafficSpeed : 0} />
+                  <StatCardCompact label="ฝ่าฝืนป้าย/ไฟ" value={reportStats ? (reportStats.trafficSign + reportStats.trafficLight) : 0} />
+                  <StatCardCompact label="ดัดแปลง/อุปกรณ์" value={reportStats ? (reportStats.trafficModify + reportStats.trafficNoPart) : 0} />
+                  <StatCardCompact label="ชิดซ้าย/ปกคลุม" value={reportStats ? (reportStats.trafficNotKeepLeft + reportStats.trafficNotCovered) : 0} />
                 </div>
               </div>
 
               {/* Bottom Row */}
               <div className="grid grid-cols-3 gap-3 h-[160px]">
-                <StatCardCompact label="น้ำหนักเกิน" value={counts.weight} />
+                <StatCardCompact label="ภาษี/ป้าย/อื่นๆ" value={reportStats ? (reportStats.trafficTax + reportStats.trafficNoPlate + reportStats.trafficGeneral) : 0} />
                 <StatCardCompact label="ตรวจน้ำหนัก" value={counts.checkWeight} highlight={true} />
                 <StatCardCompact label="ตรวจสติกเกอร์" value={counts.checkSticker} highlight={true} />
               </div>
@@ -796,6 +805,7 @@ const SquareLayout = ({ counts, headerDateText, grandTotal, totalTraffic, totalC
                 <StatCardCompact label="ยาเสพติด" value={counts.drugs} color="text-red-400" />
                 <StatCardCompact label="อาวุธปืน" value={counts.guns} color="text-orange-400" />
                 <StatCardCompact label="ต่างด้าว" value={counts.immigration} color="text-yellow-400" />
+                <StatCardCompact label="รถหนัก" value={counts.weight} color="text-blue-400" />
                 <StatCardCompact label="อื่นๆ" value={counts.others} color="text-slate-300" />
               </div>
             </div>

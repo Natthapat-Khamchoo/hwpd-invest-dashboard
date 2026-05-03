@@ -159,15 +159,15 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false, forceDesktop 
                                 <NodeCard color="bg-[#fbbf24]" label="จับกุมคดีจราจร" value={safeCounts.trafficTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="" />
                             </div>
                             <div className="grid grid-cols-1 gap-y-2">
-                                <PrintItem text="ความเร็ว" value={safeCounts.trafficSpeed} />
-                                <PrintItem text="ฝ่าฝืนป้าย" value={safeCounts.trafficSign} />
-                                <PrintItem text="ฝ่าฝืนไฟ" value={safeCounts.trafficLight} />
                                 <PrintItem text="ไม่ชิดซ้าย" value={safeCounts.trafficNotKeepLeft} />
                                 <PrintItem text="ไม่ปกคลุม" value={safeCounts.trafficNotCovered} />
-                                <PrintItem text="ดัดแปลงสภาพ" value={safeCounts.trafficModify} />
-                                <PrintItem text="อุปกรณ์ไม่ครบ" value={safeCounts.trafficNoPart} />
-                                <PrintItem text="ภาษี/พรบ." value={safeCounts.trafficTax} />
-                                <PrintItem text="ไม่ติดป้าย" value={safeCounts.trafficNoPlate} />
+                                <PrintItem text="ดัดแปลงสภาพรถ" value={safeCounts.trafficModify} />
+                                <PrintItem text="อุปกรณ์ส่วนควบไม่ครบ" value={safeCounts.trafficNoPart} />
+                                <PrintItem text="ฝ่าฝืนเครื่องหมายจราจร" value={safeCounts.trafficSign} />
+                                <PrintItem text="ฝ่าฝืนเครื่องสัญญาณไฟจราจร" value={safeCounts.trafficLight} />
+                                <PrintItem text="ขับรถเร็วเกินกำหนด" value={safeCounts.trafficSpeed} />
+                                <PrintItem text="ขาดต่อภาษี/พ.ร.บ.ฯ" value={safeCounts.trafficTax} />
+                                <PrintItem text="ไม่ติดแผ่นป้ายทะเบียน" value={safeCounts.trafficNoPlate} />
                                 <PrintItem text="อื่นๆ" value={safeCounts.trafficGeneral} />
                             </div>
                         </div>
@@ -267,7 +267,7 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false, forceDesktop 
 
                         {/* Bottom Row: Offense Base */}
                         <div className="flex flex-col w-full mt-4 pt-4 border-t-2 border-dashed border-slate-100 relative">
-                            <SubNodeHeader label="ฐานความผิด" value={null} badgeColor="bg-slate-500" forceDesktop={forceDesktop} />
+                            <SubNodeHeader label="ฐานความผิด" badgeColor="bg-slate-500" forceDesktop={forceDesktop} />
                             <div className={`grid ${forceDesktop ? 'grid-cols-2' : 'grid-cols-1 xl:grid-cols-2'} gap-x-8 gap-y-3 w-full mt-4 pl-2 md:pl-6 border-l-0 md:border-l-[3px] border-slate-200 ml-0 md:ml-8`}>
                                 <ListItem label="พ.ร.บ.ยาเสพติด" value={safeCounts.offenseDrugs} highlight forceDesktop={forceDesktop} />
                                 <ListItem label="พ.ร.บ.อาวุธปืน" value={safeCounts.offenseGuns} highlight forceDesktop={forceDesktop} />
@@ -298,6 +298,10 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false, forceDesktop 
                     <div className="w-full flex flex-col mt-0 px-0 relative z-10">
                         <div className="flex flex-col flex-1 w-full pt-8">
                             <div className="flex flex-col gap-3 w-full pl-2 md:pl-6 border-l-0 md:border-l-[3px] border-slate-200 ml-0 md:ml-8">
+                                <SimpleItem text="ไม่ชิดซ้าย" value={safeCounts.trafficNotKeepLeft} />
+                                <SimpleItem text="ไม่ปกคลุม" value={safeCounts.trafficNotCovered} />
+                                <SimpleItem text="ดัดแปลงสภาพรถ" value={safeCounts.trafficModify} />
+                                <SimpleItem text="อุปกรณ์ส่วนควบไม่ครบ" value={safeCounts.trafficNoPart} />
                                 <SimpleItem text="ฝ่าฝืนเครื่องหมายจราจร" value={safeCounts.trafficSign} />
                                 <SimpleItem text="ฝ่าฝืนเครื่องสัญญาณไฟจราจร" value={safeCounts.trafficLight} />
                                 <SimpleItem text="ขับรถเร็วเกินกำหนด" value={safeCounts.trafficSpeed} />

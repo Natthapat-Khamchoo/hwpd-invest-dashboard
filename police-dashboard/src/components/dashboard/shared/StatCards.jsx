@@ -19,9 +19,11 @@ export const NodeCard = ({ color, label, value, valueColor, textColor, scale, on
 export const SubNodeHeader = ({ label, value, badgeColor, forceDesktop = false }) => (
     <div className="bg-slate-200 rounded-full pl-6 pr-2 py-2 flex items-center justify-between gap-3 w-full shadow-lg border-[3px] border-white hover:shadow-xl transition-shadow">
         <span className={`font-bold text-slate-800 ${forceDesktop ? 'text-2xl' : 'text-xl xl:text-2xl'} whitespace-nowrap`}>{label}</span>
-        <span className={`${badgeColor} text-white rounded-full px-5 py-2 font-bold ${forceDesktop ? 'text-3xl' : 'text-2xl xl:text-3xl'} min-w-[60px] text-center whitespace-nowrap`}>
-            {safeNumber(value)}
-        </span>
+        {value !== null && value !== undefined && (
+            <span className={`${badgeColor} text-white rounded-full px-5 py-2 font-bold ${forceDesktop ? 'text-3xl' : 'text-2xl xl:text-3xl'} min-w-[60px] text-center whitespace-nowrap`}>
+                {safeNumber(value)}
+            </span>
+        )}
     </div>
 );
 
