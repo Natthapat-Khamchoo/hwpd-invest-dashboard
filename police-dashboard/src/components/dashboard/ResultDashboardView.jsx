@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import html2canvas from 'html2canvas';
-import { toPng, toJpeg } from 'html-to-image';
-import { jsPDF } from 'jspdf';
 import { Truck, Siren, Award, FileText, Zap, ChevronDown, BarChart as ChartIcon, Calendar, FileDown, Loader2, Image as ImageIcon } from 'lucide-react';
 
-import { fetchDashboardData, fetchStationInfo } from '../../services/GoogleSheetService';
+import { fetchDashboardData, fetchStationInfo, calculateDashboardStats } from '../../services/GoogleSheetService';
 import { UNIT_HIERARCHY } from '../../utils/helpers';
 
 // Import Tab Components
@@ -14,10 +11,8 @@ import TrafficComparisonTab from './tabs/TrafficComparisonTab';
 import TruckInspectionTab from './tabs/TruckInspectionTab';
 import PressReleaseTab from './tabs/PressReleaseTab';
 
-const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate }) => {
+const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onStatsUpdate }) => {
     // --- State ---
-    const [sheetCounts, setSheetCounts] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
     const [viewMode, setViewMode] = useState('default'); // 'default' | 'print_all'
     let startD = new Date();
     if (filters && filters.dateRange && filters.dateRange.startDate) {
@@ -56,6 +51,18 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
     const [localUnitKK, setLocalUnitKK] = useState(initialParams.kk);
     const [localUnitSTL, setLocalUnitSTL] = useState(initialParams.stl);
     const maxStations = localUnitKK ? (UNIT_HIERARCHY[localUnitKK] || 6) : 0;
+
+    // --- Computed Stats (Synchronous & Cached Local-filtering) ---
+    const sheetCounts = React.useMemo(() => {
+        if (!rawData || Object.keys(rawData).length === 0) return null;
+        const queryFilters = { ...filters };
+        if (localUnitKK) queryFilters.unit_kk = localUnitKK;
+        if (localUnitSTL) queryFilters.unit_s_tl = localUnitSTL;
+        const res = calculateDashboardStats(rawData, queryFilters);
+        return res.counts;
+    }, [rawData, filters, localUnitKK, localUnitSTL]);
+
+    const isLoading = !rawData || Object.keys(rawData).length === 0;
 
     // --- Station/Commander Data ---
     const [stationData, setStationData] = useState([]);
@@ -122,36 +129,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
         }
     }, [sheetCounts, onStatsUpdate]);
 
-    // --- Effect: Fetch Google Sheet Data ---
-    useEffect(() => {
-        const loadData = async () => {
-            setIsLoading(true);
-            try {
-                // Merge global filters with local unit filters
-                const queryFilters = { ...filters };
-                if (localUnitKK) queryFilters.unit_kk = localUnitKK;
-                if (localUnitSTL) queryFilters.unit_s_tl = localUnitSTL;
-                const data = await fetchDashboardData(queryFilters);
-                // Fix: GoogleSheetService now returns { counts, allCases }, but this view expects just counts
-                if (data && data.counts) {
-                    setSheetCounts(data.counts);
-                } else {
-                    setSheetCounts(data);
-                }
-            } catch (error) {
-                console.error("Failed to fetch sheet data:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        // Debounce slightly to avoid rapid refetch
-        const timer = setTimeout(() => {
-            loadData();
-        }, 300);
-
-        return () => clearTimeout(timer);
-    }, [filters, localUnitKK, localUnitSTL]);
+    // (Redundant network fetch useEffect removed - stats now computed synchronously from rawData prop)
 
     // --- Effect: Handle Export Request ---
     useEffect(() => {
@@ -170,6 +148,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
                 ];
 
                 try {
+                    const { default: html2canvas } = await import('html2canvas');
                     for (const section of sections) {
                         const element = document.getElementById(section.id);
                         if (element) {
@@ -249,6 +228,8 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
         setDesktopViewport();
 
         try {
+            const { jsPDF } = await import('jspdf');
+            const { toPng } = await import('html-to-image');
             // STEP 1: Capture the First Page (Overview) in Default Mode (Portrait)
             if (activeTab !== 'overview' || viewMode !== 'default') {
                 setActiveTab('overview');
@@ -458,6 +439,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
         }
 
         try {
+            const { toPng } = await import('html-to-image');
             const headerEl = document.getElementById('print-header');
             const contentEl = document.getElementById('overview-content');
             const container = document.getElementById('dashboard-container');
@@ -572,6 +554,7 @@ const ResultDashboardView = ({ filteredData, filters, setFilters, onStatsUpdate 
         setDesktopViewport();
 
         try {
+            const { toPng } = await import('html-to-image');
             // STEP 1: Capture the First Page (Overview) in Default Mode (Portrait)
             if (activeTab !== 'overview' || viewMode !== 'default') {
                 setActiveTab('overview');

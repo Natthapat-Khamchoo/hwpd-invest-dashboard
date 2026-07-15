@@ -17,9 +17,7 @@ import LoadingScreen from './components/ui/LoadingScreen';
 
 // Import New Views
 import RankingView from './components/dashboard/RankingView';
-import TimeAnalysisView from './components/dashboard/TimeAnalysisView';
 import TrendView from './components/dashboard/TrendView';
-import SummaryDashboardView from './components/dashboard/SummaryDashboardView';
 import ResultDashboardView from './components/dashboard/ResultDashboardView';
 
 // Import UI Components
@@ -44,7 +42,8 @@ const DebugLoading = ({ onFinished }) => (
 
 export default function App() {
   // --- Data & Logic Hooks ---
-  const { data, rawData, loading } = usePoliceData();
+  const { data, rawData, loading, error, refetch } = usePoliceData();
+  const isDataEmpty = !data || data.length === 0;
   const { getCommanderInfo } = useStationData(rawData);
   const {
     filters, setFilters,
@@ -60,8 +59,6 @@ export default function App() {
   // --- Analytics Hook ---
   const {
     unitRankings,
-    peakHoursData,
-    dayOfWeekData,
     trendData,
     nextDayForecast
   } = useAnalytics(data, filters, rawData); // Use filtered or raw data depending on requirement. Passing 'data' and applying filters inside hook is better for consistency.
@@ -70,10 +67,10 @@ export default function App() {
   const getInitialActiveTab = () => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    // 'dashboard', 'ranking', 'trend', 'time' are top-level tabs.
+    // 'dashboard', 'ranking', 'trend' are top-level tabs.
     // 'result' is the default container for 'overview', 'comparison', etc.
     // If tab is defined and is one of the top-level keys, use it.
-    if (['dashboard', 'ranking', 'trend', 'time'].includes(tab)) return tab;
+    if (['dashboard', 'ranking', 'trend'].includes(tab)) return tab;
     // Otherwise, assume it belongs to 'result' (ResultDashboardView)
     return 'result';
   };
@@ -130,7 +127,7 @@ export default function App() {
   useEffect(() => {
     const handlePopState = () => {
       const tab = new URLSearchParams(window.location.search).get('tab');
-      if (['dashboard', 'ranking', 'trend', 'time'].includes(tab)) {
+      if (['dashboard', 'ranking', 'trend'].includes(tab)) {
         setActiveTab(tab);
       } else {
         setActiveTab('result');
@@ -345,6 +342,41 @@ ${accidentReportSection}
         <LoadingScreen onFinished={handleLoadingFinished} />
       )}
 
+      {/* Error Overlay UI */}
+      {error && isDataEmpty && (
+        <div className="fixed inset-0 z-[99990] bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
+          <div className="max-w-md w-full border border-red-500/30 p-8 rounded-2xl flex flex-col items-center text-center shadow-2xl relative overflow-hidden bg-slate-900/60 backdrop-blur-xl">
+            {/* Pulsing neon red border effect */}
+            <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-red-500 to-transparent"></div>
+            
+            {/* Glowing Icon Container */}
+            <div className="relative mb-6">
+              <div className="absolute inset-0 rounded-full bg-red-500/20 blur-xl animate-pulse"></div>
+              <div className="w-20 h-20 rounded-full bg-red-950/50 border border-red-500/50 flex items-center justify-center relative z-10 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                <FileWarning className="w-10 h-10 animate-bounce" />
+              </div>
+            </div>
+
+            {/* Error Message */}
+            <h3 className="text-2xl font-bold text-white mb-2 tracking-wide">
+              การเชื่อมต่อล้มเหลว
+            </h3>
+            <p className="text-slate-400 text-sm mb-6 max-h-32 overflow-y-auto font-mono bg-black/40 p-3 rounded-lg border border-white/5 w-full text-left">
+              {error}
+            </p>
+
+            {/* Retry Button */}
+            <button
+              onClick={() => refetch({ forceRefresh: true })}
+              className="w-full flex items-center justify-center space-x-2 py-3 px-6 rounded-xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all duration-200 border border-blue-400/20 group"
+            >
+              <RefreshCw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
+              <span>ลองใหม่อีกครั้ง</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Animated Background Layers (Night mode only) */}
       {isDarkMode && (
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
@@ -381,9 +413,7 @@ ${accidentReportSection}
               {/* Active Tab Indicator Line */}
               {activeTab === tab && <div className={`absolute left-0 top-0 bottom-0 w-1 ${isDarkMode ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,1)]' : 'bg-blue-600'}`}></div>}
 
-              {tab === 'dashboard' ? <LayoutDashboard className="w-5 h-5" /> :
-                tab === 'result' ? <PieChart className="w-5 h-5" /> :
-                  <FileText className="w-5 h-5" />}
+              {tab === 'dashboard' ? <LayoutDashboard className="w-5 h-5" /> : <PieChart className="w-5 h-5" />}
               <span className="font-semibold text-lg capitalize relative z-10">{tab}</span>
               {activeTab === tab && <ChevronRight className="w-4 h-4 ml-auto opacity-70" />}
             </button>
@@ -626,12 +656,8 @@ ${accidentReportSection}
 
 
 
-          {activeTab === 'summary' && (
-            <SummaryDashboardView filteredData={filteredData} filters={filters} reportStats={detailedStats} getCommanderInfo={getCommanderInfo} />
-          )}
-
           {activeTab === 'result' && (
-            <ResultDashboardView filteredData={filteredData} filters={filters} setFilters={setFilters} onStatsUpdate={setResultStats} />
+            <ResultDashboardView filteredData={filteredData} rawData={rawData} filters={filters} setFilters={setFilters} onStatsUpdate={setResultStats} />
           )}
 
 
@@ -641,39 +667,6 @@ ${accidentReportSection}
               <RankingView unitRankings={unitRankings} isDarkMode={isDarkMode} />
             )
           }
-
-          {activeTab === 'time' && (
-            <div className="h-full w-full flex flex-col relative">
-              {/* Chrono Theme Effects */}
-              <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-                {/* Random Laser Beams */}
-                <div className="absolute w-[1px] h-[40%] left-[10%] bg-gradient-to-b from-transparent via-purple-400 to-transparent opacity-70 animate-scan-vertical" style={{ animationDuration: '4s', animationDelay: '0s' }}></div>
-                <div className="absolute w-[1px] h-[60%] left-[25%] bg-gradient-to-b from-transparent via-cyan-400 to-transparent opacity-50 animate-scan-vertical" style={{ animationDuration: '6s', animationDelay: '1s', animationDirection: 'reverse' }}></div>
-                <div className="absolute w-[1px] h-[50%] left-[45%] bg-gradient-to-b from-transparent via-fuchsia-400 to-transparent opacity-60 animate-scan-vertical" style={{ animationDuration: '5s', animationDelay: '2.5s' }}></div>
-                <div className="absolute w-[1px] h-[70%] left-[65%] bg-gradient-to-b from-transparent via-blue-400 to-transparent opacity-40 animate-scan-vertical" style={{ animationDuration: '7s', animationDelay: '0.5s', animationDirection: 'reverse' }}></div>
-                <div className="absolute w-[1px] h-[45%] left-[80%] bg-gradient-to-b from-transparent via-purple-400 to-transparent opacity-60 animate-scan-vertical" style={{ animationDuration: '4.5s', animationDelay: '3s' }}></div>
-                <div className="absolute w-[1px] h-[55%] left-[95%] bg-gradient-to-b from-transparent via-cyan-400 to-transparent opacity-50 animate-scan-vertical" style={{ animationDuration: '5.5s', animationDelay: '1.5s', animationDirection: 'reverse' }}></div>
-
-                {/* Rotating Clock Rings */}
-                <div className="absolute -top-1/2 -left-1/4 w-[1000px] h-[1000px] border-[3px] border-purple-500/30 rounded-full animate-[spin_60s_linear_infinite]"></div>
-                <div className="absolute -bottom-1/2 -right-1/4 w-[800px] h-[800px] border-[3px] border-fuchsia-500/30 rounded-full animate-[spin_40s_linear_infinite_reverse]">
-                  <div className="absolute top-0 left-1/2 w-6 h-6 bg-fuchsia-400 shadow-[0_0_30px_rgba(232,121,249,0.8)] rounded-full blur-sm"></div>
-                </div>
-
-                {/* Pulsing Time Orbs */}
-                <div className="absolute top-20 right-20 w-48 h-48 bg-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute bottom-20 left-20 w-60 h-60 bg-indigo-500/20 rounded-full blur-3xl animate-pulse-slow"></div>
-
-                {/* Central Gradient Glow */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.15)_0%,transparent_70%)]"></div>
-              </div>
-
-              {/* Content */}
-              <div className="relative z-10 h-full overflow-hidden">
-                <TimeAnalysisView isDarkMode={isDarkMode} peakHoursData={peakHoursData} dayOfWeekData={dayOfWeekData} />
-              </div>
-            </div>
-          )}
 
           {
             activeTab === 'trend' && (

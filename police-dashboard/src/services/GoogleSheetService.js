@@ -180,20 +180,131 @@ const filterRow = (row, filters) => {
     return true;
 };
 
-export const fetchDashboardData = async (filters) => {
-    const promises = Object.values(SHEETS).map(sheet => {
+const fetchRawDataFromSheetsDirectly = async () => {
+    console.log("⚡ [GoogleSheetService] Fetching all sheets directly from Google Sheets...");
+    const promises = Object.values(SHEETS).map(async (sheet) => {
         const url = `https://docs.google.com/spreadsheets/d/${sheet.id}/export?format=csv&gid=${sheet.gid}`;
-        return fetchCSV(url).then(res => ({ 
-            type: sheet.name, 
-            data: res.status === 'success' ? res.data : [] 
-        }));
+        const res = await fetchCSV(url);
+        return {
+            name: sheet.name,
+            data: res.status === 'success' ? res.data : []
+        };
     });
-
     const results = await Promise.all(promises);
-    const rawData = results.reduce((acc, curr) => {
-        acc[curr.type] = curr.data;
+    return results.reduce((acc, curr) => {
+        acc[curr.name] = curr.data;
         return acc;
     }, {});
+};
+
+// In-memory cache variables
+let dashboardCache = null; // Stores { rawData, timestamp }
+let stationsCache = null;   // Stores { data, timestamp }
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+const CACHE_KEY_DASHBOARD = 'hwpd_dashboard_cache';
+const CACHE_KEY_STATIONS = 'hwpd_stations_cache';
+
+const getCachedLocal = (key) => {
+    try {
+        const cached = localStorage.getItem(key);
+        if (!cached) return null;
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.timestamp && parsed.data) {
+            const now = Date.now();
+            if (now - parsed.timestamp < CACHE_TTL) {
+                return parsed.data;
+            }
+        }
+    } catch (e) {
+        console.error(`Error reading cache for ${key} from localStorage:`, e);
+    }
+    return null;
+};
+
+const saveCachedLocal = (key, data) => {
+    try {
+        const cacheObj = {
+            data,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(key, JSON.stringify(cacheObj));
+    } catch (e) {
+        console.error(`Error saving cache for ${key} to localStorage:`, e);
+    }
+};
+
+export const fetchDashboardData = async (filters, options = {}) => {
+    const forceRefresh = options.forceRefresh || false;
+    const now = Date.now();
+    let rawData = {};
+    let fetchedFromAPI = false;
+
+    // Check Cache first (in-memory)
+    if (!forceRefresh && dashboardCache && (now - dashboardCache.timestamp < CACHE_TTL)) {
+        console.log("⚡ [GoogleSheetService] Serving dashboard data from memory cache");
+        rawData = dashboardCache.rawData;
+        fetchedFromAPI = true;
+    } else {
+        // Check localStorage cache
+        if (!forceRefresh) {
+            const localCacheData = getCachedLocal(CACHE_KEY_DASHBOARD);
+            if (localCacheData) {
+                console.log("⚡ [GoogleSheetService] Serving dashboard data from localStorage cache");
+                rawData = localCacheData;
+                fetchedFromAPI = true;
+                // Sync to memory cache
+                dashboardCache = {
+                    rawData,
+                    timestamp: now
+                };
+            }
+        }
+
+        if (!fetchedFromAPI) {
+            try {
+                const response = await fetch('/api/dashboard');
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const resJson = await response.json();
+                    if (resJson.status === 'success' && resJson.data) {
+                        rawData = resJson.data;
+                        fetchedFromAPI = true;
+                        console.log("⚡ [GoogleSheetService] Successfully fetched dashboard data from Backend API");
+                        
+                        // Save to cache (memory & localStorage)
+                        dashboardCache = {
+                            rawData,
+                            timestamp: Date.now()
+                        };
+                        saveCachedLocal(CACHE_KEY_DASHBOARD, rawData);
+                    } else {
+                        console.error("API returned error:", resJson.message);
+                    }
+                } else {
+                    console.warn("Backend API response is not JSON:", response.status, response.statusText);
+                }
+            } catch (error) {
+                console.error("Failed to fetch dashboard data from API:", error);
+            }
+
+            if (!fetchedFromAPI || !rawData || !rawData.crime || rawData.crime.length === 0) {
+                console.warn("⚠️ [GoogleSheetService] API failed or returned empty. Falling back to direct Google Sheets fetching...");
+                rawData = await fetchRawDataFromSheetsDirectly();
+                
+                // Save to cache if fallback succeeded
+                if (rawData && rawData.crime && rawData.crime.length > 0) {
+                    dashboardCache = {
+                        rawData,
+                        timestamp: Date.now()
+                    };
+                    saveCachedLocal(CACHE_KEY_DASHBOARD, rawData);
+                } else {
+                    throw new Error("Failed to fetch dashboard data from API and direct Google Sheets fallback");
+                }
+            }
+        }
+    }
 
     // --- Build allCases array for Dashboard/Ranking/Trend tabs ---
     // Each crime row has aggregated counts. We expand them into individual "case" records
@@ -705,8 +816,62 @@ export const calculateDashboardStats = (rawData, filters) => {
 };
 
 // --- Fetch station/commander info from Settings_Stations sheet ---
-export const fetchStationInfo = async () => {
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1282713566`;
-    const res = await fetchCSV(url);
-    return res.status === 'success' ? res.data : [];
+export const fetchStationInfo = async (options = {}) => {
+    const forceRefresh = options.forceRefresh || false;
+    const now = Date.now();
+
+    // Check Cache
+    if (!forceRefresh && stationsCache && (now - stationsCache.timestamp < CACHE_TTL)) {
+        console.log("⚡ [GoogleSheetService] Serving station info from memory cache");
+        return stationsCache.data;
+    }
+
+    // Check localStorage cache
+    if (!forceRefresh) {
+        const localCacheData = getCachedLocal(CACHE_KEY_STATIONS);
+        if (localCacheData) {
+            console.log("⚡ [GoogleSheetService] Serving station info from localStorage cache");
+            stationsCache = {
+                data: localCacheData,
+                timestamp: now
+            };
+            return localCacheData;
+        }
+    }
+
+    let stations = null;
+    try {
+        const response = await fetch('/api/dashboard');
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const resJson = await response.json();
+            if (resJson.status === 'success' && resJson.data && resJson.data.stations) {
+                console.log("⚡ [GoogleSheetService] Successfully fetched station info from Backend API");
+                stations = resJson.data.stations;
+            }
+        }
+    } catch (error) {
+        console.error("fetchStationInfo error:", error);
+    }
+
+    if (!stations) {
+        // Fallback: fetch stations directly from Google Sheets
+        console.warn("⚠️ [GoogleSheetService] fetchStationInfo failed. Falling back to direct Google Sheets fetching...");
+        const url = `https://docs.google.com/spreadsheets/d/${SHEETS.STATIONS.id}/export?format=csv&gid=${SHEETS.STATIONS.gid}`;
+        const res = await fetchCSV(url);
+        stations = res.status === 'success' ? res.data : [];
+    }
+
+    // Save to cache
+    if (stations && stations.length > 0) {
+        stationsCache = {
+            data: stations,
+            timestamp: Date.now()
+        };
+        saveCachedLocal(CACHE_KEY_STATIONS, stations);
+    } else {
+        throw new Error("Failed to fetch station info");
+    }
+
+    return stations;
 };
