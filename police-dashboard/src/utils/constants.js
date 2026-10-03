@@ -1,7 +1,7 @@
 export const UNIT_COMMANDERS = {
     // 0: Main HQ (Defaults)
     '0': {
-        commander: 'พล.ต.ต.พรศักดิ์ เลารุจิราลัย ผบก.ทล.',
+        commander: 'พล.ต.ต.บุญลือ ผดุงถิ่น ผบก.ทล.',
         unitName: 'บก.ทล.'
     },
     // Sub-units
