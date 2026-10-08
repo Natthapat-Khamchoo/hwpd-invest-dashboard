@@ -1,4 +1,10 @@
 {
+  "crons": [
+    { "path": "/api/line/daily-report", "schedule": "0 1 * * *" }
+  ],
+  "functions": {
+    "api/line/daily-report.js": { "maxDuration": 120, "memory": 2048 }
+  },
   "rewrites": [
     {
       "source": "/((?!api/).*)",

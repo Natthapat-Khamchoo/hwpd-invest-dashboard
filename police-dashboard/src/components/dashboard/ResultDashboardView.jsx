@@ -10,6 +10,8 @@ import ComparisonTab from './tabs/ComparisonTab';
 import TrafficComparisonTab from './tabs/TrafficComparisonTab';
 import TruckInspectionTab from './tabs/TruckInspectionTab';
 import PressReleaseTab from './tabs/PressReleaseTab';
+import OnePageReport, { REPORT_WIDTH, REPORT_HEIGHT } from './OnePageReport';
+import { buildMorningReports, reportFileName as fileNameFor } from '../../lib/morningReport';
 
 const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onStatsUpdate }) => {
     // --- State ---
@@ -25,6 +27,19 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
     const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
     const yearBE = Number(selectedYear) + 543;
     const exportMonthName = months[selectedMonth];
+
+    // --- Report period label for the 16:9 export: a single day, a whole month, or a custom range ---
+    const endD = filters?.dateRange?.endDate ? new Date(filters.dateRange.endDate) : startD;
+    const thaiDate = (d) => `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
+    const isSameDay = startD.toDateString() === endD.toDateString();
+    const isWholeMonth = startD.getDate() === 1
+        && endD.getMonth() === startD.getMonth() && endD.getFullYear() === startD.getFullYear()
+        && endD.getDate() === new Date(startD.getFullYear(), startD.getMonth() + 1, 0).getDate();
+    const reportPeriod = isSameDay
+        ? { prefix: 'ประจำวันที่', text: thaiDate(startD) }
+        : (isWholeMonth || !filters?.dateRange?.endDate)
+            ? { prefix: 'ประจำเดือน', text: `${exportMonthName} ${yearBE}` }
+            : { prefix: 'ระหว่างวันที่', text: `${thaiDate(startD)} - ${thaiDate(endD)}` };
 
     // Get initial values from URL if present
     const getInitialParams = () => {
@@ -216,329 +231,80 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
         }
     };
 
-    // --- PDF Export Handler ---
+    // --- Single-page 16:9 report (shared by PDF and JPG export) ---
+    // null while idle; { counts, period } while a report is mounted off-screen for capture
+    const [onePageReport, setOnePageReport] = useState(null);
+    const unitLabel = localUnitKK
+        ? `กก.${localUnitKK}${localUnitSTL ? ` ส.ทล.${localUnitSTL}` : ''} บก.ทล.`
+        : '';
+    const reportFileName = fileNameFor(reportPeriod);
+
+    const captureOnePageReport = async (report) => {
+        const { toJpeg } = await import('html-to-image');
+        setOnePageReport(report);
+        // Wait for React render, fonts and the header logo
+        await new Promise(resolve => setTimeout(resolve, 800));
+        if (document.fonts?.ready) await document.fonts.ready;
+        const el = document.getElementById('one-page-report');
+        if (!el) throw new Error('One-page report not found in DOM');
+        return toJpeg(el, {
+            quality: 0.95,
+            pixelRatio: 2, // 3840x2160 output
+            backgroundColor: '#ffffff',
+            cacheBust: true,
+            width: REPORT_WIDTH,
+            height: REPORT_HEIGHT
+        });
+    };
+
+    // --- PDF Export Handler (1 page, 16:9) ---
     const handleExportPDF = async () => {
         if (isPdfExporting) return;
         setIsPdfExporting(true);
-
-        // Save current state
-        const prevViewMode = viewMode;
-        const prevTab = activeTab;
-
-        setDesktopViewport();
-
         try {
             const { jsPDF } = await import('jspdf');
-            const { toPng } = await import('html-to-image');
-            // STEP 1: Capture the First Page (Overview) in Default Mode (Portrait)
-            if (activeTab !== 'overview' || viewMode !== 'default') {
-                setActiveTab('overview');
-                setViewMode('default');
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            } else {
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-
-            const headerEl = document.getElementById('print-header');
-            const contentEl = document.getElementById('overview-content');
-            const container = document.getElementById('dashboard-container');
-
-            if (container) container.style.overflow = 'visible';
-
-            const filter = (node) => {
-                const exclusionClasses = ['exclude-from-export', 'animate-pulse'];
-                return !(node.classList && exclusionClasses.some(cls => node.classList.contains(cls)));
-            };
-
-            const captureOptsOverview = {
-                quality: 1.0,
-                pixelRatio: 2, // Match JPG export quality
-                backgroundColor: '#ffffff',
-                filter: filter,
-                cacheBust: true,
-                width: 1920,
-                windowWidth: 1920,
-                style: { width: '1920px' }
-            };
-
-            let headerDataUrl = null;
-            if (headerEl) {
-                headerDataUrl = await toPng(headerEl, captureOptsOverview);
-            }
-            const overviewDataUrl = await toPng(contentEl, captureOptsOverview);
-
-            if (container) container.style.overflow = '';
-
-            const loadImg = (src) => new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => resolve(img);
-                img.onerror = reject;
-                img.src = src;
-            });
-
-            let headerImgObj = null;
-            if (headerDataUrl) headerImgObj = await loadImg(headerDataUrl);
-            const overviewImgObj = await loadImg(overviewDataUrl);
-
-            const canvasWidth = Math.max(
-                headerImgObj ? headerImgObj.naturalWidth : 0,
-                overviewImgObj.naturalWidth
-            );
-
-            const headerH = (headerImgObj && headerImgObj.naturalWidth > 0) ? Math.round((headerImgObj.naturalHeight / headerImgObj.naturalWidth) * canvasWidth) : 0;
-            const contentH = (overviewImgObj && overviewImgObj.naturalWidth > 0) ? Math.round((overviewImgObj.naturalHeight / overviewImgObj.naturalWidth) * canvasWidth) : 0;
-            const footerH = 32;
-
-            const canvas = document.createElement('canvas');
-            canvas.width = canvasWidth;
-            canvas.height = headerH + contentH + footerH;
-            const ctx = canvas.getContext('2d');
-
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            let y = 0;
-            if (headerImgObj) {
-                ctx.drawImage(headerImgObj, 0, y, canvasWidth, headerH);
-                y += headerH;
-            }
-
-            ctx.drawImage(overviewImgObj, 0, y, canvasWidth, contentH);
-            y += contentH;
-
-            ctx.fillStyle = '#004aad';
-            ctx.fillRect(0, y, canvasWidth, footerH);
-
-            const page1DataUrl = canvas.toDataURL('image/jpeg', 0.92);
-
-            // Scale the PDF first page to have a uniform width of 1920 units 
-            // so it matches all subsequent landscape pages exactly.
-            const pdfPageWidth = 1920;
-            const pdfHeightRatio = pdfPageWidth / canvas.width;
-            const pdfPageHeight = canvas.height * pdfHeightRatio;
-
-            let pdf = new jsPDF({ 
-                orientation: pdfPageWidth > pdfPageHeight ? 'landscape' : 'portrait', 
-                unit: 'px', 
-                format: [pdfPageWidth, pdfPageHeight] 
-            });
-
-            pdf.addImage(page1DataUrl, 'JPEG', 0, 0, pdfPageWidth, pdfPageHeight);
-
-            // STEP 2: Render remaining sections in print_all mode
-            setViewMode('print_all');
-            await new Promise(resolve => setTimeout(resolve, 2500));
-
-            const remainingSections = [
-                { id: 'print-comparison' },
-                { id: 'print-traffic' },
-                { id: 'print-truck' },
-                { id: 'print-press' }
-            ];
-
-            const pageWidth = 1920;
-            const pageHeight = 1080;
-
-            for (let i = 0; i < remainingSections.length; i++) {
-                const section = remainingSections[i];
-                const element = document.getElementById(section.id);
-                if (!element) continue;
-
-                const dataUrl = await toPng(element, {
-                    quality: 1.0,
-                    pixelRatio: 1.0,
-                    backgroundColor: '#ffffff',
-                    filter: filter,
-                    cacheBust: true,
-                    width: 1920,
-                    windowWidth: 1920,
-                    style: { width: '1920px' }
-                });
-
-                const contentImg = await loadImg(dataUrl);
-
-                pdf.addPage([pageWidth, pageHeight], 'landscape');
-
-                const imgWidth = contentImg.naturalWidth;
-                const imgHeight = contentImg.naturalHeight;
-
-                const headerH_Landscape = 130;
-                const bottomMargin = 20;
-                const sideMargin = 20;
-                const contentW = pageWidth - (sideMargin * 2);
-                const contentH_Landscape = pageHeight - headerH_Landscape - bottomMargin;
-
-                const scaleX = contentW / imgWidth;
-                const scaleY = contentH_Landscape / imgHeight;
-                const scale = Math.min(scaleX, scaleY);
-
-                const drawW = imgWidth * scale;
-                const drawH = imgHeight * scale;
-
-                const offsetX = sideMargin + (contentW - drawW) / 2;
-                const offsetY = headerH_Landscape + (contentH_Landscape - drawH) / 2;
-
-                pdf.addImage(dataUrl, 'PNG', offsetX, offsetY, drawW, drawH);
-
-                if (headerDataUrl) {
-                    try {
-                        pdf.addImage(headerDataUrl, 'PNG', 0, 0, pageWidth, headerH_Landscape);
-                    } catch (e) {
-                        pdf.setFillColor(255, 255, 255);
-                        pdf.rect(0, 0, pageWidth, headerH_Landscape, 'F');
-                        pdf.setFontSize(24);
-                        pdf.setTextColor(0, 0, 0);
-                        pdf.text('Highway Police Bureau', 30, 48);
-                    }
-                } else {
-                    pdf.setFillColor(255, 255, 255);
-                    pdf.rect(0, 0, pageWidth, headerH_Landscape, 'F');
-                }
-
-                pdf.setDrawColor(0, 74, 173);
-                pdf.setLineWidth(2);
-                pdf.line(0, headerH_Landscape, pageWidth, headerH_Landscape);
-
-                pdf.setFillColor(0, 74, 173);
-                pdf.rect(0, pageHeight - 10, pageWidth, 10, 'F');
-            }
-
-            const fileName = `ผลการปฏิบัติ บก.ทล. ประจำเดือน${exportMonthName} ${yearBE}.pdf`;
-            if (pdf) {
-                pdf.save(fileName);
-            }
-
+            const dataUrl = await captureOnePageReport({ counts: sheetCounts, period: reportPeriod });
+            const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [REPORT_WIDTH, REPORT_HEIGHT] });
+            pdf.addImage(dataUrl, 'JPEG', 0, 0, REPORT_WIDTH, REPORT_HEIGHT);
+            pdf.save(`${reportFileName}.pdf`);
         } catch (error) {
             console.error('PDF Export failed:', error);
             alert('Export PDF failed. See console for details.');
         } finally {
-            restoreViewport();
-            setViewMode(prevViewMode);
-            setActiveTab(prevTab);
+            setOnePageReport(null);
             setIsPdfExporting(false);
         }
     };
 
-    // --- Portrait JPG Export Handler ---
+    // --- JPG Export Handler: morning report = 2 images (16:9) ---
+    // 1) month-to-date: 1st of the month -> yesterday  2) yesterday only.
+    // "Yesterday" is relative to the day the button is pressed, independent of the dashboard date filter.
     const handleExportOverviewJPG = async () => {
         if (isJpgExporting) return;
         setIsJpgExporting(true);
-
-        // Ensure we're on overview tab
-        const prevTab = activeTab;
-        
-        setDesktopViewport();
-
-        if (activeTab !== 'overview') {
-            setActiveTab('overview');
-            setViewMode('default');
-            await new Promise(resolve => setTimeout(resolve, 2500));
-        } else {
-            // Wait for viewport DOM render
-            await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-
         try {
-            const { toPng } = await import('html-to-image');
-            const headerEl = document.getElementById('print-header');
-            const contentEl = document.getElementById('overview-content');
-            const container = document.getElementById('dashboard-container');
+            const today = new Date();
+            const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+            // Keep the other active filters (unit, search, topic); the date range comes from the report day
+            const baseFilters = { ...filters };
+            if (localUnitKK) baseFilters.unit_kk = localUnitKK;
+            if (localUnitSTL) baseFilters.unit_s_tl = localUnitSTL;
+            const reports = buildMorningReports(rawData, baseFilters, yesterday);
 
-            if (!contentEl) throw new Error('Overview content not found in DOM');
-
-            // Temporarily remove overflow-hidden to prevent clipping
-            if (container) container.style.overflow = 'visible';
-
-            const filter = (node) => {
-                const exclusionClasses = ['exclude-from-export', 'animate-pulse'];
-                return !(node.classList && exclusionClasses.some(cls => node.classList.contains(cls)));
-            };
-
-            const captureOpts = {
-                quality: 1.0,
-                pixelRatio: 2,
-                backgroundColor: '#ffffff',
-                filter: filter,
-                cacheBust: true,
-                width: 1920,
-                windowWidth: 1920,
-                style: { width: '1920px' }
-            };
-
-            // Capture header and content separately
-            let headerDataUrl = null;
-            if (headerEl) {
-                headerDataUrl = await toPng(headerEl, captureOpts);
+            for (const report of reports) {
+                const dataUrl = await captureOnePageReport(report);
+                const link = document.createElement('a');
+                link.download = `${fileNameFor(report.period)}.jpg`;
+                link.href = dataUrl;
+                link.click();
+                // Space the downloads so the browser doesn't drop the second one
+                await new Promise(resolve => setTimeout(resolve, 800));
             }
-            const contentDataUrl = await toPng(contentEl, captureOpts);
-
-            // Restore overflow
-            if (container) container.style.overflow = '';
-
-            // Load images
-            const loadImg = (src) => new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => resolve(img);
-                img.onerror = reject;
-                img.src = src;
-            });
-
-            let headerImg = null;
-            if (headerDataUrl) headerImg = await loadImg(headerDataUrl);
-            const contentImg = await loadImg(contentDataUrl);
-
-            // Use the wider of header/content as the canvas width
-            const canvasWidth = Math.max(
-                headerImg ? headerImg.naturalWidth : 0,
-                contentImg.naturalWidth
-            );
-
-            // Scale each image to fill canvasWidth while maintaining aspect ratio
-            const headerH = headerImg ? Math.round((headerImg.naturalHeight / headerImg.naturalWidth) * canvasWidth) : 0;
-            const contentH = Math.round((contentImg.naturalHeight / contentImg.naturalWidth) * canvasWidth);
-            const footerH = 32; // footer bar
-
-            const canvas = document.createElement('canvas');
-            canvas.width = canvasWidth;
-            canvas.height = headerH + contentH + footerH;
-            const ctx = canvas.getContext('2d');
-
-            // White background
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Draw header
-            let y = 0;
-            if (headerImg) {
-                ctx.drawImage(headerImg, 0, y, canvasWidth, headerH);
-                y += headerH;
-            }
-
-            // Draw content
-            ctx.drawImage(contentImg, 0, y, canvasWidth, contentH);
-            y += contentH;
-
-            // Draw footer bar
-            ctx.fillStyle = '#004aad';
-            ctx.fillRect(0, y, canvasWidth, footerH);
-
-            // Export as JPEG
-            const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.92);
-
-            // Download
-            const now = new Date();
-            const fileName = `ผลการปฏิบัติ บก.ทล. ประจำเดือน${exportMonthName} ${yearBE}.jpg`;
-            const link = document.createElement('a');
-            link.download = fileName;
-            link.href = jpegDataUrl;
-            link.click();
-
         } catch (error) {
-            console.error('Portrait JPG Export failed:', error);
+            console.error('JPG Export failed:', error);
             alert('Export JPG failed. See console for details.');
         } finally {
-            restoreViewport();
-            setActiveTab(prevTab);
+            setOnePageReport(null);
             setIsJpgExporting(false);
         }
     };
@@ -856,12 +622,12 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
         }
 
         switch (activeTab) {
-            case 'overview': return <OverviewTab counts={sheetCounts} isLoading={isLoading} forceDesktop={isPdfExporting || isJpgExporting || isExportAllJpg} />;
+            case 'overview': return <OverviewTab counts={sheetCounts} isLoading={isLoading} forceDesktop={isExportAllJpg} />;
             case 'comparison': return <ComparisonTab data={sheetCounts?.charts?.comparison} monthNames={sheetCounts?.charts?.monthNames} />;
             case 'traffic-comparison': return <TrafficComparisonTab data={sheetCounts?.charts?.traffic} monthNames={sheetCounts?.charts?.monthNames} />;
             case 'press': return <PressReleaseTab qualityWork={sheetCounts?.charts?.qualityWork} media={sheetCounts?.charts?.media} />;
             case 'truck': return <TruckInspectionTab data={sheetCounts?.charts?.truck} monthNames={sheetCounts?.charts?.monthNames} />;
-            default: return <OverviewTab counts={sheetCounts} isLoading={isLoading} forceDesktop={isPdfExporting || isJpgExporting || isExportAllJpg} />;
+            default: return <OverviewTab counts={sheetCounts} isLoading={isLoading} forceDesktop={isExportAllJpg} />;
         }
     };
 
@@ -928,7 +694,7 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
                         <button
                             onClick={handleExportOverviewJPG}
                             disabled={isJpgExporting}
-                            title="Export ภาพรวม"
+                            title="Export รายงานเช้า: สะสมทั้งเดือน + เมื่อวาน (2 ภาพ)"
                             className={`flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-200 shadow-sm ${isJpgExporting
                                 ? 'bg-gray-300 text-gray-500 cursor-wait'
                                 : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-500/30'
@@ -1007,7 +773,7 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
                             {isJpgExporting ? (
                                 <><Loader2 size={18} className="animate-spin" /> กำลัง Export...</>
                             ) : (
-                                <><ImageIcon size={18} /> Export ภาพรวม</>
+                                <><ImageIcon size={18} /> Export รายงานเช้า (2 ภาพ)</>
                             )}
                         </button>
 
@@ -1039,7 +805,7 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
                             {isPdfExporting ? (
                                 <><Loader2 size={18} className="animate-spin" /> กำลัง Export...</>
                             ) : (
-                                <><FileDown size={18} /> Export PDF</>
+                                <><FileDown size={18} /> Export PDF (16:9)</>
                             )}
                         </button>
                     </div>
@@ -1072,13 +838,20 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
                 </div>
 
                 {/* --- Content Area --- */}
-                <div id="overview-content" className={`${isPdfExporting || isJpgExporting || isExportAllJpg ? '' : 'flex-1'} w-full bg-white min-h-[600px]`}>
+                <div id="overview-content" className={`${isExportAllJpg ? '' : 'flex-1'} w-full bg-white min-h-[600px]`}>
                     {renderContent()}
                 </div>
 
                 {/* Footer Design Line (Global) */}
                 <div className="h-4 w-full bg-[#004aad] mt-auto"></div>
             </div>
+
+            {/* Off-screen 16:9 report, mounted only while exporting */}
+            {onePageReport && (
+                <div aria-hidden="true" style={{ position: 'fixed', left: -100000, top: 0, pointerEvents: 'none' }}>
+                    <OnePageReport counts={onePageReport.counts} periodPrefix={onePageReport.period.prefix} headerDate={onePageReport.period.text} chartPeriod={onePageReport.chartPeriod} commanderInfo={commanderInfo} unitLabel={unitLabel} />
+                </div>
+            )}
         </div >
     );
 };
