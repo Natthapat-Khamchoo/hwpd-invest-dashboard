@@ -293,8 +293,9 @@ const OnePageReport = ({ counts, periodPrefix = 'ประจำเดือน'
             {/* Header */}
             <div className="flex h-[88px] shrink-0 overflow-hidden relative">
                 <div className="bg-[#5e666e] w-[42%] flex items-center gap-5 px-8 relative z-20">
+                    {/* Bundled copy of the logo: the LINE bot's headless renderer on Vercel cannot reach cib.go.th */}
                     <img
-                        src="https://cib.go.th/backend/uploads/medium_logo_cib_4_2x_9f2da10e9f_a7828c9ca0.png"
+                        src="/report-logo.png"
                         alt="ตราสัญลักษณ์"
                         className="w-[66px] h-[66px] object-contain shrink-0"
                     />

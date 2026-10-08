@@ -57,8 +57,10 @@ const BotReportPage = () => {
         const text = buildReportText({ s: daily.counts, commander, unitName, headerDateText: headerFor(day), isAllUnits: true });
         const c = daily.counts;
         const dayTotal = (c.criminalTotal || 0) + (c.trafficTotal || 0) + (c.convoyTotal || 0) + (c.accidentsTotal || 0);
-        // Wait for web fonts and one paint so the screenshot never catches fallback glyphs
-        (document.fonts?.ready || Promise.resolve()).then(() => requestAnimationFrame(() => requestAnimationFrame(() => publish({
+        // Wait for web fonts, images (logo) and one paint so the screenshot never catches a half-loaded page
+        const imagesLoaded = () => Promise.all([...document.images].map(img =>
+            img.complete ? null : new Promise(resolve => { img.onload = img.onerror = resolve; })));
+        Promise.all([document.fonts?.ready, imagesLoaded()]).then(() => requestAnimationFrame(() => requestAnimationFrame(() => publish({
             status: 'ready',
             date: `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`,
             dayTotal,
