@@ -1,6 +1,6 @@
 {
   "crons": [
-    { "path": "/api/line/daily-report", "schedule": "0 1 * * *" }
+    { "path": "/api/line/daily-report", "schedule": "0 0 * * *" }
   ],
   "functions": {
     "api/line/daily-report.js": { "maxDuration": 120, "memory": 2048 }

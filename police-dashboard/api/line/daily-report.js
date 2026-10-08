@@ -1,5 +1,5 @@
 // Morning report to LINE: 2 report images (month-to-date + yesterday) and the copy-text.
-// Triggered daily by Vercel Cron (vercel.json). Manual run:
+// Triggered daily by Vercel Cron (vercel.json): 00:00 UTC = 07:00 Bangkok; Hobby fires within that hour, so it lands before 08:00. Manual run:
 //   curl -H "Authorization: Bearer $CRON_SECRET" "https://<host>/api/line/daily-report?dry=1&date=2026-10-07"
 //   dry=1   render + upload only, return the URLs and text without sending to LINE
 //   date    report day (YYYY-MM-DD); default = yesterday in Asia/Bangkok
