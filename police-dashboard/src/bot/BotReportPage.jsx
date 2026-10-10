@@ -8,7 +8,7 @@ import { useStationData } from '../hooks/useStationData';
 import { REPORT_WIDTH, REPORT_HEIGHT } from '../components/dashboard/OnePageReport';
 import MorningReport from '../components/dashboard/MorningReport';
 import { buildMorningReports, reportFileName, THAI_MONTHS_SHORT } from '../lib/morningReport';
-import { buildReportText } from '../lib/reportText';
+import { buildLineText } from '../lib/reportText';
 
 const BASE_FILTERS = { search: '', unit_kk: '', unit_s_tl: '', topic: [], charge: '', subFilter: null };
 
@@ -20,8 +20,8 @@ const reportDay = () => {
     return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
 };
 
-// Same header format as the dashboard's copy-text button for a single day
-const headerFor = (d) => `ประจำวันที่ ${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear() + 543} `;
+// "9 ต.ค.69"
+const lineDate = (d) => `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]}${String(d.getFullYear() + 543).slice(-2)}`;
 
 const publish = (state) => { window.__BOT_REPORT__ = state; };
 
@@ -49,7 +49,7 @@ const BotReportPage = () => {
         if (!reports) return;
         const { commander, unitName } = getCommanderInfo('0', '');
         const daily = reports.find(r => r.key === 'daily');
-        const text = buildReportText({ s: daily.counts, commander, unitName, headerDateText: headerFor(day), isAllUnits: true });
+        const text = buildLineText({ s: daily.counts, commander, unitName, dateText: lineDate(day) });
         const c = daily.counts;
         const dayTotal = (c.criminalTotal || 0) + (c.trafficTotal || 0) + (c.convoyTotal || 0) + (c.accidentsTotal || 0);
         // Wait for web fonts, images (logo) and one paint so the screenshot never catches a half-loaded page
