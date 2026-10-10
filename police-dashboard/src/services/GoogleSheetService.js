@@ -234,6 +234,12 @@ const saveCachedLocal = (key, data) => {
     }
 };
 
+// /api/dashboard sends each tab as { cols, rows } (format: 'table'); expand back to row objects
+const fromTables = (tables) => Object.fromEntries(Object.entries(tables).map(([name, { cols, rows }]) => [
+    name,
+    rows.map(r => Object.fromEntries(cols.map((c, i) => [c, r[i]])))
+]));
+
 export const fetchDashboardData = async (filters, options = {}) => {
     const forceRefresh = options.forceRefresh || false;
     const now = Date.now();
@@ -263,12 +269,12 @@ export const fetchDashboardData = async (filters, options = {}) => {
 
         if (!fetchedFromAPI) {
             try {
-                const response = await fetch('/api/dashboard');
+                const response = await fetch('/api/dashboard?format=table');
                 const contentType = response.headers.get('content-type');
                 if (contentType && contentType.includes('application/json')) {
                     const resJson = await response.json();
                     if (resJson.status === 'success' && resJson.data) {
-                        rawData = resJson.data;
+                        rawData = resJson.format === 'table' ? fromTables(resJson.data) : resJson.data;
                         fetchedFromAPI = true;
                         console.log("⚡ [GoogleSheetService] Successfully fetched dashboard data from Backend API");
                         

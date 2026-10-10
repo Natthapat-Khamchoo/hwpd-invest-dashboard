@@ -11,6 +11,16 @@ const SHEETS = {
     stations: '1282713566'
 };
 
+// Form metadata the dashboard never reads; dropping it keeps the response under the CDN's 10 MB cache limit.
+// The stations tab is kept whole because useStationData reads Rank/Position from it.
+const UNUSED_COLUMNS = new Set(['Timestamp', 'UniqueID', 'ReportID', 'rank', 'name_signer', 'position']);
+
+// { cols, rows } stores each column name once instead of repeating it in every row object
+const toTable = (name, data) => {
+    const cols = data.length ? Object.keys(data[0]).filter(c => name === 'stations' || !UNUSED_COLUMNS.has(c)) : [];
+    return { cols, rows: data.map(row => cols.map(c => row[c] ?? null)) };
+};
+
 const fetchCSV = async (url) => {
     try {
         const response = await fetch(url);
@@ -55,9 +65,11 @@ export default async function handler(request, response) {
             return { name, data };
         });
 
+        // Tabs still running the previous build call without ?format=table and expect row objects
+        const asTable = request.query?.format === 'table';
         const results = await Promise.all(promises);
         const rawData = results.reduce((acc, curr) => {
-            acc[curr.name] = curr.data;
+            acc[curr.name] = asTable ? toTable(curr.name, curr.data) : curr.data;
             return acc;
         }, {});
 
@@ -66,8 +78,9 @@ export default async function handler(request, response) {
         response.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
         
         return response.status(200).json({ 
-            status: 'success', 
-            data: rawData 
+            status: 'success',
+            format: asTable ? 'table' : 'rows',
+            data: rawData
         });
     } catch (error) {
         console.error("Backend proxy handler error:", error);
