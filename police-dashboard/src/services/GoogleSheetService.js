@@ -443,6 +443,11 @@ export const calculateDashboardStats = (rawData, filters) => {
         warrantBigData: 0,
         warrantGeneral: 0,
         flagrantTotal: 0,
+        // Offense breakdown of flagrant arrests only (dir_f_* columns)
+        flagrantByOffense: {
+            drugs: 0, gun: 0, immig: 0, customs: 0, disease: 0, transport: 0, doc: 0,
+            property: 0, sex: 0, weight: 0, drunk: 0, life: 0, com: 0, other: 0
+        },
 
         // Detailed Offenses (Acts)
         offenseDrugs: 0,
@@ -484,7 +489,7 @@ export const calculateDashboardStats = (rawData, filters) => {
             drugs: { yaba: 0, ice: 0, ketamine: 0, other: 0 },
             guns: { registered: 0, unregistered: 0, bullets: 0, explosives: 0 },
             vehicles: { car: 0, bike: 0 },
-            others: { money: 0, account: 0, phone: 0, electronics: 0, items: 0 }
+            others: { money: 0, account: 0, phone: 0, electronics: 0, dutyFree: 0, items: 0 }
         },
 
         accidentsTotal: 0,
@@ -595,6 +600,9 @@ export const calculateDashboardStats = (rawData, filters) => {
                 // Flagrant
                 const f_total = Number(row.CRIM_FLAGRANTE) || 0;
                 counts.flagrantTotal += f_total;
+                Object.keys(counts.flagrantByOffense).forEach(k => {
+                    counts.flagrantByOffense[k] += Number(row[`dir_f_${k}`]) || 0;
+                });
 
                 // Offenses Breakdown (Summing Flagrant + Warrant)
                 // New Schema: dir_f_* and dir_w_*
@@ -763,6 +771,7 @@ export const calculateDashboardStats = (rawData, filters) => {
                 else if (has('บัญชี')) counts.seized.others.account += amount;
                 else if (has('โทรศัพท์') || has('มือถือ')) counts.seized.others.phone += amount;
                 else if (has('คอมพิวเตอร์') || has('โน๊ตบุ๊ค') || has('ipad') || has('tablet') || has('อุปกรณ์อิเล็กทรอนิกส์')) counts.seized.others.electronics += amount;
+                else if (has('หนีภาษี')) counts.seized.others.dutyFree += amount;
                 else counts.seized.others.items += amount;
             }
         });

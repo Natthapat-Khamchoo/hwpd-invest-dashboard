@@ -194,7 +194,7 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false, forceDesktop 
                                 <NodeCard color="bg-[#fbbf24]" label="ขบวน" value={safeCounts.convoyTotal} valueColor="bg-[#dc2626]" textColor="text-[#1c2e4a]" scale="" />
                                 <div className="grid grid-cols-2 gap-4 mt-2">
                                     <div className="bg-slate-100 p-2 rounded border border-slate-200 text-center">
-                                        <div className="text-xl text-slate-600">เสด็จ</div>
+                                        <div className="text-xl text-slate-600">ถปภ.</div>
                                         <div className="text-3xl font-bold text-red-600">{safeCounts.convoyRoyal.toLocaleString()}</div>
                                     </div>
                                     <div className="bg-slate-100 p-2 rounded border border-slate-200 text-center">
@@ -275,7 +275,7 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false, forceDesktop 
                                 <ListItem label="พ.ร.บ.ศุลกากร" value={safeCounts.offenseCustoms} highlight forceDesktop={forceDesktop} />
                                 <ListItem label="พ.ร.บ.โรคติดต่อ" value={safeCounts.offenseDisease} highlight forceDesktop={forceDesktop} />
                                 <ListItem label="พ.ร.บ.ขนส่ง" value={safeCounts.offenseTransport} highlight forceDesktop={forceDesktop} />
-                                <ListItem label="ความผิดเกี่ยวกับเอกสาร" value={safeCounts.offenseDocs} highlight forceDesktop={forceDesktop} />
+                                <ListItem label="ปลอมเอกสาร" value={safeCounts.offenseDocs} highlight forceDesktop={forceDesktop} />
                                 <ListItem label="ความผิดเกี่ยวกับทรัพย์" value={safeCounts.offenseProperty} highlight forceDesktop={forceDesktop} />
                                 <ListItem label="ความผิดเกี่ยวกับเพศ" value={safeCounts.offenseSex} highlight forceDesktop={forceDesktop} />
                                 <ListItem label="รถหนัก" value={safeCounts.offenseWeight} highlight forceDesktop={forceDesktop} />
@@ -326,7 +326,7 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false, forceDesktop 
                         </div>
                         <div className="w-full flex justify-between mt-0 gap-2 px-1 pt-6 text-center">
                             <div className="bg-slate-200 rounded-xl px-4 py-2 flex flex-col items-center flex-1 shadow-sm border border-white">
-                                <span className="font-bold text-slate-700 text-lg xl:text-xl">ขบวนเสด็จ</span>
+                                <span className="font-bold text-slate-700 text-lg xl:text-xl">ขบวน ถปภ.</span>
                                 <span className="text-[#dc2626] font-bold text-xl xl:text-2xl">{safeCounts.convoyRoyal.toLocaleString()}</span>
                             </div>
                             <div className="bg-slate-200 rounded-xl px-4 py-2 flex flex-col items-center flex-1 shadow-sm border border-white">
@@ -386,6 +386,7 @@ const OverviewTab = ({ counts, isPrint = false, isLoading = false, forceDesktop 
                             <SeizedItem label="เงินสด" value={safeCounts.seized.others.money.toLocaleString()} unit="บาท" />
                             <SeizedItem label="บัญชีธนาคาร" value={safeCounts.seized.others.account.toLocaleString()} unit="บัญชี" />
                             <SeizedItem label="โทรศัพท์มือถือ" value={safeCounts.seized.others.phone.toLocaleString()} unit="เครื่อง" />
+                            <SeizedItem label="สินค้าหนีภาษี" value={(safeCounts.seized.others.dutyFree || 0).toLocaleString()} unit="รายการ" />
                             <SeizedItem label="รายการอื่นๆ" value={safeCounts.seized.others.items.toLocaleString()} unit="รายการ" />
                         </div>
                     </div>

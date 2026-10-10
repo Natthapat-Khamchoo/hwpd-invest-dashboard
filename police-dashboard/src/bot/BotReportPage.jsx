@@ -3,9 +3,10 @@
 // Renders the two 1920x1080 report images and the copy-text, then publishes
 // window.__BOT_REPORT__ = { status: 'ready' | 'error', ... } for the screenshotter to read.
 import React, { useEffect, useState } from 'react';
-import { fetchDashboardData, fetchStationInfo } from '../services/GoogleSheetService';
+import { fetchDashboardData } from '../services/GoogleSheetService';
 import { useStationData } from '../hooks/useStationData';
-import OnePageReport, { REPORT_WIDTH, REPORT_HEIGHT } from '../components/dashboard/OnePageReport';
+import { REPORT_WIDTH, REPORT_HEIGHT } from '../components/dashboard/OnePageReport';
+import MorningReport from '../components/dashboard/MorningReport';
 import { buildMorningReports, reportFileName, THAI_MONTHS_SHORT } from '../lib/morningReport';
 import { buildReportText } from '../lib/reportText';
 
@@ -27,19 +28,14 @@ const publish = (state) => { window.__BOT_REPORT__ = state; };
 const BotReportPage = () => {
     const [day] = useState(reportDay);
     const [rawData, setRawData] = useState(null);
-    const [stations, setStations] = useState([]);
     const [error, setError] = useState(null);
     const { getCommanderInfo } = useStationData(rawData || {});
 
     useEffect(() => {
         publish({ status: 'loading' });
-        Promise.all([
-            fetchDashboardData({}, { forceRefresh: true }),
-            fetchStationInfo({ forceRefresh: true }).catch(() => [])
-        ]).then(([result, stationRows]) => {
+        fetchDashboardData({}, { forceRefresh: true }).then(result => {
             const data = result?.rawData;
             if (!data || !Object.keys(data).length) throw new Error('Google Sheet returned no data');
-            setStations(stationRows || []);
             setRawData(data);
         }).catch(err => {
             setError(err.message || String(err));
@@ -48,7 +44,6 @@ const BotReportPage = () => {
     }, []);
 
     const reports = rawData ? buildMorningReports(rawData, BASE_FILTERS, day) : null;
-    const commanderInfo = stations.find(row => row.Unit_ID === 'TOTAL_HQ') || null;
 
     useEffect(() => {
         if (!reports) return;
@@ -67,9 +62,9 @@ const BotReportPage = () => {
             text,
             images: reports.map(r => ({ key: r.key, selector: `#bot-report-${r.key}`, fileName: `${reportFileName(r.period)}.jpg` }))
         }))));
-        // reports is rebuilt every render; rawData/stations are what change it
+        // reports is rebuilt every render; rawData is what changes it
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [rawData, stations]);
+    }, [rawData]);
 
     if (error) return <pre id="bot-report-error" style={{ padding: 24, color: '#b91c1c' }}>{error}</pre>;
     if (!reports) return <div style={{ padding: 24, fontFamily: 'Sarabun, sans-serif' }}>กำลังโหลดข้อมูล...</div>;
@@ -78,8 +73,7 @@ const BotReportPage = () => {
         <div style={{ width: REPORT_WIDTH, background: '#ffffff' }}>
             {reports.map(r => (
                 <div key={r.key} id={`bot-report-${r.key}`} style={{ width: REPORT_WIDTH, height: REPORT_HEIGHT, overflow: 'hidden' }}>
-                    <OnePageReport counts={r.counts} periodPrefix={r.period.prefix} headerDate={r.period.text}
-                        chartPeriod={r.chartPeriod} commanderInfo={commanderInfo} unitLabel="" />
+                    <MorningReport report={r} />
                 </div>
             ))}
         </div>

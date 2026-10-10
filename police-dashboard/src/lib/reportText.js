@@ -47,7 +47,7 @@ export const buildReportText = ({ s, commander, unitName, headerDateText, isAllU
 - อื่นๆ ${fmt(s.trafficGeneral)} ราย
 
 🔻3. นำขบวน รวม ${fmt(s.convoyTotal)} ขบวน
-- ขบวนเสด็จ ${fmt(s.convoyRoyal)} ขบวน
+- ขบวน ถปภ. ${fmt(s.convoyRoyal)} ขบวน
 - ขบวนทั่วไป ${fmt(s.convoyGeneral)} ขบวน
 
 ${accidentReportSection}

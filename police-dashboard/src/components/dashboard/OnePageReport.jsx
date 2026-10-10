@@ -185,7 +185,7 @@ const OnePageReport = ({ counts, periodPrefix = 'ประจำเดือน'
         drugs: { yaba: 0, ice: 0, ketamine: 0, other: 0, ...(c.seized?.drugs || {}) },
         guns: { registered: 0, unregistered: 0, bullets: 0, explosives: 0, ...(c.seized?.guns || {}) },
         vehicles: { car: 0, bike: 0, ...(c.seized?.vehicles || {}) },
-        others: { money: 0, account: 0, phone: 0, items: 0, ...(c.seized?.others || {}) }
+        others: { money: 0, account: 0, phone: 0, dutyFree: 0, items: 0, ...(c.seized?.others || {}) }
     };
     const charts = c.charts || {};
     const monthNames = charts.monthNames || ['เดือนก่อน', 'เดือนนี้'];
@@ -197,7 +197,7 @@ const OnePageReport = ({ counts, periodPrefix = 'ประจำเดือน'
         { icon: Package, label: 'ศุลกากร', value: n('offenseCustoms') },
         { icon: Biohazard, label: 'โรคติดต่อ', value: n('offenseDisease') },
         { icon: Bus, label: 'ขนส่ง', value: n('offenseTransport') },
-        { icon: FileWarning, label: 'เอกสาร', value: n('offenseDocs') },
+        { icon: FileWarning, label: 'ปลอมเอกสาร', value: n('offenseDocs') },
         { icon: Wallet, label: 'ทรัพย์', value: n('offenseProperty') },
         { icon: ShieldAlert, label: 'เพศ', value: n('offenseSex') },
         { icon: Scale, label: 'รถหนัก', value: n('offenseWeight') },
@@ -226,7 +226,7 @@ const OnePageReport = ({ counts, periodPrefix = 'ประจำเดือน'
         { icon: Users, label: 'ทั่วไป', value: n('warrantGeneral'), color: CAT[2] },
     ];
     const convoy = [
-        { icon: Crown, label: 'ขบวนเสด็จ', value: n('convoyRoyal'), color: CAT[1] },
+        { icon: Crown, label: 'ขบวน ถปภ.', value: n('convoyRoyal'), color: CAT[1] },
         { icon: Flag, label: 'ขบวนทั่วไป', value: n('convoyGeneral'), color: CAT[0] },
     ];
 
@@ -247,6 +247,7 @@ const OnePageReport = ({ counts, periodPrefix = 'ประจำเดือน'
             { icon: Banknote, label: 'เงินสด', value: seized.others.money, unit: 'บาท' },
             { icon: Landmark, label: 'บัญชีธนาคาร', value: seized.others.account, unit: 'บัญชี' },
             { icon: Smartphone, label: 'โทรศัพท์', value: seized.others.phone, unit: 'เครื่อง' },
+            { icon: Package, label: 'สินค้าหนีภาษี', value: seized.others.dutyFree, unit: 'รายการ' },
             { icon: Package, label: 'อื่นๆ', value: seized.others.items, unit: 'รายการ' },
         ] },
         { color: NAVY, soft: '#f1f4f8', items: [

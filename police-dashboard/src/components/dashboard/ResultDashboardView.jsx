@@ -11,6 +11,7 @@ import TrafficComparisonTab from './tabs/TrafficComparisonTab';
 import TruckInspectionTab from './tabs/TruckInspectionTab';
 import PressReleaseTab from './tabs/PressReleaseTab';
 import OnePageReport, { REPORT_WIDTH, REPORT_HEIGHT } from './OnePageReport';
+import MorningReport from './MorningReport';
 import { buildMorningReports, reportFileName as fileNameFor } from '../../lib/morningReport';
 
 const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onStatsUpdate }) => {
@@ -233,6 +234,7 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
 
     // --- Single-page 16:9 report (shared by PDF and JPG export) ---
     // null while idle; { counts, period } while a report is mounted off-screen for capture
+    // (morning: true switches to the morning-report layout)
     const [onePageReport, setOnePageReport] = useState(null);
     const unitLabel = localUnitKK
         ? `กก.${localUnitKK}${localUnitSTL ? ` ส.ทล.${localUnitSTL}` : ''} บก.ทล.`
@@ -292,7 +294,7 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
             const reports = buildMorningReports(rawData, baseFilters, yesterday);
 
             for (const report of reports) {
-                const dataUrl = await captureOnePageReport(report);
+                const dataUrl = await captureOnePageReport({ ...report, morning: true });
                 const link = document.createElement('a');
                 link.download = `${fileNameFor(report.period)}.jpg`;
                 link.href = dataUrl;
@@ -849,7 +851,9 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
             {/* Off-screen 16:9 report, mounted only while exporting */}
             {onePageReport && (
                 <div aria-hidden="true" style={{ position: 'fixed', left: -100000, top: 0, pointerEvents: 'none' }}>
-                    <OnePageReport counts={onePageReport.counts} periodPrefix={onePageReport.period.prefix} headerDate={onePageReport.period.text} chartPeriod={onePageReport.chartPeriod} commanderInfo={commanderInfo} unitLabel={unitLabel} />
+                    {onePageReport.morning
+                        ? <MorningReport report={onePageReport} unitLabel={unitLabel} />
+                        : <OnePageReport counts={onePageReport.counts} periodPrefix={onePageReport.period.prefix} headerDate={onePageReport.period.text} chartPeriod={onePageReport.chartPeriod} commanderInfo={commanderInfo} unitLabel={unitLabel} />}
                 </div>
             )}
         </div >

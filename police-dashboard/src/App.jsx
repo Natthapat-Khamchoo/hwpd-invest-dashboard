@@ -219,7 +219,7 @@ export default function App() {
       offenseProperty: 0, offenseSex: 0, offenseWeight: 0, offenseDrunk: 0,
       offenseLife: 0, offenseCom: 0, offenseOther: 0,
       convoyTotal: 0, convoyRoyal: 0, convoyGeneral: 0,
-      seized: { drugs: { yaba: 0, ice: 0, ketamine: 0, other: 0 }, guns: { registered: 0, unregistered: 0, bullets: 0, explosives: 0 }, vehicles: { car: 0, bike: 0 }, others: { money: 0, account: 0, phone: 0, electronics: 0, items: 0 } },
+      seized: { drugs: { yaba: 0, ice: 0, ketamine: 0, other: 0 }, guns: { registered: 0, unregistered: 0, bullets: 0, explosives: 0 }, vehicles: { car: 0, bike: 0 }, others: { money: 0, account: 0, phone: 0, electronics: 0, dutyFree: 0, items: 0 } },
       accidentsTotal: 0, accidentsDeath: 0, accidentsInjured: 0,
       volunteerTotal: 0, serviceTotal: 0
     };
