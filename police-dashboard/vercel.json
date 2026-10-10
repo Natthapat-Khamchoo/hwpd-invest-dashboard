@@ -22,7 +22,7 @@
       ]
     },
     {
-      "source": "/((?!assets/).*)",
+      "source": "/((?!assets/|api/).*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-store" }
       ]
