@@ -8,6 +8,25 @@ export const THAI_MONTHS_SHORT = ["ม.ค.", "ก.พ.", "มี.ค.", "เม
 export const thaiDate = (d) => `${d.getDate()} ${THAI_MONTHS[d.getMonth()]} ${d.getFullYear() + 543}`;
 export const reportFileName = (period) => `ผลการปฏิบัติ บก.ทล. ${period.prefix} ${period.text}`;
 
+// Report cut-off: the report for day D is a snapshot of the sheet at 07.00 on D+1. Only forms submitted
+// before then count, for every day in the period, so the images and the LINE text come out the same no
+// matter when they are made. Late entries still show on the dashboard, which reads rawData directly.
+// Rows with no readable Timestamp are kept.
+const CUTOFF_HOUR = 7; // the LINE bot sends at 07.00 (vercel.json cron 0 0 * * * UTC)
+// Form Timestamp, e.g. "10/10/2026, 9:25:31" (D/M/YYYY, H:MM:SS)
+const parseTimestamp = (s) => {
+    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(String(s ?? '').trim());
+    return m ? new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), Number(m[4]), Number(m[5]), Number(m[6] || 0)) : null;
+};
+export const reportCutoff = (day) => new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1, CUTOFF_HOUR);
+export const applyReportCutoff = (rawData, cutoff) => Object.fromEntries(Object.entries(rawData).map(([name, rows]) => [
+    name,
+    Array.isArray(rows) ? rows.filter(row => {
+        const sent = parseTimestamp(row.Timestamp);
+        return !sent || sent < cutoff;
+    }) : rows
+]));
+
 // Per-กก. criminal and overweight-truck counts for startDate..endDate (bottom bar chart of the report).
 export const unitCounts = (rawData, baseFilters, startDate, endDate) =>
     Object.keys(UNIT_HIERARCHY).map(kk => {
@@ -19,8 +38,10 @@ export const unitCounts = (rawData, baseFilters, startDate, endDate) =>
 
 // The two morning images for report day `day` (normally yesterday):
 // 1) month-to-date: 1st of the month -> day   2) that day only.
+// Both use the 07.00 snapshot above (forms submitted before 07.00 the morning after `day`).
 // Each carries the month-to-date daily average so the report can compare against it.
-export const buildMorningReports = (rawData, baseFilters, day) => {
+export const buildMorningReports = (allRawData, baseFilters, day) => {
+    const rawData = applyReportCutoff(allRawData, reportCutoff(day));
     const countsFor = (startDate, endDate) =>
         calculateDashboardStats(rawData, { ...baseFilters, dateRange: { startDate, endDate } }).counts;
     const monthStart = new Date(day.getFullYear(), day.getMonth(), 1);

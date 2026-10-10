@@ -13,7 +13,8 @@ const SHEETS = {
 
 // Form metadata the dashboard never reads; dropping it keeps the response under the CDN's 10 MB cache limit.
 // The stations tab is kept whole because useStationData reads Rank/Position from it.
-const UNUSED_COLUMNS = new Set(['Timestamp', 'UniqueID', 'ReportID', 'rank', 'name_signer', 'position']);
+// Timestamp stays: the morning report cuts off rows submitted after 07.00 the next day.
+const UNUSED_COLUMNS = new Set(['UniqueID', 'ReportID', 'rank', 'name_signer', 'position']);
 
 // { cols, rows } stores each column name once instead of repeating it in every row object
 const toTable = (name, data) => {
