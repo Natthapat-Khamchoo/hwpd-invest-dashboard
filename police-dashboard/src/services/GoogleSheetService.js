@@ -361,8 +361,7 @@ export const fetchDashboardData = async (filters, options = {}) => {
             });
 
             // --- Warrant columns (CRIM_W_*) → "บุคคลตามหมายจับ" topic ---
-            // NOTE: dir_w_* columns are the offense breakdown of warrants (same cases as CRIM_W_*)
-            // We only use CRIM_W_* here to avoid double-counting
+            // Warrants count as a number only; their offense columns (dir_w_*) are not used
             const warrantCols = [
                 { col: 'CRIM_W_BIGDATA', source: 'bigdata' },
                 { col: 'CRIM_W_BODYWARN', source: 'bodyworn' },
@@ -379,42 +378,6 @@ export const fetchDashboardData = async (filters, options = {}) => {
                         unit_s_tl,
                         topic: 'บุคคลตามหมายจับ',
                         warrant_source: source,
-                        station: row.station || '',
-                        subDiv: row.subDiv || '',
-                    });
-                }
-            });
-
-            // --- Warrant Offense Breakdown (dir_w_*) → topic-based cases ---
-            // We include these with a special flag so they can be counted when filtering by topic
-            // but skipped when calculating overall totals.
-            const warrantOffenseMap = [
-                { col: 'dir_w_drugs', topic: 'ยาเสพติด' },
-                { col: 'dir_w_gun', topic: 'อาวุธปืน/วัตถุระเบิด' },
-                { col: 'dir_w_weight', topic: 'รถบรรทุก/น้ำหนัก' },
-                { col: 'dir_w_immig', topic: 'อื่นๆ' },
-                { col: 'dir_w_drunk', topic: 'อื่นๆ' },
-                { col: 'dir_w_other', topic: 'อื่นๆ' },
-                { col: 'dir_w_life', topic: 'อื่นๆ' },
-                { col: 'dir_w_property', topic: 'อื่นๆ' },
-                { col: 'dir_w_sex', topic: 'อื่นๆ' },
-                { col: 'dir_w_com', topic: 'อื่นๆ' },
-                { col: 'dir_w_doc', topic: 'อื่นๆ' },
-                { col: 'dir_w_customs', topic: 'อื่นๆ' },
-                { col: 'dir_w_disease', topic: 'อื่นๆ' },
-                { col: 'dir_w_transport', topic: 'อื่นๆ' },
-            ];
-
-            warrantOffenseMap.forEach(({ col, topic }) => {
-                const count = Number(row[col]) || 0;
-                for (let i = 0; i < count; i++) {
-                    allCases.push({
-                        date_capture: row.date || '',
-                        date_obj: rowDate,
-                        unit_kk,
-                        unit_s_tl,
-                        topic,
-                        isWarrantOffense: true,
                         station: row.station || '',
                         subDiv: row.subDiv || '',
                     });
@@ -604,22 +567,21 @@ export const calculateDashboardStats = (rawData, filters) => {
                     counts.flagrantByOffense[k] += Number(row[`dir_f_${k}`]) || 0;
                 });
 
-                // Offenses Breakdown (Summing Flagrant + Warrant)
-                // New Schema: dir_f_* and dir_w_*
-                const o_drugs = (Number(row.dir_f_drugs) || 0) + (Number(row.dir_w_drugs) || 0);
-                const o_guns = (Number(row.dir_f_gun) || 0) + (Number(row.dir_w_gun) || 0);
-                const o_immig = (Number(row.dir_f_immig) || 0) + (Number(row.dir_w_immig) || 0);
-                const o_customs = (Number(row.dir_f_customs) || 0) + (Number(row.dir_w_customs) || 0);
-                const o_disease = (Number(row.dir_f_disease) || 0) + (Number(row.dir_w_disease) || 0);
-                const o_transport = (Number(row.dir_f_transport) || 0) + (Number(row.dir_w_transport) || 0);
-                const o_docs = (Number(row.dir_f_doc) || 0) + (Number(row.dir_w_doc) || 0);
-                const o_property = (Number(row.dir_f_property) || 0) + (Number(row.dir_w_property) || 0);
-                const o_sex = (Number(row.dir_f_sex) || 0) + (Number(row.dir_w_sex) || 0);
-                const o_weight = (Number(row.dir_f_weight) || 0) + (Number(row.dir_w_weight) || 0);
-                const o_drunk = (Number(row.dir_f_drunk) || 0) + (Number(row.dir_w_drunk) || 0);
-                const o_life = (Number(row.dir_f_life) || 0) + (Number(row.dir_w_life) || 0);
-                const o_com = (Number(row.dir_f_com) || 0) + (Number(row.dir_w_com) || 0);
-                const o_other = (Number(row.dir_f_other) || 0) + (Number(row.dir_w_other) || 0);
+                // Offense breakdown counts flagrant arrests only; warrants count as a number (CRIM_W_*)
+                const o_drugs = Number(row.dir_f_drugs) || 0;
+                const o_guns = Number(row.dir_f_gun) || 0;
+                const o_immig = Number(row.dir_f_immig) || 0;
+                const o_customs = Number(row.dir_f_customs) || 0;
+                const o_disease = Number(row.dir_f_disease) || 0;
+                const o_transport = Number(row.dir_f_transport) || 0;
+                const o_docs = Number(row.dir_f_doc) || 0;
+                const o_property = Number(row.dir_f_property) || 0;
+                const o_sex = Number(row.dir_f_sex) || 0;
+                const o_weight = Number(row.dir_f_weight) || 0;
+                const o_drunk = Number(row.dir_f_drunk) || 0;
+                const o_life = Number(row.dir_f_life) || 0;
+                const o_com = Number(row.dir_f_com) || 0;
+                const o_other = Number(row.dir_f_other) || 0;
 
                 counts.offenseDrugs += o_drugs;
                 counts.offenseGuns += o_guns;
@@ -664,7 +626,7 @@ export const calculateDashboardStats = (rawData, filters) => {
 
             // Truck Chart Chart Aggregation (Comparison 2 months)
             if (unitIdx !== -1 && rowDate) {
-                const f_truck = (Number(row.dir_f_weight) || 0) + (Number(row.dir_w_weight) || 0);
+                const f_truck = Number(row.dir_f_weight) || 0;
                 if (f_truck > 0) {
                     const monthKey = getMonthKey(rowDate);
                     if (monthKey) {

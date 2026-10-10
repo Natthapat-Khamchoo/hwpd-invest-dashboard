@@ -94,7 +94,7 @@ export const buildLineText = ({ s, commander, unitName, dateText }) => {
     const seized = s.seized || {};
     const g = (group, key) => seized[group]?.[key] || 0;
 
-    const offenses = topWithOther(s, OFFENSE_SHORT, s.criminalTotal || 0).map(pair).join(' / ');
+    const offenses = topWithOther(s, OFFENSE_SHORT, s.flagrantTotal || 0).map(pair).join(' / ');
     const traffic = topWithOther(s, TRAFFIC_SHORT, s.trafficTotal || 0).map(pair);
     const trafficLines = [];
     for (let i = 0; i < traffic.length; i += 2) trafficLines.push(traffic.slice(i, i + 2).join(' / '));
