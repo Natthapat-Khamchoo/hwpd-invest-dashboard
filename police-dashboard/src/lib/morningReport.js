@@ -1,6 +1,7 @@
 // Morning report data: shared by the dashboard's "Export รายงานเช้า" button and the LINE bot page.
 import { calculateDashboardStats, fromTables } from '../services/GoogleSheetService';
 import { UNIT_HIERARCHY } from '../utils/helpers';
+import { beforeCutoff, candidateCases, caseId, parseYmd, reportCutoff } from './reportCutoff';
 
 export const THAI_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 export const THAI_MONTHS_SHORT = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
@@ -8,29 +9,12 @@ export const THAI_MONTHS_SHORT = ["ม.ค.", "ก.พ.", "มี.ค.", "เม
 export const thaiDate = (d) => `${d.getDate()} ${THAI_MONTHS[d.getMonth()]} ${d.getFullYear() + 543}`;
 export const reportFileName = (period) => `ผลการปฏิบัติ บก.ทล. ${period.prefix} ${period.text}`;
 
-// Report cut-off: the report for day D is a snapshot of the sheet at 07.00 on D+1. Only forms submitted
-// before then count, for every day in the period, so the images and the LINE text come out the same no
-// matter when they are made. Late entries still show on the dashboard, which reads rawData directly.
-// Rows with no readable Timestamp are kept.
-const CUTOFF_HOUR = 7; // the LINE bot sends at 07.00 (vercel.json cron 0 0 * * * UTC)
-// Form Timestamp, e.g. "10/10/2026, 9:25:31" (D/M/YYYY, H:MM:SS)
-const parseTimestamp = (s) => {
-    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(String(s ?? '').trim());
-    return m ? new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), Number(m[4]), Number(m[5]), Number(m[6] || 0)) : null;
-};
-export const reportCutoff = (day) => new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1, CUTOFF_HOUR);
+export { reportCutoff };
 export const applyReportCutoff = (rawData, cutoff) => Object.fromEntries(Object.entries(rawData).map(([name, rows]) => [
     name,
-    Array.isArray(rows) ? rows.filter(row => {
-        const sent = parseTimestamp(row.Timestamp);
-        return !sent || sent < cutoff;
-    }) : rows
+    Array.isArray(rows) ? rows.filter(row => beforeCutoff(row, cutoff)) : rows
 ]));
 
-const parseYmd = (s) => {
-    const m = /^(\d{4})[/.-](\d{1,2})[/.-](\d{1,2})/.exec(String(s ?? '').trim());
-    return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
-};
 // The data behind the morning report for `day`: the 07.00 snapshot, without rows dated after `day`.
 // The dashboard's 5-image export uses it too, so both exports show the same numbers.
 export const reportSnapshot = (rawData, day) => {
@@ -39,6 +23,19 @@ export const reportSnapshot = (rawData, day) => {
         name,
         Array.isArray(rows) ? rows.filter(row => { const d = parseYmd(row.date); return !d || d <= day; }) : rows
     ]));
+};
+
+// The cases listed under "เหตุการณ์ที่น่าสนใจ" for report day `day`. When the LINE job ran the AI screen
+// it stored the picks in the snapshot as `cases_ai` (CaseID, line); those are listed in the AI's order
+// with its one-line summary. Otherwise every candidate is listed with the unit's own summary.
+export const importantCases = (rawData, day) => {
+    const candidates = candidateCases(rawData.cases, day);
+    if (!Array.isArray(rawData.cases_ai)) return candidates;
+    const byId = new Map(candidates.map(c => [caseId(c), c]));
+    return rawData.cases_ai.map(pick => {
+        const c = byId.get(String(pick.CaseID ?? '').trim());
+        return c && { ...c, summary: pick.line || c.summary };
+    }).filter(Boolean);
 };
 
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

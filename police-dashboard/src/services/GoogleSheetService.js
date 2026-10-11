@@ -51,6 +51,11 @@ const SHEETS = {
         id: SHEET_ID,
         gid: '1282713566',
         name: 'stations'
+    },
+    CASES: {
+        id: SHEET_ID,
+        gid: '168702281',
+        name: 'cases'
     }
 };
 

@@ -3,7 +3,7 @@
     { "path": "/api/line/daily-report", "schedule": "0 0 * * *" }
   ],
   "functions": {
-    "api/line/daily-report.js": { "maxDuration": 120, "memory": 2048 }
+    "api/line/daily-report.js": { "maxDuration": 300, "memory": 2048 }
   },
   "rewrites": [
     {

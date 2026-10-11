@@ -8,7 +8,8 @@ const SHEETS = {
     items: '716805288',
     accidents: '985244759',
     convoy: '1914089424',
-    stations: '1282713566'
+    stations: '1282713566',
+    cases: '168702281' // Important_Cases: one row per notable event, listed in the LINE report
 };
 
 // Form metadata the dashboard never reads; dropping it keeps the response under the CDN's 10 MB cache limit.

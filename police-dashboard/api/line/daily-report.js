@@ -10,13 +10,14 @@
 // Env: CRON_SECRET, LINE_CHANNEL_ACCESS_TOKEN, LINE_TARGET_ID (group/user ID; comma-separate for several),
 //      BLOB_READ_WRITE_TOKEN (set by connecting a Vercel Blob store),
 //      optional REPORT_BASE_URL (defaults to the production URL), CHROME_PATH (local runs only),
-//      optional REPORT_RETENTION_DAYS (default 90).
+//      optional REPORT_RETENTION_DAYS (default 90), CIB_AI_API_KEY (AI screen of important cases, api/_lib/caseScreen.js).
 import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 import { put, list, del } from '@vercel/blob';
 import { randomUUID } from 'node:crypto';
 import { fetchDashboardData } from '../dashboard.js';
 import { SNAPSHOT_PREFIX } from '../report-snapshot.js';
+import { screenCases } from '../_lib/caseScreen.js';
 
 const TIME_ZONE = 'Asia/Bangkok';
 const PAGE_TIMEOUT_MS = 90_000;
@@ -123,7 +124,12 @@ export default async function handler(request, response) {
     // The report page renders from a working copy; it becomes the day's official snapshot only if sent
     let workingUrl = null;
     try {
-        const snapshot = JSON.stringify({ status: 'success', format: 'table', data: await fetchDashboardData({ asTable: true }) });
+        const data = await fetchDashboardData({ asTable: true });
+        // The AI's picks go into the snapshot, so the report and later exports list the same cases
+        const [y, m, d] = date.split('-').map(Number);
+        const { table: casesAi, ...ai } = await screenCases(data, new Date(y, m - 1, d));
+        if (casesAi) data.cases_ai = casesAi;
+        const snapshot = JSON.stringify({ status: 'success', format: 'table', data });
         workingUrl = await putSnapshot(`${SNAPSHOT_PREFIX}working/${date}.json`, snapshot);
         const report = await renderReport(date, workingUrl);
         // Units key in yesterday's results the next morning; an all-zero day means the sheet isn't filled yet
@@ -154,7 +160,7 @@ export default async function handler(request, response) {
             await pruneOldBlobs().catch(err => console.error('Blob prune failed:', err));
         }
 
-        return response.status(200).json({ status: dryRun ? 'dry-run' : 'sent', date, sentTo: dryRun ? 0 : targets.length, images, text });
+        return response.status(200).json({ status: dryRun ? 'dry-run' : 'sent', date, sentTo: dryRun ? 0 : targets.length, images, text, ai: { ...ai, picks: casesAi?.rows.length ?? null } });
     } catch (error) {
         console.error('daily-report failed:', error);
         return response.status(500).json({ status: 'error', date, message: error.message });

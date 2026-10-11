@@ -7,7 +7,7 @@ import { fetchDashboardData, fromTables } from '../services/GoogleSheetService';
 import { useStationData } from '../hooks/useStationData';
 import { REPORT_WIDTH, REPORT_HEIGHT } from '../components/dashboard/OnePageReport';
 import MorningReport from '../components/dashboard/MorningReport';
-import { buildMorningReports, reportFileName, THAI_MONTHS_SHORT } from '../lib/morningReport';
+import { buildMorningReports, importantCases, reportFileName, THAI_MONTHS_SHORT } from '../lib/morningReport';
 import { buildLineText } from '../lib/reportText';
 
 const BASE_FILTERS = { search: '', unit_kk: '', unit_s_tl: '', topic: [], charge: '', subFilter: null };
@@ -56,7 +56,7 @@ const BotReportPage = () => {
         if (!reports) return;
         const { commander, unitName } = getCommanderInfo('0', '');
         const daily = reports.find(r => r.key === 'daily');
-        const text = buildLineText({ s: daily.counts, commander, unitName, dateText: lineDate(day) });
+        const text = buildLineText({ s: daily.counts, commander, unitName, dateText: lineDate(day), cases: importantCases(rawData, day) });
         const c = daily.counts;
         const dayTotal = (c.criminalTotal || 0) + (c.trafficTotal || 0) + (c.convoyTotal || 0) + (c.accidentsTotal || 0);
         // Wait for web fonts, images (logo) and one paint so the screenshot never catches a half-loaded page

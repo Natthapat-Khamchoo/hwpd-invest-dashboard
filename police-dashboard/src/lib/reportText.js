@@ -88,7 +88,23 @@ const topWithOther = (s, labels, total, n = 3) => {
 };
 
 // Short LINE morning message: s = one day's counts, dateText e.g. "9 ต.ค.69"
-export const buildLineText = ({ s, commander, unitName, dateText }) => {
+const MAX_CASES = 5;
+const MAX_SUMMARY = 200;
+// "ส.ทล.2 กก.3 บก.ทล." -> "ส.ทล.2 กก.3"
+const shortStation = (station) => String(station ?? '').replace(/\s*บก\.ทล\.?\s*$/, '').trim();
+const caseLines = (cases = []) => {
+    if (!cases.length) return '1. ไม่มี';
+    const lines = cases.slice(0, MAX_CASES).map((c, i) => {
+        const text = String(c.summary).trim().replace(/\s+/g, ' ');
+        const summary = text.length > MAX_SUMMARY ? `${text.slice(0, MAX_SUMMARY)}…` : text;
+        const unit = shortStation(c.station || c.subDiv);
+        return `${i + 1}. ${unit ? `${unit}: ` : ''}${summary}`;
+    });
+    if (cases.length > MAX_CASES) lines.push(`(และอีก ${cases.length - MAX_CASES} เหตุ)`);
+    return lines.join('\n');
+};
+
+export const buildLineText = ({ s, commander, unitName, dateText, cases }) => {
     const fmt = (num) => Number(num || 0).toLocaleString('en-US');
     const pair = (i) => `${i.label} ${fmt(i.value)}`;
     const seized = s.seized || {};
@@ -121,7 +137,7 @@ ${commander}
 (ซึ่งหน้า ${fmt(s.flagrantTotal)} / หมายจับ ${fmt(s.warrantTotal)})${offenses ? `\n${offenses}` : ''}
 
 ⭐ เหตุการณ์ที่น่าสนใจ
-1. ไม่มี
+${caseLines(cases)}
 
 🚦 คดีจราจร ${fmt(s.trafficTotal)} ราย${trafficLines.length ? `\n${trafficLines.join('\n')}` : ''}
 
