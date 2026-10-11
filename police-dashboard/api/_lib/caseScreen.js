@@ -2,7 +2,9 @@
 // Units pick an event type when they file a case (first filter); this asks the CIB model (gpt.cib.go.th,
 // Open WebUI) which of the day's cases the commander should see and for a one-line summary of each.
 // Env: CIB_AI_API_KEY; optional CIB_AI_MODEL (else the first model whose id contains "gemma4"),
-//      CIB_AI_BASE_URL (default https://gpt.cib.go.th).
+//      CIB_AI_BASE_URL (default https://gpt.cib.go.th). Cloudflare in front of gpt.cib.go.th blocks Vercel,
+//      so in production CIB_AI_BASE_URL points at relay/cib-relay.mjs on a VM with a Thai IP and
+//      CIB_AI_RELAY_TOKEN is that relay's RELAY_TOKEN.
 // Returns null when the key is unset or the call fails; the report then lists every case as filed.
 import { candidateCases, caseId } from '../../src/lib/reportCutoff.js';
 
@@ -15,7 +17,11 @@ const baseUrl = () => (process.env.CIB_AI_BASE_URL || 'https://gpt.cib.go.th').r
 const callApi = async (path, init = {}) => {
     const res = await fetch(`${baseUrl()}${path}`, {
         ...init,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CIB_AI_API_KEY}`, ...init.headers },
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.CIB_AI_API_KEY}`,
+            ...(process.env.CIB_AI_RELAY_TOKEN && { 'X-Relay-Token': process.env.CIB_AI_RELAY_TOKEN }),
+        },
         signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) throw new Error(`CIB AI ${path} ${res.status}: ${(await res.text()).slice(0, 200)}`);
