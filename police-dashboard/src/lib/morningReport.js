@@ -27,6 +27,20 @@ export const applyReportCutoff = (rawData, cutoff) => Object.fromEntries(Object.
     }) : rows
 ]));
 
+const parseYmd = (s) => {
+    const m = /^(\d{4})[/.-](\d{1,2})[/.-](\d{1,2})/.exec(String(s ?? '').trim());
+    return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+};
+// The data behind the morning report for `day`: the 07.00 snapshot, without rows dated after `day`.
+// The dashboard's 5-image export uses it too, so both exports show the same numbers.
+export const reportSnapshot = (rawData, day) => {
+    const cut = applyReportCutoff(rawData, reportCutoff(day));
+    return Object.fromEntries(Object.entries(cut).map(([name, rows]) => [
+        name,
+        Array.isArray(rows) ? rows.filter(row => { const d = parseYmd(row.date); return !d || d <= day; }) : rows
+    ]));
+};
+
 // Per-กก. criminal and overweight-truck counts for startDate..endDate (bottom bar chart of the report).
 export const unitCounts = (rawData, baseFilters, startDate, endDate) =>
     Object.keys(UNIT_HIERARCHY).map(kk => {
@@ -41,7 +55,7 @@ export const unitCounts = (rawData, baseFilters, startDate, endDate) =>
 // Both use the 07.00 snapshot above (forms submitted before 07.00 the morning after `day`).
 // Each carries the month-to-date daily average so the report can compare against it.
 export const buildMorningReports = (allRawData, baseFilters, day) => {
-    const rawData = applyReportCutoff(allRawData, reportCutoff(day));
+    const rawData = reportSnapshot(allRawData, day);
     const countsFor = (startDate, endDate) =>
         calculateDashboardStats(rawData, { ...baseFilters, dateRange: { startDate, endDate } }).counts;
     const monthStart = new Date(day.getFullYear(), day.getMonth(), 1);

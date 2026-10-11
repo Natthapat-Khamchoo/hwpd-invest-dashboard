@@ -12,7 +12,7 @@ import TruckInspectionTab from './tabs/TruckInspectionTab';
 import PressReleaseTab from './tabs/PressReleaseTab';
 import OnePageReport, { REPORT_WIDTH, REPORT_HEIGHT } from './OnePageReport';
 import MorningReport from './MorningReport';
-import { buildMorningReports, reportFileName as fileNameFor } from '../../lib/morningReport';
+import { buildMorningReports, reportSnapshot, reportFileName as fileNameFor } from '../../lib/morningReport';
 
 const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onStatsUpdate }) => {
     // --- State ---
@@ -69,14 +69,18 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
     const maxStations = localUnitKK ? (UNIT_HIERARCHY[localUnitKK] || 6) : 0;
 
     // --- Computed Stats (Synchronous & Cached Local-filtering) ---
+    // While the 5-image export runs, the numbers come from the same 07.00 snapshot as the morning report
+    // (report day = yesterday); the rest of the time the dashboard shows the latest data.
     const sheetCounts = React.useMemo(() => {
         if (!rawData || Object.keys(rawData).length === 0) return null;
         const queryFilters = { ...filters };
         if (localUnitKK) queryFilters.unit_kk = localUnitKK;
         if (localUnitSTL) queryFilters.unit_s_tl = localUnitSTL;
-        const res = calculateDashboardStats(rawData, queryFilters);
+        const now = new Date();
+        const data = isExportAllJpg ? reportSnapshot(rawData, new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)) : rawData;
+        const res = calculateDashboardStats(data, queryFilters);
         return res.counts;
-    }, [rawData, filters, localUnitKK, localUnitSTL]);
+    }, [rawData, filters, localUnitKK, localUnitSTL, isExportAllJpg]);
 
     const isLoading = !rawData || Object.keys(rawData).length === 0;
 
@@ -140,10 +144,11 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
 
     // --- Effect: Propagate sheetCounts to parent for copy report ---
     useEffect(() => {
-        if (onStatsUpdate && sheetCounts) {
+        // The export's snapshot numbers stay out of the copy-text report
+        if (onStatsUpdate && sheetCounts && !isExportAllJpg) {
             onStatsUpdate(sheetCounts);
         }
-    }, [sheetCounts, onStatsUpdate]);
+    }, [sheetCounts, onStatsUpdate, isExportAllJpg]);
 
     // (Redundant network fetch useEffect removed - stats now computed synchronously from rawData prop)
 
