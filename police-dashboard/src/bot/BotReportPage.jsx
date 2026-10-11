@@ -3,7 +3,7 @@
 // Renders the two 1920x1080 report images and the copy-text, then publishes
 // window.__BOT_REPORT__ = { status: 'ready' | 'error', ... } for the screenshotter to read.
 import React, { useEffect, useState } from 'react';
-import { fetchDashboardData } from '../services/GoogleSheetService';
+import { fetchDashboardData, fromTables } from '../services/GoogleSheetService';
 import { useStationData } from '../hooks/useStationData';
 import { REPORT_WIDTH, REPORT_HEIGHT } from '../components/dashboard/OnePageReport';
 import MorningReport from '../components/dashboard/MorningReport';
@@ -33,7 +33,14 @@ const BotReportPage = () => {
 
     useEffect(() => {
         publish({ status: 'loading' });
-        fetchDashboardData({}, { forceRefresh: true }).then(result => {
+        // The LINE job passes ?snapshot=<blob url>: render from the exact data it stores for this report
+        const snapshot = new URLSearchParams(window.location.search).get('snapshot');
+        const load = snapshot
+            ? fetch(`/api/report-snapshot?url=${encodeURIComponent(snapshot)}`)
+                .then(res => { if (!res.ok) throw new Error(`Snapshot ${res.status}`); return res.json(); })
+                .then(json => ({ rawData: fromTables(json.data) }))
+            : fetchDashboardData({}, { forceRefresh: true });
+        load.then(result => {
             const data = result?.rawData;
             if (!data || !Object.keys(data).length) throw new Error('Google Sheet returned no data');
             setRawData(data);

@@ -1,5 +1,5 @@
 // Morning report data: shared by the dashboard's "Export รายงานเช้า" button and the LINE bot page.
-import { calculateDashboardStats } from '../services/GoogleSheetService';
+import { calculateDashboardStats, fromTables } from '../services/GoogleSheetService';
 import { UNIT_HIERARCHY } from '../utils/helpers';
 
 export const THAI_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
@@ -39,6 +39,24 @@ export const reportSnapshot = (rawData, day) => {
         name,
         Array.isArray(rows) ? rows.filter(row => { const d = parseYmd(row.date); return !d || d <= day; }) : rows
     ]));
+};
+
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Data for the report of `day`: the snapshot the LINE bot stored when it sent that report, so later
+// exports match what was sent even if units edit their forms afterwards. Falls back to `rawData`
+// (still cut off at 07.00 by reportSnapshot) when the bot sent nothing for that day.
+export const loadReportData = async (rawData, day) => {
+    try {
+        const res = await fetch(`/api/report-snapshot?date=${ymd(day)}`);
+        if (res.ok) {
+            const json = await res.json();
+            if (json.format === 'table' && json.data) return { data: fromTables(json.data), fromSnapshot: true };
+        }
+    } catch (err) {
+        console.warn('Report snapshot unavailable, using live data:', err);
+    }
+    return { data: rawData, fromSnapshot: false };
 };
 
 // Per-กก. criminal and overweight-truck counts for startDate..endDate (bottom bar chart of the report).

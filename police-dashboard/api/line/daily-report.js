@@ -1,4 +1,6 @@
 // Morning report to LINE: 2 report images (month-to-date + yesterday) and the copy-text.
+// The sheet data the report is made from is stored in Blob (report-snapshots/<date>/) when the report
+// is sent, so the dashboard's exports for that day use exactly the same data (api/report-snapshot.js).
 // Triggered daily by Vercel Cron (vercel.json): 00:00 UTC = 07:00 Bangkok; Hobby fires within that hour, so it lands before 08:00. Manual run:
 //   curl -H "Authorization: Bearer $CRON_SECRET" "https://<host>/api/line/daily-report?dry=1&date=2026-10-07"
 //   dry=1   render + upload only, return the URLs and text without sending to LINE
@@ -13,6 +15,8 @@ import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 import { put, list, del } from '@vercel/blob';
 import { randomUUID } from 'node:crypto';
+import { fetchDashboardData } from '../dashboard.js';
+import { SNAPSHOT_PREFIX } from '../report-snapshot.js';
 
 const TIME_ZONE = 'Asia/Bangkok';
 const PAGE_TIMEOUT_MS = 90_000;
@@ -36,13 +40,13 @@ const launchBrowser = async () => puppeteer.launch({
 });
 
 // Open /bot-report and capture both images at 4K (3840x2160) and 1920x1080 for LINE previews
-export const renderReport = async (date) => {
+export const renderReport = async (date, snapshotUrl) => {
     const browser = await launchBrowser();
     try {
         const page = await browser.newPage();
         await page.emulateTimezone(TIME_ZONE);
         await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 2 });
-        await page.goto(`${reportBaseUrl()}/bot-report?date=${date}`, { waitUntil: 'domcontentloaded', timeout: PAGE_TIMEOUT_MS });
+        await page.goto(`${reportBaseUrl()}/bot-report?date=${date}&snapshot=${encodeURIComponent(snapshotUrl)}`, { waitUntil: 'domcontentloaded', timeout: PAGE_TIMEOUT_MS });
         await page.waitForFunction(() => ['ready', 'error'].includes(window.__BOT_REPORT__?.status), { timeout: PAGE_TIMEOUT_MS });
         const state = await page.evaluate(() => window.__BOT_REPORT__);
         if (state.status !== 'ready') throw new Error(`Report page failed: ${state.message}`);
@@ -69,17 +73,23 @@ const upload = async (date, key, kind, buffer) => {
     return blob.url;
 };
 
-// Old images stay viewable in the chat for REPORT_RETENTION_DAYS, then are removed from Blob
-const pruneOldImages = async () => {
+const putSnapshot = async (pathname, body) => (await put(pathname, body, {
+    access: 'public', contentType: 'application/json', addRandomSuffix: true,
+})).url;
+
+// Old images (and the data snapshots behind them) stay for REPORT_RETENTION_DAYS, then are removed from Blob
+const pruneOldBlobs = async () => {
     const days = Number(process.env.REPORT_RETENTION_DAYS || 90);
     const cutoff = Date.now() - days * 86_400_000;
-    let cursor;
-    do {
-        const page = await list({ prefix: BLOB_PREFIX, cursor });
-        const stale = page.blobs.filter(b => new Date(b.uploadedAt).getTime() < cutoff).map(b => b.url);
-        if (stale.length) await del(stale);
-        cursor = page.hasMore ? page.cursor : undefined;
-    } while (cursor);
+    for (const prefix of [BLOB_PREFIX, SNAPSHOT_PREFIX]) {
+        let cursor;
+        do {
+            const page = await list({ prefix, cursor });
+            const stale = page.blobs.filter(b => new Date(b.uploadedAt).getTime() < cutoff).map(b => b.url);
+            if (stale.length) await del(stale);
+            cursor = page.hasMore ? page.cursor : undefined;
+        } while (cursor);
+    }
 };
 
 const pushToLine = async (to, messages) => {
@@ -110,8 +120,12 @@ export default async function handler(request, response) {
         return response.status(500).json({ status: 'error', message: 'LINE_CHANNEL_ACCESS_TOKEN / LINE_TARGET_ID is not set' });
     }
 
+    // The report page renders from a working copy; it becomes the day's official snapshot only if sent
+    let workingUrl = null;
     try {
-        const report = await renderReport(date);
+        const snapshot = JSON.stringify({ status: 'success', format: 'table', data: await fetchDashboardData({ asTable: true }) });
+        workingUrl = await putSnapshot(`${SNAPSHOT_PREFIX}working/${date}.json`, snapshot);
+        const report = await renderReport(date, workingUrl);
         // Units key in yesterday's results the next morning; an all-zero day means the sheet isn't filled yet
         if (!report.dayTotal && !force) {
             return response.status(409).json({ status: 'skipped', date, message: 'No results recorded for this day yet; nothing sent (use force=1 to send anyway)' });
@@ -135,12 +149,16 @@ export default async function handler(request, response) {
                 ...images.map(({ originalContentUrl, previewImageUrl }) => ({ type: 'image', originalContentUrl, previewImageUrl })),
             ];
             for (const to of targets) await pushToLine(to, messages);
-            await pruneOldImages().catch(err => console.error('Blob prune failed:', err));
+            // Already sent: a failed save is logged, not reported as a failed run (exports then fall back to the 07.00 cut-off)
+            await putSnapshot(`${SNAPSHOT_PREFIX}${date}/snapshot.json`, snapshot).catch(err => console.error('Snapshot save failed:', err));
+            await pruneOldBlobs().catch(err => console.error('Blob prune failed:', err));
         }
 
         return response.status(200).json({ status: dryRun ? 'dry-run' : 'sent', date, sentTo: dryRun ? 0 : targets.length, images, text });
     } catch (error) {
         console.error('daily-report failed:', error);
         return response.status(500).json({ status: 'error', date, message: error.message });
+    } finally {
+        if (workingUrl) await del(workingUrl).catch(err => console.error('Working snapshot cleanup failed:', err));
     }
 }

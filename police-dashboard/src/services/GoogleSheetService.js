@@ -235,7 +235,7 @@ const saveCachedLocal = (key, data) => {
 };
 
 // /api/dashboard sends each tab as { cols, rows } (format: 'table'); expand back to row objects
-const fromTables = (tables) => Object.fromEntries(Object.entries(tables).map(([name, { cols, rows }]) => [
+export const fromTables = (tables) => Object.fromEntries(Object.entries(tables).map(([name, { cols, rows }]) => [
     name,
     rows.map(r => Object.fromEntries(cols.map((c, i) => [c, r[i]])))
 ]));

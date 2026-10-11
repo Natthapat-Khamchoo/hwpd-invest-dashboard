@@ -50,44 +50,41 @@ const fetchCSV = async (url) => {
     }
 };
 
+const SHEET_ID = process.env.GOOGLE_SHEET_ID || '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk';
+
+// All tabs, as row objects or (asTable) as { cols, rows }. The LINE report job reuses this to store
+// the exact data each morning report was made from (api/line/daily-report.js).
+export const fetchDashboardData = async ({ asTable }) => {
+    const results = await Promise.all(Object.entries(SHEETS).map(async ([name, gid]) => {
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
+        return { name, data: await fetchCSV(url) };
+    }));
+    return results.reduce((acc, curr) => {
+        acc[curr.name] = asTable ? toTable(curr.name, curr.data) : curr.data;
+        return acc;
+    }, {});
+};
+
 export default async function handler(request, response) {
-    const SHEET_ID = process.env.GOOGLE_SHEET_ID || '18JZlu3gupikJxPWSrtzgqQ2xRx2MXAwF7tlLXTe6TMk';
-    if (!SHEET_ID) {
-        return response.status(500).json({ 
-            status: 'error', 
-            message: 'Missing GOOGLE_SHEET_ID environment variable' 
-        });
-    }
-
     try {
-        const promises = Object.entries(SHEETS).map(async ([name, gid]) => {
-            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
-            const data = await fetchCSV(url);
-            return { name, data };
-        });
-
         // Tabs still running the previous build call without ?format=table and expect row objects
         const asTable = request.query?.format === 'table';
-        const results = await Promise.all(promises);
-        const rawData = results.reduce((acc, curr) => {
-            acc[curr.name] = asTable ? toTable(curr.name, curr.data) : curr.data;
-            return acc;
-        }, {});
+        const rawData = await fetchDashboardData({ asTable });
 
         // Set CDN cache for 5 minutes (300 seconds) to prevent rate limiting
         // and speed up client loading times.
         response.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
-        
-        return response.status(200).json({ 
+
+        return response.status(200).json({
             status: 'success',
             format: asTable ? 'table' : 'rows',
             data: rawData
         });
     } catch (error) {
         console.error("Backend proxy handler error:", error);
-        return response.status(500).json({ 
-            status: 'error', 
-            message: error.message 
+        return response.status(500).json({
+            status: 'error',
+            message: error.message
         });
     }
 }

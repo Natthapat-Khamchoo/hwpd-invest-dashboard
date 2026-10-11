@@ -12,7 +12,7 @@ import TruckInspectionTab from './tabs/TruckInspectionTab';
 import PressReleaseTab from './tabs/PressReleaseTab';
 import OnePageReport, { REPORT_WIDTH, REPORT_HEIGHT } from './OnePageReport';
 import MorningReport from './MorningReport';
-import { buildMorningReports, reportSnapshot, reportFileName as fileNameFor } from '../../lib/morningReport';
+import { buildMorningReports, reportSnapshot, loadReportData, reportFileName as fileNameFor } from '../../lib/morningReport';
 
 const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onStatsUpdate }) => {
     // --- State ---
@@ -62,6 +62,8 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
     const [isPdfExporting, setIsPdfExporting] = useState(false);
     const [isJpgExporting, setIsJpgExporting] = useState(false);
     const [isExportAllJpg, setIsExportAllJpg] = useState(false);
+    // Data the 5-image export draws from (the stored morning-report snapshot when there is one)
+    const [exportSource, setExportSource] = useState(null);
 
     // --- Local Filter State (กก. / ส.ทล.) ---
     const [localUnitKK, setLocalUnitKK] = useState(initialParams.kk);
@@ -76,11 +78,10 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
         const queryFilters = { ...filters };
         if (localUnitKK) queryFilters.unit_kk = localUnitKK;
         if (localUnitSTL) queryFilters.unit_s_tl = localUnitSTL;
-        const now = new Date();
-        const data = isExportAllJpg ? reportSnapshot(rawData, new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)) : rawData;
+        const data = isExportAllJpg && exportSource ? reportSnapshot(exportSource.data, exportSource.day) : rawData;
         const res = calculateDashboardStats(data, queryFilters);
         return res.counts;
-    }, [rawData, filters, localUnitKK, localUnitSTL, isExportAllJpg]);
+    }, [rawData, filters, localUnitKK, localUnitSTL, isExportAllJpg, exportSource]);
 
     const isLoading = !rawData || Object.keys(rawData).length === 0;
 
@@ -296,7 +297,8 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
             const baseFilters = { ...filters };
             if (localUnitKK) baseFilters.unit_kk = localUnitKK;
             if (localUnitSTL) baseFilters.unit_s_tl = localUnitSTL;
-            const reports = buildMorningReports(rawData, baseFilters, yesterday);
+            const { data } = await loadReportData(rawData, yesterday);
+            const reports = buildMorningReports(data, baseFilters, yesterday);
 
             for (const report of reports) {
                 const dataUrl = await captureOnePageReport({ ...report, morning: true });
@@ -327,6 +329,10 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
         setDesktopViewport();
 
         try {
+            const now = new Date();
+            const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+            const { data } = await loadReportData(rawData, yesterday);
+            setExportSource({ data, day: yesterday });
             const { toPng } = await import('html-to-image');
             // STEP 1: Capture the First Page (Overview) in Default Mode (Portrait)
             if (activeTab !== 'overview' || viewMode !== 'default') {
@@ -521,6 +527,7 @@ const ResultDashboardView = ({ filteredData, rawData, filters, setFilters, onSta
             alert('Export JPG failed. See console for details.');
         } finally {
             restoreViewport();
+            setExportSource(null);
             setViewMode(prevViewMode);
             setActiveTab(prevTab);
             setIsExportAllJpg(false);
