@@ -134,7 +134,8 @@ ${commander}
 🗓️ ${dateText}
 
 🚨 คดีอาญา ${fmt(s.criminalTotal)} ราย
-(ซึ่งหน้า ${fmt(s.flagrantTotal)} / หมายจับ ${fmt(s.warrantTotal)})${offenses ? `\n${offenses}` : ''}
+ซึ่งหน้า ${fmt(s.flagrantTotal)} ราย${offenses ? `\n(${offenses})` : ''}
+หมายจับ ${fmt(s.warrantTotal)} ราย
 
 ⭐ เหตุการณ์ที่น่าสนใจ
 ${caseLines(cases)}

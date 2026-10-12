@@ -409,6 +409,10 @@ export const fetchDashboardData = async (filters, options = {}) => {
     };
 };
 
+// A dir_f_* offense count, or 0 when the row reports no flagrant arrest (CRIM_FLAGRANTE 0):
+// units sometimes fill an offense column without an arrest, which inflated the breakdown past the total
+const flagrantOffense = (row, col) => ((Number(row.CRIM_FLAGRANTE) || 0) > 0 ? Number(row[col]) || 0 : 0);
+
 export const calculateDashboardStats = (rawData, filters) => {
     const counts = {
         criminalTotal: 0,
@@ -575,24 +579,24 @@ export const calculateDashboardStats = (rawData, filters) => {
                 const f_total = Number(row.CRIM_FLAGRANTE) || 0;
                 counts.flagrantTotal += f_total;
                 Object.keys(counts.flagrantByOffense).forEach(k => {
-                    counts.flagrantByOffense[k] += Number(row[`dir_f_${k}`]) || 0;
+                    counts.flagrantByOffense[k] += flagrantOffense(row, `dir_f_${k}`);
                 });
 
                 // Offense breakdown counts flagrant arrests only; warrants count as a number (CRIM_W_*)
-                const o_drugs = Number(row.dir_f_drugs) || 0;
-                const o_guns = Number(row.dir_f_gun) || 0;
-                const o_immig = Number(row.dir_f_immig) || 0;
-                const o_customs = Number(row.dir_f_customs) || 0;
-                const o_disease = Number(row.dir_f_disease) || 0;
-                const o_transport = Number(row.dir_f_transport) || 0;
-                const o_docs = Number(row.dir_f_doc) || 0;
-                const o_property = Number(row.dir_f_property) || 0;
-                const o_sex = Number(row.dir_f_sex) || 0;
-                const o_weight = Number(row.dir_f_weight) || 0;
-                const o_drunk = Number(row.dir_f_drunk) || 0;
-                const o_life = Number(row.dir_f_life) || 0;
-                const o_com = Number(row.dir_f_com) || 0;
-                const o_other = Number(row.dir_f_other) || 0;
+                const o_drugs = flagrantOffense(row, 'dir_f_drugs');
+                const o_guns = flagrantOffense(row, 'dir_f_gun');
+                const o_immig = flagrantOffense(row, 'dir_f_immig');
+                const o_customs = flagrantOffense(row, 'dir_f_customs');
+                const o_disease = flagrantOffense(row, 'dir_f_disease');
+                const o_transport = flagrantOffense(row, 'dir_f_transport');
+                const o_docs = flagrantOffense(row, 'dir_f_doc');
+                const o_property = flagrantOffense(row, 'dir_f_property');
+                const o_sex = flagrantOffense(row, 'dir_f_sex');
+                const o_weight = flagrantOffense(row, 'dir_f_weight');
+                const o_drunk = flagrantOffense(row, 'dir_f_drunk');
+                const o_life = flagrantOffense(row, 'dir_f_life');
+                const o_com = flagrantOffense(row, 'dir_f_com');
+                const o_other = flagrantOffense(row, 'dir_f_other');
 
                 counts.offenseDrugs += o_drugs;
                 counts.offenseGuns += o_guns;
@@ -637,7 +641,7 @@ export const calculateDashboardStats = (rawData, filters) => {
 
             // Truck Chart Chart Aggregation (Comparison 2 months)
             if (unitIdx !== -1 && rowDate) {
-                const f_truck = Number(row.dir_f_weight) || 0;
+                const f_truck = flagrantOffense(row, 'dir_f_weight');
                 if (f_truck > 0) {
                     const monthKey = getMonthKey(rowDate);
                     if (monthKey) {
