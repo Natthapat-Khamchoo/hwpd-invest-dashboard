@@ -31,7 +31,7 @@ export const usePoliceData = () => {
 
     useEffect(() => {
         fetchData();
-        const intervalId = setInterval(() => fetchData(), 300000); // 5 minutes
+        const intervalId = setInterval(() => fetchData(), 600000); // 10 minutes
         return () => clearInterval(intervalId);
     }, [fetchData]);
 

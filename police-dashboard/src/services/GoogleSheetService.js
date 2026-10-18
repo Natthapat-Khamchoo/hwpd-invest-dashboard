@@ -10,16 +10,7 @@ const SHEETS = {
     },
     VOLUNTEER: {
         id: SHEET_ID,
-        gid: '0', // TODO: User needs to provide GID for Volunteer if different? User didn't specify GID for these but listed them. Assuming same Sheet ID.
-        // Wait, user provided GIDs in previous turns or I can assume they are in main SHEET_ID.
-        // User didn't give GIDs for these in the prompt "date ... " list, but they are sheets. 
-        // I will stick to existing SHEETS config if they are there, otherwise I might miss GIDs.
-        // Let's assume standard GID fetching or check if I have them.
-        // The file already has definitions for CRIME, TRAFFIC etc. 
-        // It does NOT have VOLUNTEER or SERVICE.
-        // I will add them.
-        id: SHEET_ID,
-        gid: '1925338272', // Placeholder
+        gid: '1925338272',
         name: 'volunteer'
     },
     SERVICE: {
@@ -190,9 +181,11 @@ const fetchRawDataFromSheetsDirectly = async () => {
     const promises = Object.values(SHEETS).map(async (sheet) => {
         const url = `https://docs.google.com/spreadsheets/d/${sheet.id}/export?format=csv&gid=${sheet.gid}`;
         const res = await fetchCSV(url);
+        // A failed tab fails the whole direct read, so the API fallback runs instead of caching partial data
+        if (res.status !== 'success') throw new Error(`${sheet.name}: ${res.error}`);
         return {
             name: sheet.name,
-            data: res.status === 'success' ? res.data : []
+            data: res.data
         };
     });
     const results = await Promise.all(promises);
@@ -273,47 +266,45 @@ export const fetchDashboardData = async (filters, options = {}) => {
         }
 
         if (!fetchedFromAPI) {
+            // Primary: read the sheets straight from Google (no Vercel origin transfer)
             try {
-                const response = await fetch('/api/dashboard?format=table');
-                const contentType = response.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                    const resJson = await response.json();
-                    if (resJson.status === 'success' && resJson.data) {
-                        rawData = resJson.format === 'table' ? fromTables(resJson.data) : resJson.data;
-                        fetchedFromAPI = true;
-                        console.log("⚡ [GoogleSheetService] Successfully fetched dashboard data from Backend API");
-                        
-                        // Save to cache (memory & localStorage)
-                        dashboardCache = {
-                            rawData,
-                            timestamp: Date.now()
-                        };
-                        saveCachedLocal(CACHE_KEY_DASHBOARD, rawData);
-                    } else {
-                        console.error("API returned error:", resJson.message);
-                    }
-                } else {
-                    console.warn("Backend API response is not JSON:", response.status, response.statusText);
-                }
+                rawData = await fetchRawDataFromSheetsDirectly();
             } catch (error) {
-                console.error("Failed to fetch dashboard data from API:", error);
+                console.error("Direct Google Sheets read failed:", error);
+                rawData = {};
             }
 
-            if (!fetchedFromAPI || !rawData || !rawData.crime || rawData.crime.length === 0) {
-                console.warn("⚠️ [GoogleSheetService] API failed or returned empty. Falling back to direct Google Sheets fetching...");
-                rawData = await fetchRawDataFromSheetsDirectly();
-                
-                // Save to cache if fallback succeeded
-                if (rawData && rawData.crime && rawData.crime.length > 0) {
-                    dashboardCache = {
-                        rawData,
-                        timestamp: Date.now()
-                    };
-                    saveCachedLocal(CACHE_KEY_DASHBOARD, rawData);
-                } else {
-                    throw new Error("Failed to fetch dashboard data from API and direct Google Sheets fallback");
+            // Fallback: the Vercel API, when the direct read came back empty
+            if (!rawData || !rawData.crime || rawData.crime.length === 0) {
+                console.warn("⚠️ [GoogleSheetService] Direct read empty. Falling back to the backend API...");
+                try {
+                    const response = await fetch('/api/dashboard?format=table');
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const resJson = await response.json();
+                        if (resJson.status === 'success' && resJson.data) {
+                            rawData = resJson.format === 'table' ? fromTables(resJson.data) : resJson.data;
+                        } else {
+                            console.error("API returned error:", resJson.message);
+                        }
+                    } else {
+                        console.warn("Backend API response is not JSON:", response.status, response.statusText);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch dashboard data from API:", error);
                 }
             }
+
+            if (!rawData || !rawData.crime || rawData.crime.length === 0) {
+                throw new Error("Failed to fetch dashboard data from direct Google Sheets read and API fallback");
+            }
+
+            fetchedFromAPI = true;
+            dashboardCache = {
+                rawData,
+                timestamp: Date.now()
+            };
+            saveCachedLocal(CACHE_KEY_DASHBOARD, rawData);
         }
     }
 
@@ -827,13 +818,13 @@ export const fetchStationInfo = async (options = {}) => {
 
     let stations = null;
     try {
-        const response = await fetch('/api/dashboard');
+        const response = await fetch('/api/dashboard?format=table&tab=stations');
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
             const resJson = await response.json();
             if (resJson.status === 'success' && resJson.data && resJson.data.stations) {
                 console.log("⚡ [GoogleSheetService] Successfully fetched station info from Backend API");
-                stations = resJson.data.stations;
+                stations = resJson.format === 'table' ? fromTables({ stations: resJson.data.stations }).stations : resJson.data.stations;
             }
         }
     } catch (error) {
