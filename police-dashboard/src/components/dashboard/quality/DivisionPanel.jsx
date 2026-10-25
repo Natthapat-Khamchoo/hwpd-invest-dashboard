@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Gauge, Table } from 'lucide-react';
 import { CATEGORIES } from '../../../lib/quality/scoringConfig.js';
-import { DeltaTag, ScoreBarChart, CategoryTable, Panel, Stat } from './QualityParts';
-import { barItems, formatAverage, formatCount, placingOf, toPercent, themed } from './qualityFormat.js';
+import { DeltaTag, ScoreBarChart, CategoryRadar, Panel, Stat } from './QualityParts';
+import { barItems, bestByCategory, formatAverage, formatCount, perStationCategories, placingOf, RADAR_COLORS, radarRows, toPercent, themed } from './qualityFormat.js';
 
 const METRICS = [
     { id: 'total', label: 'คะแนนรวม' },
@@ -17,8 +17,6 @@ const metricSum = (points, id) => {
     if (id === 'quality') return points.quality;
     return points.categories[id].total;
 };
-
-const safeDiv = (numerator, denominator) => (denominator > 0 ? numerator / denominator : 0);
 
 // The trend column is shown only when the period has a previous-period comparison
 const StationsTable = ({ stations, periodDays, isDarkMode, onSelectStation, showTrend }) => {
@@ -111,18 +109,13 @@ const DivisionPanel = ({ model, kk, isDarkMode = true, onSelectStation }) => {
     const metric = METRICS.find((item) => item.id === selectedMetric);
     const stationBars = barItems(stations, selectedMetric, (station) => `ส.ทล.${station.stl}`);
 
-    // Per-station averages of this division against the HQ per-station average, category by category
-    const hqStationCount = model.stations.length;
-    const averageRows = CATEGORIES.map(({ id, label }) => {
-        const { quantity, quality, total } = division.points.categories[id];
-        return {
-            label,
-            quantity: safeDiv(quantity, division.stationCount),
-            quality: safeDiv(quality, division.stationCount),
-            total: safeDiv(total, division.stationCount),
-        };
-    });
-    const hqAverages = CATEGORIES.map(({ id }) => safeDiv(model.hq.points.categories[id].total, hqStationCount));
+    // Per-station averages of this division and of the HQ, each as a percent of the best division's per-station average
+    const hqAverages = perStationCategories(model.hq.points.categories, model.stations.length);
+    const divisionAverages = model.divisions.map((item) => perStationCategories(item.points.categories, item.stationCount));
+    const radar = radarRows([
+        { name: division.name, categories: perStationCategories(division.points.categories, division.stationCount) },
+        { name: 'เฉลี่ย บก.ทล.', categories: hqAverages },
+    ], bestByCategory(divisionAverages));
 
     return (
         <div className="space-y-6">
@@ -138,18 +131,21 @@ const DivisionPanel = ({ model, kk, isDarkMode = true, onSelectStation }) => {
                         สัดส่วนคดีสำคัญ <span className="font-semibold tabular-nums">{toPercent(division.info.majorShare)}%</span>, ส่งรายงานเฉลี่ย <span className="font-semibold tabular-nums">{toPercent(division.info.reportRatio)}%</span>
                     </p>
                 </div>
-                <p className={`mb-2 mt-6 text-sm ${muted}`}>คะแนนเฉลี่ยต่อ ส.ทล. เทียบกับ บก.ทล.</p>
-                <CategoryTable
-                    rows={averageRows}
-                    compare={hqAverages}
-                    compareLabel="เฉลี่ย บก.ทล."
-                    decimals={1}
-                    isDarkMode={isDarkMode}
-                />
+                <div className="mt-6">
+                    <CategoryRadar
+                        rows={radar}
+                        series={[
+                            { name: division.name, color: RADAR_COLORS.main, decimals: 1 },
+                            { name: 'เฉลี่ย บก.ทล.', color: RADAR_COLORS.compare, dashed: true, decimals: 1 },
+                        ]}
+                        subtitle="คะแนนเฉลี่ยต่อ ส.ทล. แต่ละแกนเทียบกับ กก. ที่ทำได้สูงสุดในเรื่องนั้น (= 100%)"
+                        isDarkMode={isDarkMode}
+                    />
+                </div>
             </Panel>
 
             <Panel title={`ส.ทล. ใน ${division.name}`} icon={Table} isDarkMode={isDarkMode}>
-                <div role="group" aria-label="เลือกตัวชี้วัด" className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9">
+                <div role="group" aria-label="เลือกตัวชี้วัด" className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-8">
                     {METRICS.map((item) => (
                         <MetricCard
                             key={item.id}

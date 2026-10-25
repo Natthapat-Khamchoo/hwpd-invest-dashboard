@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatThaiDate, formatPeriodRange, formatDelta, placingOf, toPercent, barItems, pointsBreakdown, formatCount, formatAverage, scoringRules, drugTierNote } from './qualityFormat.js';
+import { formatThaiDate, formatPeriodRange, formatDelta, placingOf, toPercent, barItems, pointsBreakdown, formatCount, formatAverage, scoringRules, drugTierNote, perStationCategories, bestByCategory, radarRows, radarSummary, radarTextColor } from './qualityFormat.js';
 import { emptyStationRaw, aggregateStationRaw } from '../../../lib/quality/stationRaw.js';
 import { unitPoints } from '../../../lib/quality/points.js';
 import { rawData } from '../../../lib/quality/testFixture.js';
@@ -81,8 +81,8 @@ test('barItems ranks by quantity when the metric is quantity', () => {
 
 test('barItems ranks by one category total when the metric is a category id', () => {
     const units = [
-        { kk: '1', name: 'กก.1', points: pointsOf({ drugs: 5 }, { drugs: 5, seized: 40 }) },
-        { kk: '2', name: 'กก.2', points: pointsOf({ drugs: 20 }, { drugs: 1, seized: 0 }) },
+        { kk: '1', name: 'กก.1', points: pointsOf({ drugs: 5 }, { drugs: 5 }) },
+        { kk: '2', name: 'กก.2', points: pointsOf({ drugs: 20 }, { drugs: 1 }) },
     ];
     const items = barItems(units, 'drugs', (unit) => unit.name);
     assert.deepEqual(items.map((item) => item.key), ['2', '1']);
@@ -118,12 +118,12 @@ test('barItems prefers an explicit key over kk and breaks value ties by label', 
     assert.deepEqual(items.map((item) => item.key), ['a', 'b']);
 });
 
-test('pointsBreakdown on the fixture station reconciles to 58 quantity, 20 quality and 78 total', () => {
+test('pointsBreakdown on the fixture station reconciles to 8 quantity, 8 quality and 16 total', () => {
     const raw = aggregateStationRaw(rawData, new Date(2026, 9, 1), new Date(2026, 9, 24))['1-1'];
     const rows = pointsBreakdown(raw);
     const sum = (key) => rows.reduce((total, row) => total + row[key], 0);
-    assert.equal(sum('quantity'), 58);
-    assert.equal(sum('quality'), 20);
+    assert.equal(sum('quantity'), 8);
+    assert.equal(sum('quality'), 8);
     assert.ok(rows.every((row) => row.quantity + row.quality === row.total));
 });
 
@@ -149,11 +149,11 @@ test('pointsBreakdown lists each non-zero item with its count, quantity, quality
         convoy: 1,
     };
     assert.deepEqual(pointsBreakdown(raw), [
-        { category: 'warrant', label: 'หมายจับ', count: 2, quantity: 20, quality: 0, total: 20 },
-        { category: 'flagrant', label: 'ซึ่งหน้า อาวุธปืน', count: 1, quantity: 10, quality: 5, total: 15 },
-        { category: 'flagrant', label: 'ซึ่งหน้า จับรถบรรทุกเกินพิกัด', count: 1, quantity: 10, quality: 0, total: 10 },
-        { category: 'tickets', label: 'ใบสั่ง จราจร', count: 4, quantity: 4, quality: 0, total: 4 },
-        { category: 'service', label: 'นำขบวน', count: 1, quantity: 2, quality: 0, total: 2 },
+        { category: 'warrant', label: 'หมายจับ', count: 2, quantity: 4, quality: 0, total: 4 },
+        { category: 'flagrant', label: 'ซึ่งหน้า อาวุธปืน', count: 1, quantity: 1, quality: 4, total: 5 },
+        { category: 'flagrant', label: 'ซึ่งหน้า จับรถบรรทุกเกินพิกัด', count: 1, quantity: 1, quality: 0, total: 1 },
+        { category: 'tickets', label: 'ใบสั่งทุกประเภท', count: 4, quantity: 0, quality: 0, total: 0 },
+        { category: 'service', label: 'นำขบวน', count: 1, quantity: 1, quality: 0, total: 1 },
     ]);
 });
 
@@ -161,30 +161,21 @@ test('pointsBreakdown shows drug cases with the base as quantity and the extra t
     const raw = {
         ...emptyStationRaw(),
         flagrant: { ...emptyStationRaw().flagrant, drugs: 2 },
-        drugCaseBase: 10,
-        drugCaseExtra: 5,
+        drugCaseBase: 2,
+        drugCaseExtra: 13,
     };
     assert.deepEqual(pointsBreakdown(raw), [
-        { category: 'drugs', label: 'คดียาเสพติด', count: 2, quantity: 10, quality: 5, total: 15 },
+        { category: 'drugs', label: 'คดียาเสพติด', count: 2, quantity: 2, quality: 13, total: 15 },
     ]);
 });
 
-test('pointsBreakdown lists drug seizure amounts with their units and quality per unit block', () => {
-    const raw = { ...emptyStationRaw(), drugSeized: { yaba: 2500, ice: 250, other: 99 } };
+test('pointsBreakdown shows ticket and service points as whole hundreds and tens', () => {
+    const raw = { ...emptyStationRaw(), tickets: { transport: 150, vehicle: 99, traffic: 1 }, serviceHelp: 25, serviceTraffic: 9, volunteer: 10 };
     assert.deepEqual(pointsBreakdown(raw), [
-        { category: 'drugs', label: 'ยาบ้า (เม็ด)', count: 2500, quantity: 0, quality: 2, total: 2 },
-        { category: 'drugs', label: 'ไอซ์ (กรัม)', count: 250, quantity: 0, quality: 2, total: 2 },
-        { category: 'drugs', label: 'ยาเสพติดอื่น (หน่วย)', count: 99, quantity: 0, quality: 0, total: 0 },
-    ]);
-});
-
-test('pointsBreakdown lists seized items with quality only, bullets and cash per block', () => {
-    const raw = { ...emptyStationRaw(), seized: { gun: 1, bullets: 120, explosive: 0, car: 2, motorcycle: 0, cash: 25000 } };
-    assert.deepEqual(pointsBreakdown(raw), [
-        { category: 'seized', label: 'ของกลาง อาวุธปืน', count: 1, quantity: 0, quality: 5, total: 5 },
-        { category: 'seized', label: 'ของกลาง กระสุน', count: 120, quantity: 0, quality: 2, total: 2 },
-        { category: 'seized', label: 'ของกลาง รถยนต์', count: 2, quantity: 0, quality: 6, total: 6 },
-        { category: 'seized', label: 'ของกลาง เงินสด (บาท)', count: 25000, quantity: 0, quality: 2, total: 2 },
+        { category: 'tickets', label: 'ใบสั่งทุกประเภท', count: 250, quantity: 2, quality: 0, total: 2 },
+        { category: 'service', label: 'ช่วยเหลือประชาชนและอุบัติเหตุ', count: 25, quantity: 2, quality: 0, total: 2 },
+        { category: 'service', label: 'อำนวยความสะดวกจราจร', count: 9, quantity: 0, quality: 0, total: 0 },
+        { category: 'service', label: 'จิตอาสา', count: 10, quantity: 1, quality: 0, total: 1 },
     ]);
 });
 
@@ -210,20 +201,22 @@ test('scoringRules lists every quantity and quality rule with the configured poi
     assert.equal(find('quantity', 'warrant', 'หมายจับ').points, QUANTITY.warrant);
     assert.equal(find('quantity', 'drugs', 'ฐาน').points, QUANTITY.drugCaseBase);
     assert.equal(find('quantity', 'service', 'นำขบวน').points, QUANTITY.convoy);
-    assert.equal(find('quality', 'warrant', 'Big Data').points, QUALITY.bigDataWarrant);
+    assert.equal(find('quantity', 'tickets', 'ใบสั่ง').unit, 'ทุก 100 ใบ (นับแยกแต่ละ ส.ทล.)');
+    assert.equal(find('quantity', 'service', 'ช่วยเหลือ').unit, 'ทุก 10 ครั้ง (นับแยกแต่ละ ส.ทล.)');
+    assert.equal(find('quality', 'flagrant', 'อาวุธปืน').points, QUALITY.flagrantExtra.gun);
     assert.equal(find('quality', 'flagrant', 'เอกสารปลอม').points, QUALITY.flagrantExtra.doc);
-    assert.equal(find('quality', 'seized', 'อาวุธปืน').points, QUALITY.seizedEach.gun);
+    assert.equal(rules.some((rule) => rule.category === 'seized'), false);
     assert.ok(rules.every((rule) => ['quantity', 'quality'].includes(rule.kind) && rule.points > 0 && rule.text.length > 0));
 });
 
-test('scoringRules states the no-evidence drug case at 3 quantity and the other-drug case as 5 extra quality', () => {
+test('scoringRules states the no-evidence drug case at 1 quantity and the other-drug case as 4 extra quality', () => {
     const rules = scoringRules();
     const noEvidence = rules.find((rule) => rule.kind === 'quantity' && rule.category === 'drugs' && rule.text.includes('ไม่มีของกลาง'));
     assert.ok(noEvidence, 'no-evidence rule exists');
-    assert.equal(noEvidence.points, POINTS.drug.noEvidence);
+    assert.equal(noEvidence.points, 1);
     const otherDrug = rules.find((rule) => rule.kind === 'quality' && rule.category === 'drugs' && rule.text.includes('เคตามีน'));
     assert.ok(otherDrug, 'other-drug rule exists');
-    assert.equal(otherDrug.points, POINTS.drug.otherDrug - QUANTITY.drugCaseBase);
+    assert.equal(otherDrug.points, 4);
 });
 
 test('drugTierNote spells out the yaba and ice tier thresholds from the config', () => {
@@ -238,17 +231,14 @@ test('pointsBreakdown rows reconcile with unitPoints when every StationRaw field
     const raw = {
         ...base,
         warrants: 4,
-        bigDataWarrants: 2,
         flagrant: Object.fromEntries(Object.keys(base.flagrant).map((key, index) => [key, index + 1])),
         drugCaseBase: 15,
         drugCaseExtra: 7,
-        drugSeized: { yaba: 2500, ice: 250, other: 300 },
-        seized: { gun: 2, bullets: 120, explosive: 1, car: 3, motorcycle: 2, cash: 25000 },
-        tickets: { transport: 2, vehicle: 3, traffic: 4 },
+        tickets: { transport: 50, vehicle: 60, traffic: 40 },
         convoy: 2,
-        serviceHelp: 3,
-        serviceTraffic: 4,
-        volunteer: 5,
+        serviceHelp: 13,
+        serviceTraffic: 24,
+        volunteer: 35,
     };
     const expected = unitPoints(raw);
     const rows = pointsBreakdown(raw);
@@ -263,4 +253,79 @@ test('pointsBreakdown rows reconcile with unitPoints when every StationRaw field
         assert.equal(quality, expected.categories[id].quality, `${id} quality`);
     }
     assert.equal(rows.reduce((total, row) => total + row.total, 0), expected.total);
+});
+
+test('perStationCategories divides each category by the station count and gives zeros with no stations', () => {
+    const categories = pointsOf({ warrant: 60 }, { warrant: 15 }).categories;
+    const averaged = perStationCategories(categories, 5);
+    assert.deepEqual(averaged.warrant, { quantity: 12, quality: 3, total: 15 });
+    assert.deepEqual(averaged.flagrant, { quantity: 0, quality: 0, total: 0 });
+    const none = perStationCategories(categories, 0);
+    assert.ok(CATEGORIES.every(({ id }) => none[id].total === 0));
+});
+
+test('bestByCategory takes the highest category total across the given units', () => {
+    const best = bestByCategory([
+        pointsOf({ warrant: 30 }).categories,
+        pointsOf({ warrant: 20, drugs: 50 }).categories,
+    ]);
+    assert.equal(best.warrant, 30);
+    assert.equal(best.drugs, 50);
+    assert.equal(best.tickets, 0);
+});
+
+test('bestByCategory returns zero for every category when there are no units', () => {
+    const best = bestByCategory([]);
+    assert.deepEqual(best, Object.fromEntries(CATEGORIES.map(({ id }) => [id, 0])));
+});
+
+test('radarRows plots each category as a percent of its best, rounded to one decimal', () => {
+    const best = bestByCategory([pointsOf({ warrant: 45 }).categories]);
+    const rows = radarRows([{ name: 'บก.ทล.', categories: pointsOf({ warrant: 20 }, { warrant: 10 }).categories }], best);
+    assert.equal(rows.length, CATEGORIES.length);
+    const warrant = rows.find((row) => row.id === 'warrant');
+    assert.equal(warrant.label, 'หมายจับ');
+    assert.equal(warrant['บก.ทล.'], 66.7);
+    assert.deepEqual(warrant.raw['บก.ทล.'], { quantity: 20, quality: 10, total: 30 });
+});
+
+test('radarRows gives 0 for a category whose best is 0, never NaN', () => {
+    const rows = radarRows(
+        [{ name: 'กก.1', categories: pointsOf({ warrant: 5 }).categories }],
+        bestByCategory([pointsOf().categories])
+    );
+    assert.ok(rows.every((row) => row['กก.1'] === 0));
+    assert.ok(rows.every((row) => Number.isFinite(row['กก.1'])));
+});
+
+test('radarRows puts the main and compare series side by side on the same best', () => {
+    const best = bestByCategory([pointsOf({ drugs: 40 }).categories]);
+    const rows = radarRows([
+        { name: 'กก.1', categories: pointsOf({ drugs: 10 }).categories },
+        { name: 'เฉลี่ย บก.ทล.', categories: pointsOf({ drugs: 25 }).categories },
+    ], best);
+    const drugs = rows.find((row) => row.id === 'drugs');
+    assert.equal(drugs['กก.1'], 25);
+    assert.equal(drugs['เฉลี่ย บก.ทล.'], 62.5);
+});
+
+test('radarSummary lists each category percent for one series', () => {
+    const rows = [
+        { id: 'warrant', label: 'หมายจับ', 'บก.ทล.': 100, raw: {} },
+        { id: 'flagrant', label: 'ซึ่งหน้า', 'บก.ทล.': 45.5, raw: {} },
+    ];
+    assert.equal(radarSummary(rows, 'บก.ทล.'), 'หมายจับ 100%, ซึ่งหน้า 45.5%');
+});
+
+test('radar rows have five axes, one per scoring category, and no seized axis', () => {
+    const categories = pointsOf().categories;
+    const rows = radarRows([{ name: 'กก.1', categories }], bestByCategory([categories]));
+    assert.deepEqual(rows.map((row) => row.label), ['หมายจับ', 'ซึ่งหน้า', 'ยาเสพติด', 'ใบสั่ง', 'บริการ']);
+});
+
+test('radarTextColor keeps the stroke colour on dark and darkens amber and cyan text for light', () => {
+    assert.equal(radarTextColor('#f59e0b', true), '#f59e0b');
+    assert.equal(radarTextColor('#f59e0b', false), '#b45309');
+    assert.equal(radarTextColor('#06b6d4', true), '#06b6d4');
+    assert.equal(radarTextColor('#06b6d4', false), '#0e7490');
 });

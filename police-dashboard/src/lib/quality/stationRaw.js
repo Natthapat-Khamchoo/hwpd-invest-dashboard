@@ -61,12 +61,9 @@ export const pointsPerDrugCase = (yabaPills, iceGrams, hasOtherDrug) => {
 
 export const emptyStationRaw = () => ({
     warrants: 0,
-    bigDataWarrants: 0,
     flagrant: Object.fromEntries(OFFENSE_KEYS.map((key) => [key, 0])),
     drugCaseBase: 0,
     drugCaseExtra: 0,
-    drugSeized: { yaba: 0, ice: 0, other: 0 },
-    seized: { gun: 0, bullets: 0, explosive: 0, car: 0, motorcycle: 0, cash: 0 },
     majorCases: 0,
     tickets: { transport: 0, vehicle: 0, traffic: 0 },
     convoy: 0,
@@ -110,7 +107,6 @@ export const aggregateStationRaw = (rawData = {}, start, end) => {
         const bigData = num(row.CRIM_W_BIGDATA);
         const warrants = bigData + num(row.CRIM_W_BODYWARN) + num(row.CRIM_W_GENERAL);
         stats.warrants += warrants;
-        stats.bigDataWarrants += bigData;
 
         const flagrant = num(row.CRIM_FLAGRANTE) > 0;
         if (flagrant) {
@@ -120,29 +116,15 @@ export const aggregateStationRaw = (rawData = {}, start, end) => {
         if (warrants > 0 || flagrant) cell.arrest = true;
     });
 
+    // Only drug amounts are kept: they set the tier of each drug case
     eachRow('items', (row, key, day) => {
         const amount = num(row.amount);
         if (amount <= 0) return;
-        const stats = result[key];
         const cell = cellOf(key, day);
         const name = String(row.item_name ?? '').trim();
-        const has = (keyword) => name.includes(keyword);
-        // Drugs first so that, for example, a drug name never counts as seized cash
-        if (has('ยาบ้า') || has('ยาอี')) {
-            cell.yaba += amount;
-            stats.drugSeized.yaba += amount;
-        } else if (has('ไอซ์')) {
-            cell.ice += amount;
-            stats.drugSeized.ice += amount;
-        } else if (has('เคตามีน') || has('โคเคน')) {
-            cell.otherDrug = true;
-            stats.drugSeized.other += amount;
-        } else if (has('อาวุธปืน')) stats.seized.gun += amount;
-        else if (has('กระสุน')) stats.seized.bullets += amount;
-        else if (has('ระเบิด') || has('วัตถุระเบิด')) stats.seized.explosive += amount;
-        else if (has('รถยนต์') || has('เก๋ง') || has('กระบะ') || has('ตู้')) stats.seized.car += amount;
-        else if (has('รถจักรยานยนต์') || has('จยย') || has('มอเตอร์ไซค์')) stats.seized.motorcycle += amount;
-        else if (has('เงิน') || has('ธนบัตร')) stats.seized.cash += amount;
+        if (name.includes('ยาบ้า') || name.includes('ยาอี')) cell.yaba += amount;
+        else if (name.includes('ไอซ์')) cell.ice += amount;
+        else if (name.includes('เคตามีน') || name.includes('โคเคน')) cell.otherDrug = true;
     });
 
     eachRow('traffic', (row, key, day) => {
@@ -186,7 +168,8 @@ export const aggregateStationRaw = (rawData = {}, start, end) => {
             const base = Math.min(perCase, QUANTITY.drugCaseBase);
             stats.drugCaseBase += cell.drugs * base;
             stats.drugCaseExtra += cell.drugs * (perCase - base);
-            if (perCase >= 10) stats.majorCases += cell.drugs;
+            // A big case scores above the base point: tier 2, tier 3 or other drugs
+            if (perCase > QUANTITY.drugCaseBase) stats.majorCases += cell.drugs;
         }
     }
 

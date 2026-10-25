@@ -30,6 +30,14 @@ export const toPercent = (ratio) => Math.round(ratio * 100);
 
 export const themed = (isDarkMode, dark, light) => (isDarkMode ? dark : light);
 
+// Main series is cyan and the compare series amber, on both themes
+export const RADAR_COLORS = { main: '#06b6d4', compare: '#f59e0b' };
+
+// Darker text versions of the strokes for light backgrounds, where the bright strokes are too faint for small text
+const RADAR_TEXT_LIGHT = { '#06b6d4': '#0e7490', '#f59e0b': '#b45309' };
+
+export const radarTextColor = (stroke, isDarkMode) => themed(isDarkMode, stroke, RADAR_TEXT_LIGHT[stroke] ?? stroke);
+
 const metricValue = (unit, metric) => {
     if (metric === 'average') return unit.average;
     if (metric === 'total') return unit.points.total;
@@ -54,7 +62,7 @@ const OFFENSE_NAMES = {
     doc: 'เอกสารปลอม', property: 'ทรัพย์', sex: 'เพศ', life: 'ชีวิตและร่างกาย', com: 'คอมพิวเตอร์', other: 'อื่นๆ',
     weight: 'จับรถบรรทุกเกินพิกัด', drunk: 'จับเมาแล้วขับ',
 };
-const TICKET_NAMES = { transport: 'ใบสั่ง พ.ร.บ.ขนส่ง', vehicle: 'ใบสั่ง พ.ร.บ.รถยนต์', traffic: 'ใบสั่ง จราจร' };
+const sum = (values) => values.reduce((total, value) => total + value, 0);
 const FLAGRANT_OFFENSES = [...SUPPRESSION_OFFENSES.filter((offense) => offense !== 'drugs'), ...ROAD_OFFENSES];
 const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((category) => [category.id, category.label]));
 
@@ -69,9 +77,10 @@ const item = (category, label, count, quantity, quality) => ({
 
 // One row per non-zero item, using the same rules as points.js unitPoints
 export const pointsBreakdown = (raw) => {
-    const { flagrant, drugSeized, seized, tickets } = raw;
+    const { flagrant, tickets } = raw;
+    const ticketCount = sum(Object.values(tickets));
     const rows = [
-        item('warrant', 'หมายจับ', raw.warrants, raw.warrants * QUANTITY.warrant, raw.bigDataWarrants * QUALITY.bigDataWarrant),
+        item('warrant', 'หมายจับ', raw.warrants, raw.warrants * QUANTITY.warrant, 0),
         ...FLAGRANT_OFFENSES.map((offense) => item(
             'flagrant',
             `ซึ่งหน้า ${OFFENSE_NAMES[offense]}`,
@@ -80,22 +89,11 @@ export const pointsBreakdown = (raw) => {
             flagrant[offense] * (QUALITY.flagrantExtra[offense] ?? 0)
         )),
         item('drugs', 'คดียาเสพติด', flagrant.drugs, raw.drugCaseBase, raw.drugCaseExtra),
-        item('drugs', 'ยาบ้า (เม็ด)', drugSeized.yaba, 0, Math.floor(drugSeized.yaba / QUALITY.drugPer.yaba)),
-        item('drugs', 'ไอซ์ (กรัม)', drugSeized.ice, 0, Math.floor(drugSeized.ice / QUALITY.drugPer.ice)),
-        item('drugs', 'ยาเสพติดอื่น (หน่วย)', drugSeized.other, 0, Math.floor(drugSeized.other / QUALITY.drugPer.other)),
-        item('tickets', TICKET_NAMES.transport, tickets.transport, tickets.transport * QUANTITY.ticket, 0),
-        item('tickets', TICKET_NAMES.vehicle, tickets.vehicle, tickets.vehicle * QUANTITY.ticket, 0),
-        item('tickets', TICKET_NAMES.traffic, tickets.traffic, tickets.traffic * QUANTITY.ticket, 0),
+        item('tickets', 'ใบสั่งทุกประเภท', ticketCount, Math.floor(ticketCount / QUANTITY.ticketsPer), 0),
         item('service', 'นำขบวน', raw.convoy, raw.convoy * QUANTITY.convoy, 0),
-        item('service', 'ช่วยเหลือประชาชนและอุบัติเหตุ', raw.serviceHelp, raw.serviceHelp * QUANTITY.help, 0),
-        item('service', 'อำนวยความสะดวกจราจร', raw.serviceTraffic, raw.serviceTraffic * QUANTITY.trafficService, 0),
-        item('service', 'จิตอาสา', raw.volunteer, raw.volunteer * QUANTITY.volunteer, 0),
-        item('seized', 'ของกลาง อาวุธปืน', seized.gun, 0, seized.gun * QUALITY.seizedEach.gun),
-        item('seized', 'ของกลาง กระสุน', seized.bullets, 0, Math.floor(seized.bullets / QUALITY.seizedPer.bullets)),
-        item('seized', 'ของกลาง วัตถุระเบิด', seized.explosive, 0, seized.explosive * QUALITY.seizedEach.explosive),
-        item('seized', 'ของกลาง รถยนต์', seized.car, 0, seized.car * QUALITY.seizedEach.car),
-        item('seized', 'ของกลาง จักรยานยนต์', seized.motorcycle, 0, seized.motorcycle * QUALITY.seizedEach.motorcycle),
-        item('seized', 'ของกลาง เงินสด (บาท)', seized.cash, 0, Math.floor(seized.cash / QUALITY.seizedPer.cash)),
+        item('service', 'ช่วยเหลือประชาชนและอุบัติเหตุ', raw.serviceHelp, Math.floor(raw.serviceHelp / QUANTITY.servicePer), 0),
+        item('service', 'อำนวยความสะดวกจราจร', raw.serviceTraffic, Math.floor(raw.serviceTraffic / QUANTITY.servicePer), 0),
+        item('service', 'จิตอาสา', raw.volunteer, Math.floor(raw.volunteer / QUANTITY.servicePer), 0),
     ];
     return rows.filter((row) => row.count > 0);
 };
@@ -111,30 +109,20 @@ const rule = (kind, category, text, points, unit) => ({
 
 // Every quantity and quality rule, read from the config so the copy never drifts from the points
 export const scoringRules = () => [
-    rule('quantity', 'warrant', 'ทุกหมายจับ', QUANTITY.warrant, 'ต่อหมาย'),
+    rule('quantity', 'warrant', 'ทุกหมายจับ (ทั่วไป Bodyworn และ Big Data)', QUANTITY.warrant, 'ต่อหมาย'),
     rule('quantity', 'flagrant', 'ทุกการจับกุมซึ่งหน้า (ไม่รวมยาเสพติด)', QUANTITY.flagrant, 'ต่อคดี'),
     rule('quantity', 'drugs', 'คดียาเสพติดที่มีของกลาง ฐาน', QUANTITY.drugCaseBase, 'ต่อคดี'),
     rule('quantity', 'drugs', 'คดียาเสพติดที่ไม่มีของกลาง', POINTS.drug.noEvidence, 'ต่อคดี'),
-    rule('quantity', 'tickets', 'ใบสั่งทุกใบ (ขนส่ง รถยนต์ จราจร)', QUANTITY.ticket, 'ต่อใบ'),
+    rule('quantity', 'tickets', 'ใบสั่งทุกประเภท (ขนส่ง รถยนต์ จราจร)', 1, `ทุก ${formatCount(QUANTITY.ticketsPer)} ใบ (นับแยกแต่ละ ส.ทล.)`),
     rule('quantity', 'service', 'นำขบวน', QUANTITY.convoy, 'ต่อครั้ง'),
-    rule('quantity', 'service', 'ช่วยเหลือประชาชนและอุบัติเหตุ', QUANTITY.help, 'ต่อครั้ง'),
-    rule('quantity', 'service', 'อำนวยความสะดวกจราจร', QUANTITY.trafficService, 'ต่อครั้ง'),
-    rule('quantity', 'service', 'จิตอาสา', QUANTITY.volunteer, 'ต่อครั้ง'),
-    rule('quality', 'warrant', 'หมายจับ Big Data', QUALITY.bigDataWarrant, 'ต่อหมาย'),
+    rule('quantity', 'service', 'ช่วยเหลือประชาชนและอุบัติเหตุ', 1, `ทุก ${formatCount(QUANTITY.servicePer)} ครั้ง (นับแยกแต่ละ ส.ทล.)`),
+    rule('quantity', 'service', 'อำนวยความสะดวกจราจร', 1, `ทุก ${formatCount(QUANTITY.servicePer)} ครั้ง (นับแยกแต่ละ ส.ทล.)`),
+    rule('quantity', 'service', 'จิตอาสา', 1, `ทุก ${formatCount(QUANTITY.servicePer)} ครั้ง (นับแยกแต่ละ ส.ทล.)`),
     rule('quality', 'flagrant', 'อาวุธปืน', QUALITY.flagrantExtra.gun, 'ต่อคดี'),
     rule('quality', 'flagrant', 'เอกสารปลอม', QUALITY.flagrantExtra.doc, 'ต่อคดี'),
     rule('quality', 'drugs', 'ส่วนเพิ่มตามขั้นของกลาง ขั้น 2', POINTS.drug.tierPoints[1] - QUANTITY.drugCaseBase, 'ต่อคดี'),
     rule('quality', 'drugs', 'ส่วนเพิ่มตามขั้นของกลาง ขั้น 3', POINTS.drug.tierPoints[2] - QUANTITY.drugCaseBase, 'ต่อคดี'),
     rule('quality', 'drugs', 'เคตามีน/โคเคน (ยาเสพติดอื่น) ส่วนเพิ่ม', POINTS.drug.otherDrug - QUANTITY.drugCaseBase, 'ต่อคดี'),
-    rule('quality', 'drugs', 'ยาบ้า', 1, `ต่อ ${formatCount(QUALITY.drugPer.yaba)} เม็ด`),
-    rule('quality', 'drugs', 'ไอซ์', 1, `ต่อ ${formatCount(QUALITY.drugPer.ice)} กรัม`),
-    rule('quality', 'drugs', 'ยาเสพติดอื่น', 1, `ต่อ ${formatCount(QUALITY.drugPer.other)} หน่วย`),
-    rule('quality', 'seized', 'อาวุธปืน', QUALITY.seizedEach.gun, 'ต่อกระบอก'),
-    rule('quality', 'seized', 'วัตถุระเบิด', QUALITY.seizedEach.explosive, 'ต่อรายการ'),
-    rule('quality', 'seized', 'รถยนต์', QUALITY.seizedEach.car, 'ต่อคัน'),
-    rule('quality', 'seized', 'จักรยานยนต์', QUALITY.seizedEach.motorcycle, 'ต่อคัน'),
-    rule('quality', 'seized', 'กระสุน', 1, `ต่อ ${formatCount(QUALITY.seizedPer.bullets)} นัด`),
-    rule('quality', 'seized', 'เงินสด', 1, `ต่อ ${formatCount(QUALITY.seizedPer.cash)} บาท`),
 ];
 
 // Tier thresholds from POINTS.drug: a tier applies only above the threshold below it, so the upper bound of tier 2 is inclusive
@@ -142,3 +130,39 @@ export const drugTierNote = () => {
     const tiers = (name, unit, [first, second]) => `${name} ขั้น 1 ไม่เกิน ${formatCount(first)} ${unit}, ขั้น 2 ไม่เกิน ${formatCount(second)} ${unit}, ขั้น 3 เกิน ${formatCount(second)} ${unit}`;
     return `ขั้นของกลางต่อคดี: ${tiers('ยาบ้า', 'เม็ด', POINTS.drug.yaba)} · ${tiers('ไอซ์', 'กรัม', POINTS.drug.ice)}`;
 };
+
+const safeDivide = (numerator, denominator) => (denominator > 0 ? numerator / denominator : 0);
+
+// Per-station averages of one category map, so a division or the HQ can be set against a single station
+export const perStationCategories = (categories, stationCount) => Object.fromEntries(
+    CATEGORIES.map(({ id }) => {
+        const { quantity, quality, total } = categories[id];
+        return [id, {
+            quantity: safeDivide(quantity, stationCount),
+            quality: safeDivide(quality, stationCount),
+            total: safeDivide(total, stationCount),
+        }];
+    })
+);
+
+// The highest category total across the given units, per category id; 0 when there are no units
+export const bestByCategory = (categoryMaps) => Object.fromEntries(
+    CATEGORIES.map(({ id }) => [id, Math.max(0, ...categoryMaps.map((categories) => categories[id].total))])
+);
+
+// Percent of the best unit, rounded to one decimal; 0 when nothing has been scored in that category
+export const percentOfBest = (value, best) => (best > 0 ? Math.round((value / best) * 1000) / 10 : 0);
+
+// One row per category. Each series is a percent of its category best, and raw keeps the points for the tooltip
+export const radarRows = (series, best) => CATEGORIES.map(({ id, label }) => {
+    const row = { id, label, raw: {} };
+    for (const { name, categories } of series) {
+        const { quantity, quality, total } = categories[id];
+        row[name] = percentOfBest(total, best[id] ?? 0);
+        row.raw[name] = { quantity, quality, total };
+    }
+    return row;
+});
+
+// Plain-text percents for one series, read out by screen readers
+export const radarSummary = (rows, name) => rows.map((row) => `${row.label} ${formatCount(row[name])}%`).join(', ');

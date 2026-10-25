@@ -15,16 +15,22 @@ test('unitPoints splits fixture station 1-1 into quantity and quality per catego
     const points = unitPoints(fixtureStation('1-1'));
 
     assert.deepEqual(splitOf(points), {
-        warrant: [20, 10],
-        flagrant: [20, 5],
-        drugs: [5, 5],
-        tickets: [7, 0],
-        service: [6, 0],
-        seized: [0, 0],
+        warrant: [4, 0],
+        flagrant: [2, 4],
+        drugs: [1, 4],
+        tickets: [0, 0],
+        service: [1, 0],
     });
-    assert.equal(points.quantity, 58);
-    assert.equal(points.quality, 20);
-    assert.equal(points.total, 78);
+    assert.equal(points.quantity, 8);
+    assert.equal(points.quality, 8);
+    assert.equal(points.total, 16);
+});
+
+test('unitPoints has exactly the five scoring categories and no seized category', () => {
+    assert.deepEqual(
+        Object.keys(unitPoints(fixtureStation('1-1')).categories),
+        ['warrant', 'flagrant', 'drugs', 'tickets', 'service']
+    );
 });
 
 test('unitPoints makes every category total and the unit totals equal quantity plus quality', () => {
@@ -37,24 +43,45 @@ test('unitPoints makes every category total and the unit totals equal quantity p
     assert.equal(points.total, points.quantity + points.quality);
 });
 
-test('unitPoints scores seized items as quality only: 10 + 2 + 3 + 2 + 2 = 19', () => {
+test('unitPoints scores every warrant at 2 quantity with no quality, Big Data included', () => {
     const raw = emptyStationRaw();
-    raw.seized = { gun: 2, bullets: 120, explosive: 0, car: 1, motorcycle: 2, cash: 25000 };
+    raw.warrants = 3;
 
-    assert.deepEqual(unitPoints(raw).categories.seized, { quantity: 0, quality: 19, total: 19 });
+    assert.deepEqual(unitPoints(raw).categories.warrant, { quantity: 6, quality: 0, total: 6 });
 });
 
-test('unitPoints adds drug quality from case excess plus seized pills, ice and other-drug weight', () => {
+test('unitPoints scores each flagrant arrest at 1 and adds 4 quality for a gun or forged document', () => {
+    const raw = emptyStationRaw();
+    raw.flagrant = { ...raw.flagrant, gun: 2, doc: 1, weight: 1, drugs: 3 };
+
+    // Drug arrests are scored under drugs, not flagrant: 2 + 1 + 1 = 4 arrests, quality 2 * 4 + 1 * 4 = 12
+    assert.deepEqual(unitPoints(raw).categories.flagrant, { quantity: 4, quality: 12, total: 16 });
+});
+
+test('unitPoints takes drug points from the case base and tier excess alone', () => {
     const raw = emptyStationRaw();
     raw.drugCaseBase = 5;
     raw.drugCaseExtra = 10;
-    raw.drugSeized = { yaba: 2500, ice: 0, other: 0 };
 
-    assert.deepEqual(unitPoints(raw).categories.drugs, { quantity: 5, quality: 12, total: 17 });
+    assert.deepEqual(unitPoints(raw).categories.drugs, { quantity: 5, quality: 10, total: 15 });
+});
+
+test('unitPoints scores tickets per full 100 and service per convoy plus per full 10 of each other service', () => {
+    const raw = emptyStationRaw();
+    raw.tickets = { transport: 150, vehicle: 99, traffic: 1 };
+    raw.convoy = 3;
+    raw.serviceHelp = 25;
+    raw.serviceTraffic = 9;
+    raw.volunteer = 10;
+    const points = unitPoints(raw);
+
+    // 250 tickets -> 2; convoy 3 + help 2 + traffic 0 + volunteer 1 = 6
+    assert.deepEqual(points.categories.tickets, { quantity: 2, quality: 0, total: 2 });
+    assert.deepEqual(points.categories.service, { quantity: 6, quality: 0, total: 6 });
 });
 
 test('unitInfo derives major share, report ratio and active days from the fixture station', () => {
-    // arrests = 2 warrants + 3 flagrant (drugs, gun, weight) = 5; major = drug case (10 pts) + gun = 2
+    // arrests = 2 warrants + 3 flagrant (drugs, gun, weight) = 5; major = drug case (5 pts) + gun = 2
     assert.deepEqual(unitInfo(fixtureStation('1-1'), 4), {
         majorShare: 0.4,
         reportDays: 2,
@@ -77,8 +104,8 @@ test('addPoints sums categories and totals, and emptyPoints is the identity', ()
 
     assert.deepEqual(addPoints(emptyPoints(), station), station);
     const doubled = addPoints(station, station);
-    assert.equal(doubled.total, 156);
-    assert.deepEqual(doubled.categories.warrant, { quantity: 40, quality: 20, total: 60 });
+    assert.equal(doubled.total, 32);
+    assert.deepEqual(doubled.categories.warrant, { quantity: 8, quality: 0, total: 8 });
 });
 
 test('periodRange month starts on the 1st and counts days inclusively', () => {
@@ -123,11 +150,11 @@ test('buildQualityModel sums stations into divisions and HQ, with averages per s
     const division1 = model.divisions.find((d) => d.kk === '1');
 
     assert.equal(division1.stationCount, 6);
-    assert.equal(division1.total, 78);
-    assert.equal(division1.average, 13);
+    assert.equal(division1.total, 16);
+    assert.equal(division1.average, 2.7);
     assert.equal(model.hq.total, model.divisions.reduce((sum, d) => sum + d.total, 0));
-    assert.equal(model.hq.total, 78);
-    assert.equal(model.hq.average, 1.8);
+    assert.equal(model.hq.total, 16);
+    assert.equal(model.hq.average, 0.4);
 });
 
 test('buildQualityModel keeps quantity + quality = total on every unit', () => {
@@ -145,9 +172,9 @@ test('buildQualityModel compares month deltas against the same days of the previ
     const station = model.stations.find((s) => s.key === '1-1');
 
     // The 30/09 warrant row falls outside 1-24 Sep, so the previous period is empty
-    assert.equal(station.delta, 78);
-    assert.equal(model.divisions.find((d) => d.kk === '1').delta, 78);
-    assert.equal(model.hq.delta, 78);
+    assert.equal(station.delta, 16);
+    assert.equal(model.divisions.find((d) => d.kk === '1').delta, 16);
+    assert.equal(model.hq.delta, 16);
 });
 
 test('buildQualityModel scores every unit 0 with zero deltas when rawData is empty', () => {

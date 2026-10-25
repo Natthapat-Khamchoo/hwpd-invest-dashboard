@@ -7,33 +7,27 @@ export const CATEGORIES = [
     { id: 'drugs', label: 'ยาเสพติด' },
     { id: 'tickets', label: 'ใบสั่ง' },
     { id: 'service', label: 'บริการ' },
-    { id: 'seized', label: 'ของกลาง' },
 ];
 
-// Raw points per unit of activity
+// Quantity points: warrants and flagrant arrests per unit, the base of each drug case, 1 point per convoy.
+// ticketsPer and servicePer are the block sizes behind the floor rules for tickets and service.
 export const QUANTITY = {
-    warrant: 10,
-    flagrant: 10,
-    drugCaseBase: 5,
-    ticket: 1,
-    convoy: 2,
-    help: 1,
-    trafficService: 1,
-    volunteer: 2,
+    warrant: 2,
+    flagrant: 1,
+    drugCaseBase: 1,
+    ticketsPer: 100,
+    convoy: 1,
+    servicePer: 10,
 };
 
-// Extra points on top of quantity (quality)
+// Extra points on top of quantity (quality), for big cases only
 export const QUALITY = {
-    bigDataWarrant: 5,
-    flagrantExtra: { gun: 5, doc: 10 },
-    drugPer: { yaba: 1000, ice: 100, other: 100 },
-    seizedEach: { gun: 5, explosive: 5, car: 3, motorcycle: 1 },
-    seizedPer: { bullets: 50, cash: 10000 },
+    flagrantExtra: { gun: 4, doc: 4 },
 };
 
 // Drug case tiers: a case's points come from the highest tier its pills or ice exceed
 export const POINTS = {
-    drug: { yaba: [20, 100], ice: [5, 50], tierPoints: [5, 10, 15], otherDrug: 10, noEvidence: 3 },
+    drug: { yaba: [20, 100], ice: [5, 50], tierPoints: [1, 5, 10], otherDrug: 5, noEvidence: 1 },
 };
 
 // Camera ticket columns; any other traf_* column counts as traffic

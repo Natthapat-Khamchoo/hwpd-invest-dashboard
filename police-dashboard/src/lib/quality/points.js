@@ -11,41 +11,25 @@ const withTotal = (quantity, quality) => ({ quantity, quality, total: quantity +
 export const arrestsOf = (raw) => raw.warrants + sum(Object.values(raw.flagrant));
 
 const categoriesOf = (raw) => {
-    const { flagrant, drugSeized, seized, tickets } = raw;
+    const { flagrant, tickets } = raw;
     const flagrantCount = sum(Object.values(flagrant)) - flagrant.drugs;
+    const ticketCount = sum(Object.values(tickets));
 
+    // Floors apply to each station's period total, so a partial block at one station never counts toward another
     return {
-        warrant: withTotal(
-            raw.warrants * QUANTITY.warrant,
-            raw.bigDataWarrants * QUALITY.bigDataWarrant
-        ),
+        warrant: withTotal(raw.warrants * QUANTITY.warrant, 0),
         flagrant: withTotal(
             flagrantCount * QUANTITY.flagrant,
             flagrant.gun * QUALITY.flagrantExtra.gun + flagrant.doc * QUALITY.flagrantExtra.doc
         ),
-        drugs: withTotal(
-            raw.drugCaseBase,
-            raw.drugCaseExtra
-                + Math.floor(drugSeized.yaba / QUALITY.drugPer.yaba)
-                + Math.floor(drugSeized.ice / QUALITY.drugPer.ice)
-                + Math.floor(drugSeized.other / QUALITY.drugPer.other)
-        ),
-        tickets: withTotal(sum(Object.values(tickets)) * QUANTITY.ticket, 0),
+        drugs: withTotal(raw.drugCaseBase, raw.drugCaseExtra),
+        tickets: withTotal(Math.floor(ticketCount / QUANTITY.ticketsPer), 0),
         service: withTotal(
             raw.convoy * QUANTITY.convoy
-                + raw.serviceHelp * QUANTITY.help
-                + raw.serviceTraffic * QUANTITY.trafficService
-                + raw.volunteer * QUANTITY.volunteer,
+                + Math.floor(raw.serviceHelp / QUANTITY.servicePer)
+                + Math.floor(raw.serviceTraffic / QUANTITY.servicePer)
+                + Math.floor(raw.volunteer / QUANTITY.servicePer),
             0
-        ),
-        seized: withTotal(
-            0,
-            seized.gun * QUALITY.seizedEach.gun
-                + seized.explosive * QUALITY.seizedEach.explosive
-                + seized.car * QUALITY.seizedEach.car
-                + seized.motorcycle * QUALITY.seizedEach.motorcycle
-                + Math.floor(seized.bullets / QUALITY.seizedPer.bullets)
-                + Math.floor(seized.cash / QUALITY.seizedPer.cash)
         ),
     };
 };

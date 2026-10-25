@@ -1,8 +1,7 @@
 import React from 'react';
 import { Gauge, BarChart3, Calculator } from 'lucide-react';
-import { CATEGORIES } from '../../../lib/quality/scoringConfig.js';
-import { DeltaTag, CategoryTable, Panel, PointsBreakdownTable, Stat } from './QualityParts';
-import { formatCount, pointsBreakdown, placingOf, toPercent, themed } from './qualityFormat.js';
+import { DeltaTag, CategoryRadar, Panel, PointsBreakdownTable, Stat } from './QualityParts';
+import { bestByCategory, formatCount, perStationCategories, pointsBreakdown, placingOf, RADAR_COLORS, radarRows, toPercent, themed } from './qualityFormat.js';
 
 const StationPanel = ({ model, stationKey, isDarkMode = true }) => {
     const station = model.stations.find((item) => item.key === stationKey);
@@ -14,10 +13,13 @@ const StationPanel = ({ model, stationKey, isDarkMode = true }) => {
     const stationName = `ส.ทล.${station.stl}`;
     const divisionStations = model.stations.filter((item) => item.kk === station.kk);
     const placingRows = divisionStations.map((item) => ({ key: item.key, value: item.total }));
-    const categoryRows = CATEGORIES.map(({ id, label }) => {
-        const { quantity, quality, total } = station.points.categories[id];
-        return { label, quantity, quality, total };
-    });
+    // Each category as a percent of the best of all stations; the division's per-station average is the compare series
+    const best = bestByCategory(model.stations.map((item) => item.points.categories));
+    const division = model.divisions.find((item) => item.kk === station.kk);
+    const radar = radarRows([
+        { name: stationName, categories: station.points.categories },
+        { name: 'เฉลี่ย กก.', categories: perStationCategories(division.points.categories, division.stationCount) },
+    ], best);
 
     return (
         <div className="space-y-6">
@@ -32,7 +34,15 @@ const StationPanel = ({ model, stationKey, isDarkMode = true }) => {
             </Panel>
 
             <Panel title="คะแนนแยกตามเรื่อง" icon={BarChart3} isDarkMode={isDarkMode}>
-                <CategoryTable rows={categoryRows} isDarkMode={isDarkMode} />
+                <CategoryRadar
+                    rows={radar}
+                    series={[
+                        { name: stationName, color: RADAR_COLORS.main },
+                        { name: 'เฉลี่ย กก.', color: RADAR_COLORS.compare, dashed: true, decimals: 1 },
+                    ]}
+                    subtitle="แต่ละแกนเทียบกับ ส.ทล. ที่ทำได้สูงสุดในเรื่องนั้น (= 100%)"
+                    isDarkMode={isDarkMode}
+                />
             </Panel>
 
             <Panel title="ที่มาของคะแนน" icon={Calculator} isDarkMode={isDarkMode}>

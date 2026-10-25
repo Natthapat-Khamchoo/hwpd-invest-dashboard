@@ -1,12 +1,16 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList, Tooltip as RechartsTooltip } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList, Tooltip as RechartsTooltip, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from 'recharts';
 import { CATEGORIES } from '../../../lib/quality/scoringConfig.js';
-import { formatAverage, formatCount, formatDelta, themed } from './qualityFormat.js';
+import { formatAverage, formatCount, formatDelta, radarSummary, radarTextColor, themed } from './qualityFormat.js';
 
 const BAR_FILL = '#06b6d4';
 
 const formatValue = (value, decimals) => (decimals > 0 ? formatAverage(value) : formatCount(value));
+const formatPercent = (value) => `${formatCount(value)}%`;
+
+// Series with decimals > 0 hold per-station averages, so their raw points say so
+const averageNote = (item) => (item.decimals > 0 ? ' (เฉลี่ยต่อ ส.ทล.)' : '');
 
 const ScoreBarTooltip = ({ active, payload, isDarkMode, valueLabel, decimals }) => {
     if (!active || !payload?.length) return null;
@@ -81,45 +85,76 @@ export const Stat = ({ label, value, isDarkMode = true, emphasis = false }) => (
     </div>
 );
 
-// rows: [{ label, quantity, quality, total }]; compare (optional) is one number per row, aligned with rows.
-// A total row sums the rows, including the compare column.
-export const CategoryTable = ({ rows, compare, compareLabel, isDarkMode = true, decimals = 0 }) => {
-    const muted = themed(isDarkMode, 'text-slate-400', 'text-slate-600');
-    const divider = themed(isDarkMode, 'border-white/10', 'border-slate-200');
-    const fmt = (value) => formatValue(value, decimals);
-    const sumOf = (key) => rows.reduce((total, row) => total + row[key], 0);
-    const compareSum = compare ? compare.reduce((total, value) => total + value, 0) : 0;
+const RadarTooltip = ({ active, payload, isDarkMode, series }) => {
+    if (!active || !payload?.length) return null;
+    const row = payload[0].payload;
     return (
-        <div className="overflow-x-auto">
-            <table className="w-full min-w-[320px] text-sm">
-                <thead>
-                    <tr className={`border-b text-left text-xs ${muted} ${divider}`}>
-                        <th scope="col" className="whitespace-nowrap px-3 py-2 font-semibold">เรื่อง</th>
-                        <th scope="col" className="whitespace-nowrap px-3 py-2 text-right font-semibold">ปริมาณ</th>
-                        <th scope="col" className="whitespace-nowrap px-3 py-2 text-right font-semibold">คุณภาพ</th>
-                        <th scope="col" className="whitespace-nowrap px-3 py-2 text-right font-semibold">รวม</th>
-                        {compare && <th scope="col" className="whitespace-nowrap px-3 py-2 text-right font-semibold">{compareLabel}</th>}
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.map((row, index) => (
-                        <tr key={row.label} className={`border-b ${divider}`}>
-                            <td className="px-3 py-2">{row.label}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{fmt(row.quantity)}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{fmt(row.quality)}</td>
-                            <td className="px-3 py-2 text-right font-semibold tabular-nums">{fmt(row.total)}</td>
-                            {compare && <td className={`px-3 py-2 text-right tabular-nums ${muted}`}>{fmt(compare[index])}</td>}
-                        </tr>
-                    ))}
-                    <tr className="font-bold">
-                        <th scope="row" className="px-3 py-2 text-left">รวม</th>
-                        <td className="px-3 py-2 text-right tabular-nums">{fmt(sumOf('quantity'))}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{fmt(sumOf('quality'))}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{fmt(sumOf('total'))}</td>
-                        {compare && <td className={`px-3 py-2 text-right tabular-nums ${muted}`}>{fmt(compareSum)}</td>}
-                    </tr>
-                </tbody>
-            </table>
+        <div className={`rounded-xl border px-3 py-2 text-sm shadow-lg ${themed(isDarkMode, 'border-white/10 bg-slate-800/95 text-white', 'border-slate-200 bg-white/95 text-slate-900')}`}>
+            <p className="font-semibold">{row.label}</p>
+            {series.map((item) => {
+                const raw = row.raw[item.name];
+                return (
+                    <div key={item.name} className="mt-1">
+                        <p className="tabular-nums"><span style={{ color: radarTextColor(item.color, isDarkMode) }}>{item.name}</span> {formatPercent(row[item.name])}</p>
+                        <p className="text-xs tabular-nums">
+                            ปริมาณ {formatValue(raw.quantity, item.decimals)} · คุณภาพ {formatValue(raw.quality, item.decimals)} · รวม {formatValue(raw.total, item.decimals)}{averageNote(item)}
+                        </p>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+// rows come from radarRows(). series: [{ name, color, dashed?, decimals? }]; the first series is the one the aria-label summarises.
+// decimals > 0 marks per-station averages, which the tooltip and text list show with one decimal.
+export const CategoryRadar = ({ rows, series, subtitle, isDarkMode = true }) => {
+    const mainName = series[0].name;
+    // Spokes are 360 / rows.length degrees apart, starting at the top (90). The radius axis sits midway between the first two spokes, so its ticks never meet a category label.
+    const radiusAxisAngle = 90 - 180 / rows.length;
+    const tickColor = themed(isDarkMode, '#cbd5e1', '#334155');
+    const gridColor = themed(isDarkMode, 'rgba(255,255,255,0.14)', '#cbd5e1');
+    const labelColor = themed(isDarkMode, '#f1f5f9', '#0f172a');
+    return (
+        <div>
+            <p className={`mb-3 text-sm ${themed(isDarkMode, 'text-slate-400', 'text-slate-600')}`}>{subtitle}</p>
+            <div role="img" aria-label={`กราฟเรดาร์ ${mainName}: ${radarSummary(rows, mainName)}`}>
+                <ResponsiveContainer width="100%" height={360}>
+                    <RadarChart data={rows} outerRadius="76%" margin={{ top: 8, right: 16, bottom: 8, left: 16 }}>
+                        <PolarGrid stroke={gridColor} />
+                        <PolarAngleAxis dataKey="label" tick={{ fill: tickColor, fontSize: 12 }} />
+                        <PolarRadiusAxis domain={[0, 100]} tickCount={5} angle={radiusAxisAngle} stroke={gridColor} tick={{ fill: tickColor, fontSize: 10 }} tickFormatter={formatPercent} />
+                        {series.map((item) => (
+                            <Radar
+                                key={item.name}
+                                name={item.name}
+                                dataKey={(row) => row[item.name]}
+                                stroke={item.color}
+                                fill={item.color}
+                                fillOpacity={item.dashed ? 0.1 : 0.3}
+                                strokeWidth={2}
+                                strokeDasharray={item.dashed ? '6 4' : undefined}
+                            />
+                        ))}
+                        <RechartsTooltip content={(props) => <RadarTooltip {...props} isDarkMode={isDarkMode} series={series} />} />
+                        <Legend
+                            wrapperStyle={{ color: labelColor, fontSize: 12 }}
+                            formatter={(value) => <span style={{ color: radarTextColor(series.find((item) => item.name === value)?.color ?? labelColor, isDarkMode) }}>{value}</span>}
+                        />
+                    </RadarChart>
+                </ResponsiveContainer>
+            </div>
+            <ul className="sr-only">
+                {rows.flatMap((row) => series.map((item) => {
+                    const raw = row.raw[item.name];
+                    const prefix = series.length > 1 ? `${item.name} · ` : '';
+                    return (
+                        <li key={`${row.id}-${item.name}`}>
+                            {prefix}{row.label}: ปริมาณ {formatValue(raw.quantity, item.decimals)}, คุณภาพ {formatValue(raw.quality, item.decimals)}, รวม {formatValue(raw.total, item.decimals)}{averageNote(item)}
+                        </li>
+                    );
+                }))}
+            </ul>
         </div>
     );
 };
@@ -165,6 +200,7 @@ export const PointsBreakdownTable = ({ rows, isDarkMode = true }) => {
                     ))}
                 </tbody>
             </table>
+            <p className={`mt-3 text-sm ${muted}`}>ใบสั่งและบริการปัดเศษทิ้ง นับแยกแต่ละ ส.ทล.</p>
         </div>
     );
 };

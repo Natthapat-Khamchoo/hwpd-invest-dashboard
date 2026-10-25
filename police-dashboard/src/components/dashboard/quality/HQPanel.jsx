@@ -1,8 +1,7 @@
 import React from 'react';
 import { Gauge, BarChart3, Calculator } from 'lucide-react';
-import { CATEGORIES } from '../../../lib/quality/scoringConfig.js';
-import { DeltaTag, ScoreBarChart, CategoryTable, Panel, Stat } from './QualityParts';
-import { barItems, drugTierNote, formatAverage, formatCount, scoringRules, themed } from './qualityFormat.js';
+import { DeltaTag, ScoreBarChart, CategoryRadar, Panel, Stat } from './QualityParts';
+import { barItems, bestByCategory, drugTierNote, formatAverage, formatCount, perStationCategories, RADAR_COLORS, radarRows, scoringRules, themed } from './qualityFormat.js';
 
 const RULES = scoringRules();
 const KIND_HEADINGS = [
@@ -13,10 +12,10 @@ const KIND_HEADINGS = [
 const HQPanel = ({ model, isDarkMode = true, onSelectDivision }) => {
     const { hq, divisions } = model;
     const muted = themed(isDarkMode, 'text-slate-400', 'text-slate-600');
-    const categoryRows = CATEGORIES.map(({ id, label }) => {
-        const { quantity, quality, total } = hq.points.categories[id];
-        return { label, quantity, quality, total };
-    });
+    // HQ per-station average in each category, as a percent of the best division's per-station average
+    const hqAverages = perStationCategories(hq.points.categories, model.stations.length);
+    const divisionAverages = divisions.map((division) => perStationCategories(division.points.categories, division.stationCount));
+    const radar = radarRows([{ name: 'บก.ทล.', categories: hqAverages }], bestByCategory(divisionAverages));
     const divisionBars = barItems(divisions, 'average', (division) => division.name);
 
     return (
@@ -30,7 +29,12 @@ const HQPanel = ({ model, isDarkMode = true, onSelectDivision }) => {
                 </dl>
                 <div className="mt-3"><DeltaTag delta={hq.delta} isDarkMode={isDarkMode} /></div>
                 <div className="mt-6">
-                    <CategoryTable rows={categoryRows} isDarkMode={isDarkMode} />
+                    <CategoryRadar
+                        rows={radar}
+                        series={[{ name: 'บก.ทล.', color: RADAR_COLORS.main, decimals: 1 }]}
+                        subtitle="คะแนนเฉลี่ยต่อ ส.ทล. ของ บก.ทล. แต่ละแกนเทียบกับ กก. ที่ทำได้สูงสุดในเรื่องนั้น (= 100%)"
+                        isDarkMode={isDarkMode}
+                    />
                 </div>
             </Panel>
 
@@ -56,7 +60,7 @@ const HQPanel = ({ model, isDarkMode = true, onSelectDivision }) => {
                                 {RULES.filter((rule) => rule.kind === kind).map((rule) => (
                                     <li key={`${rule.category}-${rule.text}`} className="flex flex-wrap justify-between gap-x-4">
                                         <span>{rule.categoryLabel} · {rule.text}</span>
-                                        <span className="whitespace-nowrap font-semibold tabular-nums">{rule.points} แต้ม {rule.unit}</span>
+                                        <span className="whitespace-nowrap font-semibold tabular-nums">{rule.points} คะแนน {rule.unit}</span>
                                     </li>
                                 ))}
                             </ul>
