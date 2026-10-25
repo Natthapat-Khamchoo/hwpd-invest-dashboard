@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Search, Filter, Siren, Users,
   FileText, Calendar, ChevronRight, X, Menu, BarChart3,
   Building2, ChevronLeft, Truck, FileWarning, Activity, Radar, RefreshCw, Download, Check, ClipboardCopy,
-  Award, Clock, TrendingUp, PieChart
+  Award, Clock, TrendingUp, PieChart, ClipboardCheck
 } from 'lucide-react';
 
 // Import Components
@@ -19,6 +19,7 @@ import LoadingScreen from './components/ui/LoadingScreen';
 // Import New Views
 import RankingView from './components/dashboard/RankingView';
 import TrendView from './components/dashboard/TrendView';
+import QualityView from './components/dashboard/quality/QualityView';
 import ResultDashboardView from './components/dashboard/ResultDashboardView';
 
 // Import UI Components
@@ -71,7 +72,7 @@ export default function App() {
     // 'dashboard', 'ranking', 'trend' are top-level tabs.
     // 'result' is the default container for 'overview', 'comparison', etc.
     // If tab is defined and is one of the top-level keys, use it.
-    if (['dashboard', 'ranking', 'trend'].includes(tab)) return tab;
+    if (['dashboard', 'ranking', 'trend', 'quality'].includes(tab)) return tab;
     // Otherwise, assume it belongs to 'result' (ResultDashboardView)
     return 'result';
   };
@@ -128,7 +129,7 @@ export default function App() {
   useEffect(() => {
     const handlePopState = () => {
       const tab = new URLSearchParams(window.location.search).get('tab');
-      if (['dashboard', 'ranking', 'trend'].includes(tab)) {
+      if (['dashboard', 'ranking', 'trend', 'quality'].includes(tab)) {
         setActiveTab(tab);
       } else {
         setActiveTab('result');
@@ -364,7 +365,8 @@ export default function App() {
 
           {[
             { id: 'ranking', label: 'Ranking', icon: Award, color: isDarkMode ? 'text-yellow-400' : 'text-yellow-600', activeBg: isDarkMode ? 'bg-yellow-500/10' : 'bg-yellow-50', activeBorder: isDarkMode ? 'border-yellow-500/30' : 'border-yellow-200' },
-            { id: 'trend', label: 'Trend Prediction', icon: TrendingUp, color: isDarkMode ? 'text-green-400' : 'text-green-600', activeBg: isDarkMode ? 'bg-green-500/10' : 'bg-green-50', activeBorder: isDarkMode ? 'border-green-500/30' : 'border-green-200' }
+            { id: 'trend', label: 'Trend Prediction', icon: TrendingUp, color: isDarkMode ? 'text-green-400' : 'text-green-600', activeBg: isDarkMode ? 'bg-green-500/10' : 'bg-green-50', activeBorder: isDarkMode ? 'border-green-500/30' : 'border-green-200' },
+            { id: 'quality', label: 'Quality Score', icon: ClipboardCheck, color: isDarkMode ? 'text-cyan-400' : 'text-cyan-600', activeBg: isDarkMode ? 'bg-cyan-500/10' : 'bg-cyan-50', activeBorder: isDarkMode ? 'border-cyan-500/30' : 'border-cyan-200' }
           ].map(item => (
             <button key={item.id} onClick={() => handleTabChange(item.id)}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden 
@@ -612,6 +614,8 @@ export default function App() {
               <TrendView isDarkMode={isDarkMode} trendData={trendData} nextDayForecast={nextDayForecast} />
             )
           }
+
+          {activeTab === 'quality' && <QualityView rawData={rawData} isDarkMode={isDarkMode} />}
 
         </div >
       </main >
