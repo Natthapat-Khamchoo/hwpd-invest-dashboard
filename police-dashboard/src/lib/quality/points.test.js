@@ -18,19 +18,30 @@ test('unitPoints splits fixture station 1-1 into quantity and quality per catego
         warrant: [4, 0],
         flagrant: [2, 4],
         drugs: [1, 4],
-        tickets: [0, 0],
-        service: [1, 0],
     });
-    assert.equal(points.quantity, 8);
+    assert.equal(points.quantity, 7);
     assert.equal(points.quality, 8);
-    assert.equal(points.total, 16);
+    assert.equal(points.total, 15);
 });
 
-test('unitPoints has exactly the five scoring categories and no seized category', () => {
+test('unitPoints has exactly the three criminal-case categories', () => {
     assert.deepEqual(
         Object.keys(unitPoints(fixtureStation('1-1')).categories),
-        ['warrant', 'flagrant', 'drugs', 'tickets', 'service']
+        ['warrant', 'flagrant', 'drugs']
     );
+});
+
+test('unitPoints ignores tickets, convoy and service counts, which no longer score', () => {
+    const raw = {
+        ...emptyStationRaw(),
+        tickets: { transport: 150, vehicle: 99, traffic: 1 },
+        convoy: 3,
+        serviceHelp: 25,
+        serviceTraffic: 9,
+        volunteer: 10,
+    };
+
+    assert.equal(unitPoints(raw).total, 0);
 });
 
 test('unitPoints makes every category total and the unit totals equal quantity plus quality', () => {
@@ -66,27 +77,14 @@ test('unitPoints takes drug points from the case base and tier excess alone', ()
     assert.deepEqual(unitPoints(raw).categories.drugs, { quantity: 5, quality: 10, total: 15 });
 });
 
-test('unitPoints scores tickets per full 100 and service per convoy plus per full 10 of each other service', () => {
-    const raw = emptyStationRaw();
-    raw.tickets = { transport: 150, vehicle: 99, traffic: 1 };
-    raw.convoy = 3;
-    raw.serviceHelp = 25;
-    raw.serviceTraffic = 9;
-    raw.volunteer = 10;
-    const points = unitPoints(raw);
-
-    // 250 tickets -> 2; convoy 3 + help 2 + traffic 0 + volunteer 1 = 6
-    assert.deepEqual(points.categories.tickets, { quantity: 2, quality: 0, total: 2 });
-    assert.deepEqual(points.categories.service, { quantity: 6, quality: 0, total: 6 });
-});
-
 test('unitInfo derives major share, report ratio and active days from the fixture station', () => {
     // arrests = 2 warrants + 3 flagrant (drugs, gun, weight) = 5; major = drug case (5 pts) + gun = 2
+    // Only 03/10 is an arrest day; 05/10 has traffic and convoy rows but no arrest, so it is not active
     assert.deepEqual(unitInfo(fixtureStation('1-1'), 4), {
         majorShare: 0.4,
         reportDays: 2,
         reportRatio: 0.5,
-        activeDays: 2,
+        activeDays: 1,
     });
 });
 
@@ -104,7 +102,7 @@ test('addPoints sums categories and totals, and emptyPoints is the identity', ()
 
     assert.deepEqual(addPoints(emptyPoints(), station), station);
     const doubled = addPoints(station, station);
-    assert.equal(doubled.total, 32);
+    assert.equal(doubled.total, 30);
     assert.deepEqual(doubled.categories.warrant, { quantity: 8, quality: 0, total: 8 });
 });
 
@@ -150,11 +148,12 @@ test('buildQualityModel sums stations into divisions and HQ, with averages per s
     const division1 = model.divisions.find((d) => d.kk === '1');
 
     assert.equal(division1.stationCount, 6);
-    assert.equal(division1.total, 16);
-    assert.equal(division1.average, 2.7);
+    assert.equal(division1.total, 15);
+    assert.equal(division1.average, 2.5);
     assert.equal(model.hq.total, model.divisions.reduce((sum, d) => sum + d.total, 0));
-    assert.equal(model.hq.total, 16);
-    assert.equal(model.hq.average, 0.4);
+    assert.equal(model.hq.total, 15);
+    // 15 points over the 43 stations in HQ
+    assert.equal(model.hq.average, 0.3);
 });
 
 test('buildQualityModel keeps quantity + quality = total on every unit', () => {
@@ -172,9 +171,9 @@ test('buildQualityModel compares month deltas against the same days of the previ
     const station = model.stations.find((s) => s.key === '1-1');
 
     // The 30/09 warrant row falls outside 1-24 Sep, so the previous period is empty
-    assert.equal(station.delta, 16);
-    assert.equal(model.divisions.find((d) => d.kk === '1').delta, 16);
-    assert.equal(model.hq.delta, 16);
+    assert.equal(station.delta, 15);
+    assert.equal(model.divisions.find((d) => d.kk === '1').delta, 15);
+    assert.equal(model.hq.delta, 15);
 });
 
 test('buildQualityModel scores every unit 0 with zero deltas when rawData is empty', () => {

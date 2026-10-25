@@ -11,11 +11,9 @@ const withTotal = (quantity, quality) => ({ quantity, quality, total: quantity +
 export const arrestsOf = (raw) => raw.warrants + sum(Object.values(raw.flagrant));
 
 const categoriesOf = (raw) => {
-    const { flagrant, tickets } = raw;
+    const { flagrant } = raw;
     const flagrantCount = sum(Object.values(flagrant)) - flagrant.drugs;
-    const ticketCount = sum(Object.values(tickets));
 
-    // Floors apply to each station's period total, so a partial block at one station never counts toward another
     return {
         warrant: withTotal(raw.warrants * QUANTITY.warrant, 0),
         flagrant: withTotal(
@@ -23,14 +21,6 @@ const categoriesOf = (raw) => {
             flagrant.gun * QUALITY.flagrantExtra.gun + flagrant.doc * QUALITY.flagrantExtra.doc
         ),
         drugs: withTotal(raw.drugCaseBase, raw.drugCaseExtra),
-        tickets: withTotal(Math.floor(ticketCount / QUANTITY.ticketsPer), 0),
-        service: withTotal(
-            raw.convoy * QUANTITY.convoy
-                + Math.floor(raw.serviceHelp / QUANTITY.servicePer)
-                + Math.floor(raw.serviceTraffic / QUANTITY.servicePer)
-                + Math.floor(raw.volunteer / QUANTITY.servicePer),
-            0
-        ),
     };
 };
 

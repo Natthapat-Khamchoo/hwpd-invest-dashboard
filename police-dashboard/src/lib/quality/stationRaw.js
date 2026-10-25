@@ -1,4 +1,4 @@
-import { STATIONS_PER_DIVISION, POINTS, QUANTITY, TICKET_COLUMNS, SUPPRESSION_OFFENSES, ROAD_OFFENSES } from './scoringConfig.js';
+import { STATIONS_PER_DIVISION, POINTS, QUANTITY, SUPPRESSION_OFFENSES, ROAD_OFFENSES } from './scoringConfig.js';
 
 const OFFENSE_KEYS = [...SUPPRESSION_OFFENSES, ...ROAD_OFFENSES];
 const STATION_KEYS = new Set(
@@ -65,11 +65,6 @@ export const emptyStationRaw = () => ({
     drugCaseBase: 0,
     drugCaseExtra: 0,
     majorCases: 0,
-    tickets: { transport: 0, vehicle: 0, traffic: 0 },
-    convoy: 0,
-    serviceHelp: 0,
-    serviceTraffic: 0,
-    volunteer: 0,
     reportDays: 0,
     activeDays: 0,
 });
@@ -83,7 +78,7 @@ export const aggregateStationRaw = (rawData = {}, start, end) => {
     const cells = new Map();
     const cellOf = (key, day) => {
         const id = `${key}|${day}`;
-        if (!cells.has(id)) cells.set(id, { key, reported: false, arrest: false, drugs: 0, yaba: 0, ice: 0, otherDrug: false, tickets: 0 });
+        if (!cells.has(id)) cells.set(id, { key, reported: false, arrest: false, drugs: 0, yaba: 0, ice: 0, otherDrug: false });
         return cells.get(id);
     };
 
@@ -127,42 +122,10 @@ export const aggregateStationRaw = (rawData = {}, start, end) => {
         else if (name.includes('เคตามีน') || name.includes('โคเคน')) cell.otherDrug = true;
     });
 
-    eachRow('traffic', (row, key, day) => {
-        const stats = result[key];
-        const cell = cellOf(key, day);
-        let transport = 0;
-        let vehicle = 0;
-        let traffic = 0;
-        for (const col of Object.keys(row)) {
-            if (!col.startsWith('traf_')) continue;
-            const count = num(row[col]);
-            if (TICKET_COLUMNS.transport.includes(col)) transport += count;
-            else if (TICKET_COLUMNS.vehicle.includes(col)) vehicle += count;
-            else traffic += count; // unknown traf_* columns are traffic tickets
-        }
-        stats.tickets.transport += transport;
-        stats.tickets.vehicle += vehicle;
-        stats.tickets.traffic += traffic;
-        cell.tickets += transport + vehicle + traffic;
-    });
-
-    eachRow('convoy', (row, key) => {
-        result[key].convoy += num(row.convoy_royal) + num(row.convoy_route) + num(row.convoy_vip) + num(row.convoy_safety);
-    });
-
-    eachRow('service', (row, key) => {
-        result[key].serviceHelp += num(row.service_help);
-        result[key].serviceTraffic += num(row.service_traffic);
-    });
-
-    eachRow('volunteer', (row, key) => {
-        result[key].volunteer += num(row.volunteer_task);
-    });
-
     for (const cell of cells.values()) {
         const stats = result[cell.key];
         if (cell.reported) stats.reportDays += 1;
-        if (cell.arrest || cell.tickets > 0) stats.activeDays += 1;
+        if (cell.arrest) stats.activeDays += 1;
         if (cell.drugs > 0) {
             const perCase = pointsPerDrugCase(cell.yaba / cell.drugs, cell.ice / cell.drugs, cell.otherDrug);
             const base = Math.min(perCase, QUANTITY.drugCaseBase);

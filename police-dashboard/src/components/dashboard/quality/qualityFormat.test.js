@@ -124,12 +124,13 @@ test('barItems prefers an explicit key over kk', () => {
     assert.deepEqual(items.map((item) => item.key), ['a', 'b']);
 });
 
-test('pointsBreakdown on the fixture station reconciles to 8 quantity, 8 quality and 16 total', () => {
+test('pointsBreakdown on the fixture station reconciles to 7 quantity, 8 quality and 15 total', () => {
     const raw = aggregateStationRaw(rawData, new Date(2026, 9, 1), new Date(2026, 9, 24))['1-1'];
     const rows = pointsBreakdown(raw);
     const sum = (key) => rows.reduce((total, row) => total + row[key], 0);
-    assert.equal(sum('quantity'), 8);
+    assert.equal(sum('quantity'), 7);
     assert.equal(sum('quality'), 8);
+    assert.equal(sum('total'), 15);
     assert.ok(rows.every((row) => row.quantity + row.quality === row.total));
 });
 
@@ -151,15 +152,18 @@ test('pointsBreakdown lists each non-zero item with its count, quantity, quality
         ...emptyStationRaw(),
         warrants: 2,
         flagrant: { ...emptyStationRaw().flagrant, gun: 1, weight: 1 },
-        tickets: { transport: 0, vehicle: 0, traffic: 4 },
-        convoy: 1,
     };
     assert.deepEqual(pointsBreakdown(raw), [
         { category: 'warrant', label: 'หมายจับ', count: 2, quantity: 4, quality: 0, total: 4 },
         { category: 'flagrant', label: 'ซึ่งหน้า อาวุธปืน', count: 1, quantity: 1, quality: 4, total: 5 },
         { category: 'flagrant', label: 'ซึ่งหน้า จับรถบรรทุกเกินพิกัด', count: 1, quantity: 1, quality: 0, total: 1 },
-        { category: 'tickets', label: 'ใบสั่งทุกประเภท', count: 4, quantity: 0, quality: 0, total: 0 },
-        { category: 'service', label: 'นำขบวน', count: 1, quantity: 1, quality: 0, total: 1 },
+    ]);
+});
+
+test('pointsBreakdown marks immigration arrests as counted per person', () => {
+    const raw = { ...emptyStationRaw(), flagrant: { ...emptyStationRaw().flagrant, immig: 3 } };
+    assert.deepEqual(pointsBreakdown(raw), [
+        { category: 'flagrant', label: 'ซึ่งหน้า คนเข้าเมือง (นับตามจำนวนคน)', count: 3, quantity: 3, quality: 0, total: 3 },
     ]);
 });
 
@@ -172,16 +176,6 @@ test('pointsBreakdown shows drug cases with the base as quantity and the extra t
     };
     assert.deepEqual(pointsBreakdown(raw), [
         { category: 'drugs', label: 'คดียาเสพติด', count: 2, quantity: 2, quality: 13, total: 15 },
-    ]);
-});
-
-test('pointsBreakdown shows ticket and service points as whole hundreds and tens', () => {
-    const raw = { ...emptyStationRaw(), tickets: { transport: 150, vehicle: 99, traffic: 1 }, serviceHelp: 25, serviceTraffic: 9, volunteer: 10 };
-    assert.deepEqual(pointsBreakdown(raw), [
-        { category: 'tickets', label: 'ใบสั่งทุกประเภท', count: 250, quantity: 2, quality: 0, total: 2 },
-        { category: 'service', label: 'ช่วยเหลือประชาชนและอุบัติเหตุ', count: 25, quantity: 2, quality: 0, total: 2 },
-        { category: 'service', label: 'อำนวยความสะดวกจราจร', count: 9, quantity: 0, quality: 0, total: 0 },
-        { category: 'service', label: 'จิตอาสา', count: 10, quantity: 1, quality: 0, total: 1 },
     ]);
 });
 
@@ -206,12 +200,9 @@ test('scoringRules lists every quantity and quality rule with the configured poi
     const find = (kind, category, text) => rules.find((rule) => rule.kind === kind && rule.category === category && rule.text.includes(text));
     assert.equal(find('quantity', 'warrant', 'หมายจับ').points, QUANTITY.warrant);
     assert.equal(find('quantity', 'drugs', 'ฐาน').points, QUANTITY.drugCaseBase);
-    assert.equal(find('quantity', 'service', 'นำขบวน').points, QUANTITY.convoy);
-    assert.equal(find('quantity', 'tickets', 'ใบสั่ง').unit, 'ทุก 100 ใบ (นับแยกแต่ละ ส.ทล.)');
-    assert.equal(find('quantity', 'service', 'ช่วยเหลือ').unit, 'ทุก 10 ครั้ง (นับแยกแต่ละ ส.ทล.)');
     assert.equal(find('quality', 'flagrant', 'อาวุธปืน').points, QUALITY.flagrantExtra.gun);
     assert.equal(find('quality', 'flagrant', 'เอกสารปลอม').points, QUALITY.flagrantExtra.doc);
-    assert.equal(rules.some((rule) => rule.category === 'seized'), false);
+    assert.ok(rules.every((rule) => ['warrant', 'flagrant', 'drugs'].includes(rule.category)), 'only criminal-case categories');
     assert.ok(rules.every((rule) => ['quantity', 'quality'].includes(rule.kind) && rule.points > 0 && rule.text.length > 0));
 });
 
@@ -240,11 +231,6 @@ test('pointsBreakdown rows reconcile with unitPoints when every StationRaw field
         flagrant: Object.fromEntries(Object.keys(base.flagrant).map((key, index) => [key, index + 1])),
         drugCaseBase: 15,
         drugCaseExtra: 7,
-        tickets: { transport: 50, vehicle: 60, traffic: 40 },
-        convoy: 2,
-        serviceHelp: 13,
-        serviceTraffic: 24,
-        volunteer: 35,
     };
     const expected = unitPoints(raw);
     const rows = pointsBreakdown(raw);
@@ -277,7 +263,7 @@ test('bestByCategory takes the highest category total across the given units', (
     ]);
     assert.equal(best.warrant, 30);
     assert.equal(best.drugs, 50);
-    assert.equal(best.tickets, 0);
+    assert.equal(best.flagrant, 0);
 });
 
 test('bestByCategory returns zero for every category when there are no units', () => {
@@ -323,10 +309,10 @@ test('radarSummary lists each category percent for one series', () => {
     assert.equal(radarSummary(rows, 'บก.ทล.'), 'หมายจับ 100%, ซึ่งหน้า 45.5%');
 });
 
-test('radar rows have five axes, one per scoring category, and no seized axis', () => {
+test('radar rows have three axes, one per criminal-case category', () => {
     const categories = pointsOf().categories;
     const rows = radarRows([{ name: 'กก.1', categories }], bestByCategory([categories]));
-    assert.deepEqual(rows.map((row) => row.label), ['หมายจับ', 'ซึ่งหน้า', 'ยาเสพติด', 'ใบสั่ง', 'บริการ']);
+    assert.deepEqual(rows.map((row) => row.label), ['หมายจับ', 'ซึ่งหน้า', 'ยาเสพติด']);
 });
 
 test('radarTextColor keeps the stroke colour on dark and darkens amber and cyan text for light', () => {

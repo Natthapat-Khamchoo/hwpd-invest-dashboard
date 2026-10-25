@@ -63,7 +63,6 @@ const OFFENSE_NAMES = {
     doc: 'เอกสารปลอม', property: 'ทรัพย์', sex: 'เพศ', life: 'ชีวิตและร่างกาย', com: 'คอมพิวเตอร์', other: 'อื่นๆ',
     weight: 'จับรถบรรทุกเกินพิกัด', drunk: 'จับเมาแล้วขับ',
 };
-const sum = (values) => values.reduce((total, value) => total + value, 0);
 const FLAGRANT_OFFENSES = [...SUPPRESSION_OFFENSES.filter((offense) => offense !== 'drugs'), ...ROAD_OFFENSES];
 const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((category) => [category.id, category.label]));
 
@@ -77,24 +76,23 @@ const item = (category, label, count, quantity, quality) => ({
 });
 
 // One row per non-zero item, using the same rules as points.js unitPoints
+// Immigration counts are a head count, so the label says each person is one point
+const flagrantLabel = (offense) => (offense === 'immig'
+    ? `ซึ่งหน้า ${OFFENSE_NAMES.immig} (นับตามจำนวนคน)`
+    : `ซึ่งหน้า ${OFFENSE_NAMES[offense]}`);
+
 export const pointsBreakdown = (raw) => {
-    const { flagrant, tickets } = raw;
-    const ticketCount = sum(Object.values(tickets));
+    const { flagrant } = raw;
     const rows = [
         item('warrant', 'หมายจับ', raw.warrants, raw.warrants * QUANTITY.warrant, 0),
         ...FLAGRANT_OFFENSES.map((offense) => item(
             'flagrant',
-            `ซึ่งหน้า ${OFFENSE_NAMES[offense]}`,
+            flagrantLabel(offense),
             flagrant[offense],
             flagrant[offense] * QUANTITY.flagrant,
             flagrant[offense] * (QUALITY.flagrantExtra[offense] ?? 0)
         )),
         item('drugs', 'คดียาเสพติด', flagrant.drugs, raw.drugCaseBase, raw.drugCaseExtra),
-        item('tickets', 'ใบสั่งทุกประเภท', ticketCount, Math.floor(ticketCount / QUANTITY.ticketsPer), 0),
-        item('service', 'นำขบวน', raw.convoy, raw.convoy * QUANTITY.convoy, 0),
-        item('service', 'ช่วยเหลือประชาชนและอุบัติเหตุ', raw.serviceHelp, Math.floor(raw.serviceHelp / QUANTITY.servicePer), 0),
-        item('service', 'อำนวยความสะดวกจราจร', raw.serviceTraffic, Math.floor(raw.serviceTraffic / QUANTITY.servicePer), 0),
-        item('service', 'จิตอาสา', raw.volunteer, Math.floor(raw.volunteer / QUANTITY.servicePer), 0),
     ];
     return rows.filter((row) => row.count > 0);
 };
@@ -111,14 +109,9 @@ const rule = (kind, category, text, points, unit) => ({
 // Every quantity and quality rule, read from the config so the copy never drifts from the points
 export const scoringRules = () => [
     rule('quantity', 'warrant', 'ทุกหมายจับ (ทั่วไป Bodyworn และ Big Data)', QUANTITY.warrant, 'ต่อหมาย'),
-    rule('quantity', 'flagrant', 'ทุกการจับกุมซึ่งหน้า (ไม่รวมยาเสพติด)', QUANTITY.flagrant, 'ต่อคดี'),
+    rule('quantity', 'flagrant', 'ทุกการจับกุมซึ่งหน้า (ไม่รวมยาเสพติด)', QUANTITY.flagrant, 'ต่อคดี (คนเข้าเมืองนับต่อคน)'),
     rule('quantity', 'drugs', 'คดียาเสพติดที่มีของกลาง ฐาน', QUANTITY.drugCaseBase, 'ต่อคดี'),
     rule('quantity', 'drugs', 'คดียาเสพติดที่ไม่มีของกลาง', POINTS.drug.noEvidence, 'ต่อคดี'),
-    rule('quantity', 'tickets', 'ใบสั่งทุกประเภท (ขนส่ง รถยนต์ จราจร)', 1, `ทุก ${formatCount(QUANTITY.ticketsPer)} ใบ (นับแยกแต่ละ ส.ทล.)`),
-    rule('quantity', 'service', 'นำขบวน', QUANTITY.convoy, 'ต่อครั้ง'),
-    rule('quantity', 'service', 'ช่วยเหลือประชาชนและอุบัติเหตุ', 1, `ทุก ${formatCount(QUANTITY.servicePer)} ครั้ง (นับแยกแต่ละ ส.ทล.)`),
-    rule('quantity', 'service', 'อำนวยความสะดวกจราจร', 1, `ทุก ${formatCount(QUANTITY.servicePer)} ครั้ง (นับแยกแต่ละ ส.ทล.)`),
-    rule('quantity', 'service', 'จิตอาสา', 1, `ทุก ${formatCount(QUANTITY.servicePer)} ครั้ง (นับแยกแต่ละ ส.ทล.)`),
     rule('quality', 'flagrant', 'อาวุธปืน', QUALITY.flagrantExtra.gun, 'ต่อคดี'),
     rule('quality', 'flagrant', 'เอกสารปลอม', QUALITY.flagrantExtra.doc, 'ต่อคดี'),
     rule('quality', 'drugs', 'ส่วนเพิ่มตามขั้นของกลาง ขั้น 2', POINTS.drug.tierPoints[1] - QUANTITY.drugCaseBase, 'ต่อคดี'),

@@ -71,13 +71,31 @@ test('aggregateStationRaw splits a 2,500-pill drug case into base 1 and extra 9'
     assert.equal(stats.majorCases, 1);
 });
 
-test('aggregateStationRaw counts every traf_ column, with unknown columns as traffic tickets', () => {
+test('aggregateStationRaw ignores traffic, convoy, service and volunteer rows, which no longer score or make a day active', () => {
     const data = {
-        traffic: [{ date: '03/10/2026', station: 'ส.ทล.1 กก.1', traf_overhang: 3, traf_overheight: 2 }],
+        traffic: [{ date: '03/10/2026', station: 'ส.ทล.1 กก.1', traf_overhang: 3, traf_cover: 2 }],
+        convoy: [{ date: '03/10/2026', station: 'ส.ทล.1 กก.1', convoy_royal: 1 }],
+        service: [{ date: '03/10/2026', station: 'ส.ทล.1 กก.1', service_help: 4, service_traffic: 4 }],
+        volunteer: [{ date: '03/10/2026', station: 'ส.ทล.1 กก.1', volunteer_task: 10 }],
+    };
+
+    assert.deepEqual(aggregateStationRaw(data, ...RANGE)['1-1'], emptyStationRaw());
+});
+
+test('aggregateStationRaw counts a station-day as active only when it has an arrest', () => {
+    const data = {
+        crime: [
+            { date: '03/10/2026', station: 'ส.ทล.1 กก.1', CRIM_W_GENERAL: 1 },
+            { date: '04/10/2026', station: 'ส.ทล.1 กก.1', CRIM_FLAGRANTE: 0 },
+            { date: '05/10/2026', station: 'ส.ทล.1 กก.1', CRIM_FLAGRANTE: 1, dir_f_weight: 1 },
+        ],
+        traffic: [{ date: '06/10/2026', station: 'ส.ทล.1 กก.1', traf_cover: 9 }],
     };
     const stats = aggregateStationRaw(data, ...RANGE)['1-1'];
 
-    assert.deepEqual(stats.tickets, { transport: 0, vehicle: 0, traffic: 5 });
+    // 03/10 and 05/10 are arrest days; 04/10 is reported but idle; 06/10 has tickets only
+    assert.equal(stats.reportDays, 3);
+    assert.equal(stats.activeDays, 2);
 });
 
 test('aggregateStationRaw ignores seized items, which no longer score', () => {
@@ -106,13 +124,8 @@ test('aggregateStationRaw sums in-range station rows from the fixture', () => {
         drugCaseBase: 1,
         drugCaseExtra: 4,
         majorCases: 2,
-        tickets: { transport: 1, vehicle: 2, traffic: 4 },
-        convoy: 1,
-        serviceHelp: 2,
-        serviceTraffic: 0,
-        volunteer: 1,
         reportDays: 2,
-        activeDays: 2,
+        activeDays: 1,
     });
     assert.deepEqual(result['8-4'], emptyStationRaw());
 });
