@@ -81,12 +81,19 @@ test('in 2025-10 OP gives each unit its full points: 2-4 gets 2, 2-5 gets 1, 1-3
     assert.equal(stationOf(model, '3-2').raw.op, 2);
 });
 
-test('in 2025-11 every station of กก.2 and กก.5 gets 2/6 OP, the division points split across six stations', () => {
+test('in 2025-11 every station of กก.5 gets 2/6 OP, the division points split across six stations', () => {
     const model = modelOf('2025-11');
 
-    for (const key of STATION_KEYS.filter((k) => k.startsWith('2-') || k.startsWith('5-'))) {
+    for (const key of STATION_KEYS.filter((k) => k.startsWith('5-'))) {
         close(stationOf(model, key).raw.op, 2 / 6);
     }
+});
+
+test('in 2025-11 ส.ทล.2 กก.2 led the กก.2 case for 2 OP and every other กก.2 station supported it for 1', () => {
+    const model = modelOf('2025-11');
+
+    assert.equal(stationOf(model, '2-2').raw.op, 2);
+    for (const key of ['2-1', '2-3', '2-4', '2-5', '2-6']) assert.equal(stationOf(model, key).raw.op, 1);
 });
 
 test('in 2026-03 the shared major case gives 1-4 and 5-1 each 1 point, half of difficulty 2', () => {
