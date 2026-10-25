@@ -87,10 +87,10 @@ test('barItems reads quantity when the metric is quantity', () => {
 
 test('barItems reads one category total when the metric is a category id', () => {
     const units = [
-        { kk: '1', name: 'กก.1', points: pointsOf({ drugs: 5 }, { drugs: 5 }) },
-        { kk: '2', name: 'กก.2', points: pointsOf({ drugs: 20 }, { drugs: 1 }) },
+        { kk: '1', name: 'กก.1', points: pointsOf({ truck: 5 }, { truck: 5 }) },
+        { kk: '2', name: 'กก.2', points: pointsOf({ truck: 20 }, { truck: 1 }) },
     ];
-    const items = barItems(units, 'drugs', (unit) => unit.name);
+    const items = barItems(units, 'truck', (unit) => unit.name);
     assert.deepEqual(items.map((item) => item.key), ['1', '2']);
     assert.deepEqual(items.map((item) => item.value), [10, 21]);
 });
@@ -127,7 +127,7 @@ test('barItems prefers an explicit key over kk', () => {
 test('pointsBreakdown lists the seven self-arrest rows and the royal-convoy row, zeros included', () => {
     const rows = pointsBreakdown(counts());
 
-    assert.deepEqual(rows.map((row) => row.label), ['หมายจับ', 'ยาเสพติด', 'คนเข้าเมือง', 'ลักทรัพย์', 'อาวุธปืน', 'คดีอาญาอื่น ๆ', 'รถหนัก', 'ถวายความปลอดภัย (ถปภ.)']);
+    assert.deepEqual(rows.map((row) => row.label), ['หมายจับ', 'คนเข้าเมือง', 'ลักทรัพย์', 'อาวุธปืน', 'ยาเสพติด', 'คดีอาญาอื่น ๆ', 'รถหนัก', 'ถวายความปลอดภัย (ถปภ.)']);
     assert.ok(rows.every((row) => row.count === 0 && row.total === 0));
 });
 
@@ -139,12 +139,12 @@ test('pointsBreakdown gives each self-arrest row its count, quantity, quality an
 
     assert.deepEqual(rows, [
         { category: 'warrant', label: 'หมายจับ', count: 3, quantity: 6, quality: 0, total: 6 },
-        { category: 'drugs', label: 'ยาเสพติด', count: 2, quantity: 2, quality: 0, total: 2 },
         { category: 'flagrant', label: 'คนเข้าเมือง', count: 1, quantity: 1, quality: 0, total: 1 },
         { category: 'flagrant', label: 'ลักทรัพย์', count: 2, quantity: 2, quality: 0, total: 2 },
         { category: 'flagrant', label: 'อาวุธปืน', count: 1, quantity: 1, quality: 4, total: 5 },
+        { category: 'flagrant', label: 'ยาเสพติด', count: 2, quantity: 2, quality: 0, total: 2 },
         { category: 'flagrant', label: 'คดีอาญาอื่น ๆ', count: 4, quantity: 4, quality: 0, total: 4 },
-        { category: 'flagrant', label: 'รถหนัก', count: 1, quantity: 1, quality: 0, total: 1 },
+        { category: 'truck', label: 'รถหนัก', count: 1, quantity: 1, quality: 0, total: 1 },
         { category: 'royal', label: 'ถวายความปลอดภัย (ถปภ.)', count: 2, quantity: 4, quality: 0, total: 4 },
         { category: 'award', label: 'ผลงานดีเด่น ก.ย. 2569 ลำดับ 1', count: 1, quantity: 0, quality: 10, total: 10 },
         { category: 'award', label: 'จับเมาแล้วขับสูงสุด เทศกาลสงกรานต์ 2569 เม.ย. 2569 ลำดับ 2', count: 1, quantity: 0, quality: 8, total: 8 },
@@ -181,10 +181,10 @@ test('scoringRules lists the warrant, flagrant, drug and gun rules with the conf
     const find = (kind, category, text) => rules.find((rule) => rule.kind === kind && rule.category === category && rule.text.includes(text));
     assert.equal(find('quantity', 'warrant', 'หมายจับ').points, QUANTITY.warrant);
     assert.equal(find('quantity', 'flagrant', 'ซึ่งหน้า').points, QUANTITY.flagrant);
-    assert.equal(find('quantity', 'drugs', 'ยาเสพติด').points, QUANTITY.drugCaseBase);
+    assert.equal(find('quantity', 'truck', 'รถหนัก').points, QUANTITY.truck);
     assert.equal(find('quality', 'flagrant', 'อาวุธปืน').points, QUALITY.flagrantExtra.gun);
     assert.equal(find('quantity', 'royal', 'ถปภ.').points, QUANTITY.royalConvoy);
-    assert.ok(rules.every((rule) => ['warrant', 'flagrant', 'drugs', 'royal', 'award'].includes(rule.category)), 'only known categories');
+    assert.ok(rules.every((rule) => ['warrant', 'flagrant', 'truck', 'royal', 'award'].includes(rule.category)), 'only known categories');
     assert.ok(rules.every((rule) => ['quantity', 'quality'].includes(rule.kind) && rule.points > 0 && rule.text.length > 0));
 });
 
@@ -214,10 +214,10 @@ test('perStationCategories divides each category by the station count and gives 
 test('bestByCategory takes the highest category total across the given units', () => {
     const best = bestByCategory([
         pointsOf({ warrant: 30 }).categories,
-        pointsOf({ warrant: 20, drugs: 50 }).categories,
+        pointsOf({ warrant: 20, truck: 50 }).categories,
     ]);
     assert.equal(best.warrant, 30);
-    assert.equal(best.drugs, 50);
+    assert.equal(best.truck, 50);
     assert.equal(best.flagrant, 0);
 });
 
@@ -246,14 +246,14 @@ test('radarRows gives 0 for a category whose best is 0, never NaN', () => {
 });
 
 test('radarRows puts the main and compare series side by side on the same best', () => {
-    const best = bestByCategory([pointsOf({ drugs: 40 }).categories]);
+    const best = bestByCategory([pointsOf({ truck: 40 }).categories]);
     const rows = radarRows([
-        { name: 'กก.1', categories: pointsOf({ drugs: 10 }).categories },
-        { name: 'เฉลี่ย บก.ทล.', categories: pointsOf({ drugs: 25 }).categories },
+        { name: 'กก.1', categories: pointsOf({ truck: 10 }).categories },
+        { name: 'เฉลี่ย บก.ทล.', categories: pointsOf({ truck: 25 }).categories },
     ], best);
-    const drugs = rows.find((row) => row.id === 'drugs');
-    assert.equal(drugs['กก.1'], 25);
-    assert.equal(drugs['เฉลี่ย บก.ทล.'], 62.5);
+    const truck = rows.find((row) => row.id === 'truck');
+    assert.equal(truck['กก.1'], 25);
+    assert.equal(truck['เฉลี่ย บก.ทล.'], 62.5);
 });
 
 test('radarSummary lists each category percent for one series', () => {
@@ -267,7 +267,7 @@ test('radarSummary lists each category percent for one series', () => {
 test('radar rows have five axes: the criminal-case categories, royal convoys and awards', () => {
     const categories = pointsOf().categories;
     const rows = radarRows([{ name: 'กก.1', categories }], bestByCategory([categories]));
-    assert.deepEqual(rows.map((row) => row.label), ['หมายจับ', 'ซึ่งหน้า', 'ยาเสพติด', 'ถวายความปลอดภัย', 'ผลงานดีเด่น']);
+    assert.deepEqual(rows.map((row) => row.label), ['หมายจับ', 'ซึ่งหน้า', 'รถหนัก', 'ถวายความปลอดภัย', 'ผลงานดีเด่น']);
 });
 
 test('awardLabel gives the Thai month and rank, with the share and honourable mention when they apply', () => {

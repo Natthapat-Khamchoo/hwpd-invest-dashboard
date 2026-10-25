@@ -12,8 +12,8 @@ test('each warrant case scores 2 quantity', () => {
     assert.equal(points.total, 30);
 });
 
-test('each flagrant case scores 1 quantity across immig, theft, gun, other and truck', () => {
-    const points = unitPoints(counts({ immig: 4, theft: 1, other: 2, truck: 3 }));
+test('each flagrant case scores 1 quantity across immig, theft, gun, drugs and other, but not trucks', () => {
+    const points = unitPoints(counts({ immig: 4, theft: 1, other: 2, drugs: 3, truck: 5 }));
 
     assert.deepEqual(points.categories.flagrant, { quantity: 10, quality: 0, total: 10 });
 });
@@ -24,21 +24,28 @@ test('a gun case scores 1 quantity and 4 quality', () => {
     assert.deepEqual(points.categories.flagrant, { quantity: 1, quality: 4, total: 5 });
 });
 
-test('each drug case scores 1 quantity and no quality', () => {
+test('each drug case scores 1 quantity in the flagrant category', () => {
     const points = unitPoints(counts({ drugs: 7 }));
 
-    assert.deepEqual(points.categories.drugs, { quantity: 7, quality: 0, total: 7 });
+    assert.deepEqual(points.categories.flagrant, { quantity: 7, quality: 0, total: 7 });
+});
+
+test('each heavy-truck case scores 1 quantity in its own category', () => {
+    const points = unitPoints(counts({ truck: 3 }));
+
+    assert.deepEqual(points.categories.truck, { quantity: 3, quality: 0, total: 3 });
+    assert.equal(points.categories.flagrant.total, 0);
 });
 
 test('a row with no arrests scores zero in every category', () => {
     const points = unitPoints(counts());
 
     assert.equal(points.total, 0);
-    assert.ok(['warrant', 'flagrant', 'drugs', 'award'].every((id) => points.categories[id].total === 0));
+    assert.ok(['warrant', 'flagrant', 'truck', 'award'].every((id) => points.categories[id].total === 0));
 });
 
 test('the total is quantity plus quality over all categories', () => {
-    // warrant 2 x 2 = 4 quantity; flagrant 2 gun + 1 immig = 3 quantity and 2 x 4 = 8 quality; drugs 1 quantity
+    // warrant 2 x 2 = 4 quantity; flagrant 2 gun + 1 immig + 1 drug = 4 quantity and 2 x 4 = 8 quality
     const points = unitPoints(counts({ warrant: 2, drugs: 1, gun: 2, immig: 1 }));
 
     assert.equal(points.quantity, 8);

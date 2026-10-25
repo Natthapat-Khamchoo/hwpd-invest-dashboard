@@ -8,12 +8,15 @@ const withTotal = (quantity, quality) => ({ quantity, quality, total: quantity +
 
 // Points per category from counts: self-arrests { warrant, drugs, immig, theft, gun, other, truck } and royal convoys
 const categoriesOf = (counts) => {
-    const flagrantCount = counts.immig + counts.theft + counts.gun + counts.other + counts.truck;
+    const flagrantCount = counts.immig + counts.theft + counts.gun + counts.other;
 
     return {
         warrant: withTotal(counts.warrant * QUANTITY.warrant, 0),
-        flagrant: withTotal(flagrantCount * QUANTITY.flagrant, counts.gun * QUALITY.flagrantExtra.gun),
-        drugs: withTotal(counts.drugs * QUANTITY.drugCaseBase, 0),
+        flagrant: withTotal(
+            flagrantCount * QUANTITY.flagrant + counts.drugs * QUANTITY.drugCaseBase,
+            counts.gun * QUALITY.flagrantExtra.gun,
+        ),
+        truck: withTotal(counts.truck * QUANTITY.truck, 0),
         royal: withTotal((counts.royal ?? 0) * QUANTITY.royalConvoy, 0),
         award: withTotal(0, 0),
     };

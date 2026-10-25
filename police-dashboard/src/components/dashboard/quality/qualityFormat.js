@@ -101,12 +101,12 @@ export const barItems = (units, metric, labelOf) => units
 // The seven self-arrest columns of a station's raw counts. Each case scores its quantity, and a gun case also its quality.
 const SELF_ARREST_ROWS = [
     { field: 'warrant', label: 'หมายจับ', category: 'warrant', quantityEach: QUANTITY.warrant, qualityEach: 0 },
-    { field: 'drugs', label: 'ยาเสพติด', category: 'drugs', quantityEach: QUANTITY.drugCaseBase, qualityEach: 0 },
     { field: 'immig', label: 'คนเข้าเมือง', category: 'flagrant', quantityEach: QUANTITY.flagrant, qualityEach: 0 },
     { field: 'theft', label: 'ลักทรัพย์', category: 'flagrant', quantityEach: QUANTITY.flagrant, qualityEach: 0 },
     { field: 'gun', label: 'อาวุธปืน', category: 'flagrant', quantityEach: QUANTITY.flagrant, qualityEach: QUALITY.flagrantExtra.gun },
+    { field: 'drugs', label: 'ยาเสพติด', category: 'flagrant', quantityEach: QUANTITY.drugCaseBase, qualityEach: 0 },
     { field: 'other', label: 'คดีอาญาอื่น ๆ', category: 'flagrant', quantityEach: QUANTITY.flagrant, qualityEach: 0 },
-    { field: 'truck', label: 'รถหนัก', category: 'flagrant', quantityEach: QUANTITY.flagrant, qualityEach: 0 },
+    { field: 'truck', label: 'รถหนัก', category: 'truck', quantityEach: QUANTITY.truck, qualityEach: 0 },
     { field: 'royal', label: 'ถวายความปลอดภัย (ถปภ.)', category: 'royal', quantityEach: QUANTITY.royalConvoy, qualityEach: 0 },
 ];
 
@@ -140,8 +140,8 @@ const rule = (kind, category, text, points, unit) => ({
 // Every quantity and quality rule, read from the config so the copy never drifts from the points
 export const scoringRules = () => [
     rule('quantity', 'warrant', 'ทุกหมายจับ', QUANTITY.warrant, 'ต่อหมาย'),
-    rule('quantity', 'flagrant', 'ทุกการจับกุมซึ่งหน้า (คนเข้าเมือง ลักทรัพย์ อาวุธปืน คดีอาญาอื่น ๆ รถหนัก)', QUANTITY.flagrant, 'ต่อคดี'),
-    rule('quantity', 'drugs', 'ทุกคดียาเสพติด', QUANTITY.drugCaseBase, 'ต่อคดี'),
+    rule('quantity', 'flagrant', 'ทุกการจับกุมซึ่งหน้า (คนเข้าเมือง ลักทรัพย์ อาวุธปืน ยาเสพติด คดีอาญาอื่น ๆ)', QUANTITY.flagrant, 'ต่อคดี'),
+    rule('quantity', 'truck', 'ทุกคดีรถหนัก (จับเอง)', QUANTITY.truck, 'ต่อคดี'),
     rule('quantity', 'royal', 'ภารกิจถวายความปลอดภัย (ถปภ.) ในพื้นที่สถานี', QUANTITY.royalConvoy, 'ต่อครั้ง'),
     rule('quality', 'flagrant', 'อาวุธปืน (เพิ่มจากปริมาณ)', QUALITY.flagrantExtra.gun, 'ต่อคดี'),
     rule('quality', 'award', 'ลำดับ 1', AWARD_POINTS.byRank[0], 'ต่อรางวัล'),
