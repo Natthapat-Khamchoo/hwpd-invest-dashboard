@@ -1,22 +1,8 @@
 import React, { useState } from 'react';
 import { Gauge, Table } from 'lucide-react';
 import { CATEGORIES } from '../../../lib/quality/scoringConfig.js';
-import { DeltaTag, ScoreBarChart, CategoryRadar, Panel, Stat } from './QualityParts';
-import { barItems, bestByCategory, formatAverage, formatCount, perStationCategories, placingOf, RADAR_COLORS, radarRows, toPercent, themed } from './qualityFormat.js';
-
-const METRICS = [
-    { id: 'total', label: 'คะแนนรวม' },
-    { id: 'quantity', label: 'ปริมาณ' },
-    { id: 'quality', label: 'คุณภาพ' },
-    ...CATEGORIES.map(({ id, label }) => ({ id, label })),
-];
-
-const metricSum = (points, id) => {
-    if (id === 'total') return points.total;
-    if (id === 'quantity') return points.quantity;
-    if (id === 'quality') return points.quality;
-    return points.categories[id].total;
-};
+import { DeltaTag, ScoreBarChart, CategoryRadar, MetricCard, Panel, Stat } from './QualityParts';
+import { barItems, METRICS, metricSum, bestByCategory, formatAverage, formatCount, perStationCategories, placingOf, RADAR_COLORS, radarRows, toPercent, themed } from './qualityFormat.js';
 
 // The trend column is shown only when the period has a previous-period comparison
 const StationsTable = ({ stations, periodDays, isDarkMode, onSelectStation, showTrend }) => {
@@ -74,23 +60,6 @@ const StationsTable = ({ stations, periodDays, isDarkMode, onSelectStation, show
                 </tbody>
             </table>
         </div>
-    );
-};
-
-const MetricCard = ({ metric, value, selected, onSelect, isDarkMode }) => {
-    const stateClass = selected
-        ? themed(isDarkMode, 'border-cyan-400 bg-cyan-500/15', 'border-cyan-600 bg-cyan-50')
-        : themed(isDarkMode, 'border-white/10 bg-slate-900/40 hover:bg-slate-800/60', 'border-slate-200 bg-white hover:bg-slate-100');
-    return (
-        <button
-            type="button"
-            aria-pressed={selected}
-            onClick={() => onSelect(metric.id)}
-            className={`flex min-h-[44px] w-full min-w-0 cursor-pointer flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${stateClass}`}
-        >
-            <span className="break-words text-xs font-semibold">{metric.label}</span>
-            <span className="max-w-full break-words text-lg font-bold tabular-nums sm:text-xl">{formatCount(value)}</span>
-        </button>
     );
 };
 

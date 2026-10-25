@@ -105,7 +105,7 @@ const QualityView = ({ rawData, isDarkMode = true }) => {
                 </ol>
             </nav>
 
-            {nav.level === 'hq' && <HQPanel model={model} isDarkMode={isDarkMode} onSelectDivision={selectDivision} />}
+            {nav.level === 'hq' && <HQPanel model={model} isDarkMode={isDarkMode} onSelectDivision={selectDivision} onSelectStation={selectStation} />}
             {nav.level === 'division' && (
                 <DivisionPanel model={model} kk={nav.kk} isDarkMode={isDarkMode} onSelectStation={selectStation} />
             )}

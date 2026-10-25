@@ -12,7 +12,7 @@ const formatPercent = (value) => `${formatCount(value)}%`;
 // Series with decimals > 0 hold per-station averages, so their raw points say so
 const averageNote = (item) => (item.decimals > 0 ? ' (เฉลี่ยต่อ ส.ทล.)' : '');
 
-const ScoreBarTooltip = ({ active, payload, isDarkMode, valueLabel, decimals }) => {
+export const ScoreBarTooltip = ({ active, payload, isDarkMode, valueLabel, decimals }) => {
     if (!active || !payload?.length) return null;
     const item = payload[0].payload;
     return (
@@ -217,3 +217,20 @@ export const Panel = ({ title, icon: Icon, action, children, isDarkMode = true }
         {children}
     </section>
 );
+
+export const MetricCard = ({ metric, value, selected, onSelect, isDarkMode }) => {
+    const stateClass = selected
+        ? themed(isDarkMode, 'border-cyan-400 bg-cyan-500/15', 'border-cyan-600 bg-cyan-50')
+        : themed(isDarkMode, 'border-white/10 bg-slate-900/40 hover:bg-slate-800/60', 'border-slate-200 bg-white hover:bg-slate-100');
+    return (
+        <button
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onSelect(metric.id)}
+            className={`flex min-h-[44px] w-full min-w-0 cursor-pointer flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${stateClass}`}
+        >
+            <span className="break-words text-xs font-semibold">{metric.label}</span>
+            <span className="max-w-full break-words text-lg font-bold tabular-nums sm:text-xl">{formatCount(value)}</span>
+        </button>
+    );
+};

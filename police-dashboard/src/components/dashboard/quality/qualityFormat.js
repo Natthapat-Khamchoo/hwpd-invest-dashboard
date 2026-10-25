@@ -38,6 +38,20 @@ const RADAR_TEXT_LIGHT = { '#06b6d4': '#0e7490', '#f59e0b': '#b45309' };
 
 export const radarTextColor = (stroke, isDarkMode) => themed(isDarkMode, stroke, RADAR_TEXT_LIGHT[stroke] ?? stroke);
 
+export const METRICS = [
+    { id: 'total', label: 'คะแนนรวม' },
+    { id: 'quantity', label: 'ปริมาณ' },
+    { id: 'quality', label: 'คุณภาพ' },
+    ...CATEGORIES.map(({ id, label }) => ({ id, label })),
+];
+
+export const metricSum = (points, id) => {
+    if (id === 'total') return points.total;
+    if (id === 'quantity') return points.quantity;
+    if (id === 'quality') return points.quality;
+    return points.categories[id].total;
+};
+
 const metricValue = (unit, metric) => {
     if (metric === 'average') return unit.average;
     if (metric === 'total') return unit.points.total;

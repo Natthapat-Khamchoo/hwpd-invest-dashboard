@@ -1,6 +1,7 @@
 import React from 'react';
 import { Gauge, BarChart3, Calculator } from 'lucide-react';
 import { DeltaTag, ScoreBarChart, CategoryRadar, Panel, Stat } from './QualityParts';
+import StationCompare from './StationCompare';
 import { barItems, bestByCategory, drugTierNote, formatAverage, formatCount, perStationCategories, RADAR_COLORS, radarRows, scoringRules, themed } from './qualityFormat.js';
 
 const RULES = scoringRules();
@@ -9,7 +10,7 @@ const KIND_HEADINGS = [
     { kind: 'quality', label: 'คุณภาพ' },
 ];
 
-const HQPanel = ({ model, isDarkMode = true, onSelectDivision }) => {
+const HQPanel = ({ model, isDarkMode = true, onSelectDivision, onSelectStation }) => {
     const { hq, divisions } = model;
     const muted = themed(isDarkMode, 'text-slate-400', 'text-slate-600');
     // HQ per-station average in each category, as a percent of the best division's per-station average
@@ -49,6 +50,8 @@ const HQPanel = ({ model, isDarkMode = true, onSelectDivision }) => {
                     decimals={1}
                 />
             </Panel>
+
+            <StationCompare model={model} isDarkMode={isDarkMode} onSelectStation={onSelectStation} />
 
             <Panel title="วิธีคิดคะแนน" icon={Calculator} isDarkMode={isDarkMode}>
                 <p className={`mb-4 text-sm ${muted}`}>คะแนนรวม = ปริมาณ + คุณภาพ</p>
