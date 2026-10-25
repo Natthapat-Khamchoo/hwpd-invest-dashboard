@@ -1,10 +1,37 @@
-import { CATEGORIES, POINTS, QUANTITY, QUALITY, SUPPRESSION_OFFENSES, ROAD_OFFENSES } from '../../../lib/quality/scoringConfig.js';
+import { AWARD_POINTS, CATEGORIES, QUANTITY, QUALITY } from '../../../lib/quality/scoringConfig.js';
+import { scoredDataMonths } from '../../../lib/quality/scoringDates.js';
 
 const MONTHS_SHORT = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
 export const formatThaiDate = (date) => `${date.getDate()} ${MONTHS_SHORT[date.getMonth()]} ${date.getFullYear() + 543}`;
 
 export const formatPeriodRange = ({ start, end }) => `${formatThaiDate(start)} – ${formatThaiDate(end)}`;
+
+// 'YYYY-MM' to "ส.ค. 2569"
+export const formatMonthThai = (monthKey) => {
+    const [year, month] = monthKey.split('-').map(Number);
+    return `${MONTHS_SHORT[month - 1]} ${year + 543}`;
+};
+
+// Workbook months that count, newest first, for the month picker
+export const monthOptions = () => scoredDataMonths().reverse().map((value) => ({ value, label: formatMonthThai(value) }));
+
+// The fiscal year (starts 1 October) that holds a 'YYYY-MM' month, by its Buddhist year: Oct 2025 starts FY 2569
+export const fiscalYearLabel = (monthKey) => {
+    const [year, month] = monthKey.split('-').map(Number);
+    const startYear = month >= 10 ? year : year - 1;
+    return `ปีงบ ${startYear + 1 + 543}`;
+};
+
+// Header line under the title: where the self-arrest workbooks end, and that awards are added
+export const sourceNotice = (newestMonth) => `คะแนนคิดจากสถิติคดีอาญาจับเองของงานแผน (รายกลุ่มข้อหา) ข้อมูลถึง ${formatMonthThai(newestMonth)} และรวมคะแนนผลงานดีเด่นประจำเดือน`;
+
+// "ก.ย. 2569 ลำดับ 1", with the share count and an honourable mention when they apply. Points sit in their own column.
+export const awardLabel = ({ month, rank, shared, honourable }) => (
+    `${formatMonthThai(month)} ลำดับ ${rank}`
+    + (shared > 1 ? ` (แบ่ง ${shared} หน่วย)` : '')
+    + (honourable ? ' · ชมเชย' : '')
+);
 
 const formatNumber = (value, options) => Number(value).toLocaleString('th-TH', options);
 
@@ -14,10 +41,11 @@ export const formatCount = (value) => formatNumber(value, { maximumFractionDigit
 // Per-station averages always show one decimal
 export const formatAverage = (value) => formatNumber(value, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
+// A delta is always measured against the whole previous month
 export const formatDelta = (delta) => {
     if (delta === null || delta === undefined) return null;
     const sign = delta > 0 ? '+' : '';
-    return `${sign}${formatCount(delta)} จากช่วงเดียวกันเดือนก่อน`;
+    return `${sign}${formatCount(delta)} จากเดือนก่อน`;
 };
 
 // Rows are { key, value }; a tie shares the better place
@@ -25,8 +53,6 @@ export const placingOf = (rows, key) => {
     const chosen = rows.find((row) => row.key === key);
     return 1 + rows.filter((row) => row.value > chosen.value).length;
 };
-
-export const toPercent = (ratio) => Math.round(ratio * 100);
 
 export const themed = (isDarkMode, dark, light) => (isDarkMode ? dark : light);
 
@@ -72,49 +98,39 @@ export const barItems = (units, metric, labelOf) => units
     }))
     .sort((a, b) => a.label.localeCompare(b.label, 'th', { numeric: true }));
 
-const OFFENSE_NAMES = {
-    drugs: 'ยาเสพติด', gun: 'อาวุธปืน', immig: 'คนเข้าเมือง', customs: 'ศุลกากร', disease: 'โรคติดต่อ', transport: 'ขนส่ง',
-    doc: 'เอกสารปลอม', property: 'ทรัพย์', sex: 'เพศ', life: 'ชีวิตและร่างกาย', com: 'คอมพิวเตอร์', other: 'อื่นๆ',
-    weight: 'จับรถบรรทุกเกินพิกัด', drunk: 'จับเมาแล้วขับ',
-};
-const FLAGRANT_OFFENSES = [...SUPPRESSION_OFFENSES.filter((offense) => offense !== 'drugs'), ...ROAD_OFFENSES];
-const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((category) => [category.id, category.label]));
+// The seven self-arrest columns of a station's raw counts. Each case scores its quantity, and a gun case also its quality.
+const SELF_ARREST_ROWS = [
+    { field: 'warrant', label: 'หมายจับ', category: 'warrant', quantityEach: QUANTITY.warrant, qualityEach: 0 },
+    { field: 'drugs', label: 'ยาเสพติด', category: 'drugs', quantityEach: QUANTITY.drugCaseBase, qualityEach: 0 },
+    { field: 'immig', label: 'คนเข้าเมือง', category: 'flagrant', quantityEach: QUANTITY.flagrant, qualityEach: 0 },
+    { field: 'theft', label: 'ลักทรัพย์', category: 'flagrant', quantityEach: QUANTITY.flagrant, qualityEach: 0 },
+    { field: 'gun', label: 'อาวุธปืน', category: 'flagrant', quantityEach: QUANTITY.flagrant, qualityEach: QUALITY.flagrantExtra.gun },
+    { field: 'other', label: 'คดีอาญาอื่น ๆ', category: 'flagrant', quantityEach: QUANTITY.flagrant, qualityEach: 0 },
+    { field: 'truck', label: 'รถหนัก', category: 'flagrant', quantityEach: QUANTITY.flagrant, qualityEach: 0 },
+];
 
-const item = (category, label, count, quantity, quality) => ({
-    category,
-    label,
-    count,
-    quantity,
-    quality,
-    total: quantity + quality,
-});
-
-// One row per non-zero item, using the same rules as points.js unitPoints
-// Immigration counts are a head count, so the label says each person is one point
-const flagrantLabel = (offense) => (offense === 'immig'
-    ? `ซึ่งหน้า ${OFFENSE_NAMES.immig} (นับตามจำนวนคน)`
-    : `ซึ่งหน้า ${OFFENSE_NAMES[offense]}`);
-
-export const pointsBreakdown = (raw) => {
-    const { flagrant } = raw;
-    const rows = [
-        item('warrant', 'หมายจับ', raw.warrants, raw.warrants * QUANTITY.warrant, 0),
-        ...FLAGRANT_OFFENSES.map((offense) => item(
-            'flagrant',
-            flagrantLabel(offense),
-            flagrant[offense],
-            flagrant[offense] * QUANTITY.flagrant,
-            flagrant[offense] * (QUALITY.flagrantExtra[offense] ?? 0)
-        )),
-        item('drugs', 'คดียาเสพติด', flagrant.drugs, raw.drugCaseBase, raw.drugCaseExtra),
-    ];
-    return rows.filter((row) => row.count > 0);
-};
+// One row per self-arrest column (zeros included), then one row per award. The rows add up to the station's points.
+export const pointsBreakdown = (counts, awards = []) => [
+    ...SELF_ARREST_ROWS.map(({ field, label, category, quantityEach, qualityEach }) => {
+        const count = counts[field];
+        const quantity = count * quantityEach;
+        const quality = count * qualityEach;
+        return { category, label, count, quantity, quality, total: quantity + quality };
+    }),
+    ...awards.map((award) => ({
+        category: 'award',
+        label: `ผลงานดีเด่น ${awardLabel(award)}`,
+        count: 1,
+        quantity: 0,
+        quality: award.points,
+        total: award.points,
+    })),
+];
 
 const rule = (kind, category, text, points, unit) => ({
     kind,
     category,
-    categoryLabel: CATEGORY_LABEL[category],
+    categoryLabel: CATEGORIES.find((item) => item.id === category).label,
     text,
     points,
     unit,
@@ -122,22 +138,15 @@ const rule = (kind, category, text, points, unit) => ({
 
 // Every quantity and quality rule, read from the config so the copy never drifts from the points
 export const scoringRules = () => [
-    rule('quantity', 'warrant', 'ทุกหมายจับ (ทั่วไป Bodyworn และ Big Data)', QUANTITY.warrant, 'ต่อหมาย'),
-    rule('quantity', 'flagrant', 'ทุกการจับกุมซึ่งหน้า (ไม่รวมยาเสพติด)', QUANTITY.flagrant, 'ต่อคดี (คนเข้าเมืองนับต่อคน)'),
-    rule('quantity', 'drugs', 'คดียาเสพติดที่มีของกลาง ฐาน', QUANTITY.drugCaseBase, 'ต่อคดี'),
-    rule('quantity', 'drugs', 'คดียาเสพติดที่ไม่มีของกลาง', POINTS.drug.noEvidence, 'ต่อคดี'),
-    rule('quality', 'flagrant', 'อาวุธปืน', QUALITY.flagrantExtra.gun, 'ต่อคดี'),
-    rule('quality', 'flagrant', 'เอกสารปลอม', QUALITY.flagrantExtra.doc, 'ต่อคดี'),
-    rule('quality', 'drugs', 'ส่วนเพิ่มตามขั้นของกลาง ขั้น 2', POINTS.drug.tierPoints[1] - QUANTITY.drugCaseBase, 'ต่อคดี'),
-    rule('quality', 'drugs', 'ส่วนเพิ่มตามขั้นของกลาง ขั้น 3', POINTS.drug.tierPoints[2] - QUANTITY.drugCaseBase, 'ต่อคดี'),
-    rule('quality', 'drugs', 'เคตามีน/โคเคน (ยาเสพติดอื่น) ส่วนเพิ่ม', POINTS.drug.otherDrug - QUANTITY.drugCaseBase, 'ต่อคดี'),
+    rule('quantity', 'warrant', 'ทุกหมายจับ', QUANTITY.warrant, 'ต่อหมาย'),
+    rule('quantity', 'flagrant', 'ทุกการจับกุมซึ่งหน้า (คนเข้าเมือง ลักทรัพย์ อาวุธปืน คดีอาญาอื่น ๆ รถหนัก)', QUANTITY.flagrant, 'ต่อคดี'),
+    rule('quantity', 'drugs', 'ทุกคดียาเสพติด', QUANTITY.drugCaseBase, 'ต่อคดี'),
+    rule('quality', 'flagrant', 'อาวุธปืน (เพิ่มจากปริมาณ)', QUALITY.flagrantExtra.gun, 'ต่อคดี'),
+    rule('quality', 'award', 'ประจำเดือน ลำดับ 1', AWARD_POINTS.byRank[0], 'ต่อรางวัล'),
+    rule('quality', 'award', 'ประจำเดือน ลำดับ 2', AWARD_POINTS.byRank[1], 'ต่อรางวัล'),
+    rule('quality', 'award', 'ประจำเดือน ลำดับ 3', AWARD_POINTS.byRank[2], 'ต่อรางวัล'),
+    rule('quality', 'award', 'ประจำเดือน ลำดับ 4 ขึ้นไป', AWARD_POINTS.other, 'ต่อรางวัล'),
 ];
-
-// Tier thresholds from POINTS.drug: a tier applies only above the threshold below it, so the upper bound of tier 2 is inclusive
-export const drugTierNote = () => {
-    const tiers = (name, unit, [first, second]) => `${name} ขั้น 1 ไม่เกิน ${formatCount(first)} ${unit}, ขั้น 2 ไม่เกิน ${formatCount(second)} ${unit}, ขั้น 3 เกิน ${formatCount(second)} ${unit}`;
-    return `ขั้นของกลางต่อคดี: ${tiers('ยาบ้า', 'เม็ด', POINTS.drug.yaba)} · ${tiers('ไอซ์', 'กรัม', POINTS.drug.ice)}`;
-};
 
 const safeDivide = (numerator, denominator) => (denominator > 0 ? numerator / denominator : 0);
 

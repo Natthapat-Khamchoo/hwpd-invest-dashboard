@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import { Gauge, Table } from 'lucide-react';
 import { CATEGORIES } from '../../../lib/quality/scoringConfig.js';
 import { DeltaTag, ScoreBarChart, CategoryRadar, MetricCard, Panel, Stat } from './QualityParts';
-import { barItems, METRICS, metricSum, bestByCategory, formatAverage, formatCount, perStationCategories, placingOf, RADAR_COLORS, radarRows, toPercent, themed } from './qualityFormat.js';
+import { barItems, METRICS, metricSum, bestByCategory, formatAverage, formatCount, perStationCategories, placingOf, RADAR_COLORS, radarRows, themed } from './qualityFormat.js';
 
-// The trend column is shown only when the period has a previous-period comparison
-const StationsTable = ({ stations, periodDays, isDarkMode, onSelectStation, showTrend }) => {
+// The trend column is shown only when the period has a previous-month comparison
+const StationsTable = ({ stations, isDarkMode, onSelectStation, showTrend }) => {
     const muted = themed(isDarkMode, 'text-slate-400', 'text-slate-600');
     const divider = themed(isDarkMode, 'border-white/10', 'border-slate-200');
     return (
         <div className="overflow-x-auto">
-            <table className="w-full min-w-[1200px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
                 <thead>
                     <tr className={`border-b text-left text-xs ${muted} ${divider}`}>
                         <th scope="col" className="whitespace-nowrap px-3 py-2 font-semibold">ส.ทล.</th>
@@ -20,9 +20,6 @@ const StationsTable = ({ stations, periodDays, isDarkMode, onSelectStation, show
                         {CATEGORIES.map((category) => (
                             <th key={category.id} scope="col" className="whitespace-nowrap px-3 py-2 text-right font-semibold">{category.label}</th>
                         ))}
-                        <th scope="col" className="whitespace-nowrap px-3 py-2 font-semibold">ส่งรายงาน</th>
-                        <th scope="col" className="whitespace-nowrap px-3 py-2 font-semibold">มีผลงาน</th>
-                        <th scope="col" className="whitespace-nowrap px-3 py-2 font-semibold">สัดส่วนคดีสำคัญ</th>
                         {showTrend && <th scope="col" className="whitespace-nowrap px-3 py-2 font-semibold">แนวโน้ม</th>}
                     </tr>
                 </thead>
@@ -51,9 +48,6 @@ const StationsTable = ({ stations, periodDays, isDarkMode, onSelectStation, show
                             {CATEGORIES.map((category) => (
                                 <td key={category.id} className="px-3 py-2 text-right tabular-nums">{formatCount(station.points.categories[category.id].total)}</td>
                             ))}
-                            <td className={`whitespace-nowrap px-3 py-2 tabular-nums ${muted}`}>{station.info.reportDays}/{periodDays} วัน</td>
-                            <td className={`whitespace-nowrap px-3 py-2 tabular-nums ${muted}`}>{toPercent(station.consistency)}% ของวัน</td>
-                            <td className={`whitespace-nowrap px-3 py-2 tabular-nums ${muted}`}>{toPercent(station.info.majorShare)}%</td>
                             {showTrend && <td className="px-3 py-2"><DeltaTag delta={station.delta} isDarkMode={isDarkMode} /></td>}
                         </tr>
                     ))}
@@ -94,12 +88,7 @@ const DivisionPanel = ({ model, kk, isDarkMode = true, onSelectStation }) => {
                     <Stat label="เฉลี่ยต่อ ส.ทล." value={formatAverage(division.average)} isDarkMode={isDarkMode} />
                     <Stat label="อันดับตามค่าเฉลี่ย" value={`ที่ ${placingOf(divisionRows, kk)} จาก ${model.divisions.length}`} isDarkMode={isDarkMode} />
                 </dl>
-                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-                    <DeltaTag delta={division.delta} isDarkMode={isDarkMode} />
-                    <p className={`text-sm ${muted}`}>
-                        สัดส่วนคดีสำคัญ <span className="font-semibold tabular-nums">{toPercent(division.info.majorShare)}%</span>, ส่งรายงานเฉลี่ย <span className="font-semibold tabular-nums">{toPercent(division.info.reportRatio)}%</span>
-                    </p>
-                </div>
+                <div className="mt-3"><DeltaTag delta={division.delta} isDarkMode={isDarkMode} /></div>
                 <div className="mt-6">
                     <CategoryRadar
                         rows={radar}
@@ -114,11 +103,12 @@ const DivisionPanel = ({ model, kk, isDarkMode = true, onSelectStation }) => {
             </Panel>
 
             <Panel title={`ส.ทล. ใน ${division.name}`} icon={Table} isDarkMode={isDarkMode}>
-                <div role="group" aria-label="เลือกตัวชี้วัด" className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                <div role="group" aria-label="เลือกตัวชี้วัด" className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7">
                     {METRICS.map((item) => (
                         <MetricCard
                             key={item.id}
                             metric={item}
+                            className={item.id === 'total' ? 'col-span-2 lg:col-span-1' : ''}
                             value={metricSum(division.points, item.id)}
                             selected={item.id === selectedMetric}
                             onSelect={setSelectedMetric}
@@ -137,10 +127,9 @@ const DivisionPanel = ({ model, kk, isDarkMode = true, onSelectStation }) => {
                 <div className="mt-6">
                     <StationsTable
                         stations={stations}
-                        periodDays={model.period.days}
                         isDarkMode={isDarkMode}
                         onSelectStation={onSelectStation}
-                        showTrend={model.period.kind !== 'fy'}
+                        showTrend={model.hq.delta !== null}
                     />
                 </div>
             </Panel>

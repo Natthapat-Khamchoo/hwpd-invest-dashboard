@@ -2,7 +2,7 @@ import React from 'react';
 import { Gauge, BarChart3, Calculator } from 'lucide-react';
 import { DeltaTag, ScoreBarChart, CategoryRadar, Panel, Stat } from './QualityParts';
 import StationCompare from './StationCompare';
-import { barItems, bestByCategory, drugTierNote, formatAverage, formatCount, perStationCategories, RADAR_COLORS, radarRows, scoringRules, themed } from './qualityFormat.js';
+import { barItems, bestByCategory, formatAverage, formatCount, perStationCategories, RADAR_COLORS, radarRows, scoringRules, themed } from './qualityFormat.js';
 
 const RULES = scoringRules();
 const KIND_HEADINGS = [
@@ -70,7 +70,8 @@ const HQPanel = ({ model, isDarkMode = true, onSelectDivision, onSelectStation }
                         </div>
                     ))}
                 </div>
-                <p className={`mt-5 text-sm ${muted}`}>{drugTierNote()}</p>
+                <p className={`mt-5 text-sm ${muted}`}>ผลงานดีเด่นประจำเดือน ลำดับ 1 ถึง 3 ได้ 10, 8 และ 6 คะแนน ลำดับถัดไปได้ 5 คะแนน ผลงานที่ใช้ร่วมกันแบ่งเท่ากันระหว่างหน่วย และผลงานระดับ กก. แบ่งเท่ากันระหว่าง ส.ทล. ใน กก. นั้น</p>
+                <p className={`mt-3 text-sm ${muted}`}>เริ่มคิดคะแนนตั้งแต่ 1 ม.ค. 2569</p>
             </Panel>
         </div>
     );

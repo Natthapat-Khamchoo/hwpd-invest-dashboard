@@ -3,24 +3,18 @@ import { CATEGORIES, QUANTITY, QUALITY } from './scoringConfig.js';
 const CATEGORY_IDS = CATEGORIES.map((category) => category.id);
 
 const sum = (values) => values.reduce((total, value) => total + value, 0);
-const safeDiv = (numerator, denominator) => (denominator > 0 ? numerator / denominator : 0);
 
 const withTotal = (quantity, quality) => ({ quantity, quality, total: quantity + quality });
 
-// Every warrant plus every flagrant offense, drugs included
-export const arrestsOf = (raw) => raw.warrants + sum(Object.values(raw.flagrant));
-
-const categoriesOf = (raw) => {
-    const { flagrant } = raw;
-    const flagrantCount = sum(Object.values(flagrant)) - flagrant.drugs;
+// Points per category from self-arrest counts: { warrant, drugs, immig, theft, gun, other, truck }
+const categoriesOf = (counts) => {
+    const flagrantCount = counts.immig + counts.theft + counts.gun + counts.other + counts.truck;
 
     return {
-        warrant: withTotal(raw.warrants * QUANTITY.warrant, 0),
-        flagrant: withTotal(
-            flagrantCount * QUANTITY.flagrant,
-            flagrant.gun * QUALITY.flagrantExtra.gun + flagrant.doc * QUALITY.flagrantExtra.doc
-        ),
-        drugs: withTotal(raw.drugCaseBase, raw.drugCaseExtra),
+        warrant: withTotal(counts.warrant * QUANTITY.warrant, 0),
+        flagrant: withTotal(flagrantCount * QUANTITY.flagrant, counts.gun * QUALITY.flagrantExtra.gun),
+        drugs: withTotal(counts.drugs * QUANTITY.drugCaseBase, 0),
+        award: withTotal(0, 0),
     };
 };
 
@@ -29,7 +23,13 @@ const pointsOf = (categories) => {
     return { categories, ...withTotal(sum(values.map((c) => c.quantity)), sum(values.map((c) => c.quality))) };
 };
 
-export const unitPoints = (raw) => pointsOf(categoriesOf(raw));
+// Points in one category only, for awards (quality only)
+export const pointsIn = (id, quantity, quality) => pointsOf(Object.fromEntries(CATEGORY_IDS.map((c) => [c, withTotal(
+    c === id ? quantity : 0,
+    c === id ? quality : 0,
+)])));
+
+export const unitPoints = (counts) => pointsOf(categoriesOf(counts));
 
 export const emptyPoints = () => pointsOf(Object.fromEntries(CATEGORY_IDS.map((id) => [id, withTotal(0, 0)])));
 
@@ -37,10 +37,3 @@ export const addPoints = (a, b) => pointsOf(Object.fromEntries(CATEGORY_IDS.map(
     a.categories[id].quantity + b.categories[id].quantity,
     a.categories[id].quality + b.categories[id].quality,
 )])));
-
-export const unitInfo = (raw, periodDays) => ({
-    majorShare: safeDiv(raw.majorCases, arrestsOf(raw)),
-    reportDays: raw.reportDays,
-    reportRatio: periodDays > 0 ? Math.min(1, raw.reportDays / periodDays) : 0,
-    activeDays: raw.activeDays,
-});

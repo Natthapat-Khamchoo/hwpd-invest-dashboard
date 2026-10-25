@@ -28,11 +28,12 @@ const StationCompare = ({ model, isDarkMode = true, onSelectStation }) => {
 
     return (
         <Panel title="เปรียบเทียบทั้ง 43 ส.ทล." icon={Building2} isDarkMode={isDarkMode}>
-            <div role="group" aria-label="เลือกตัวชี้วัด" className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <div role="group" aria-label="เลือกตัวชี้วัด" className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7">
                 {METRICS.map((item) => (
                     <MetricCard
                         key={item.id}
                         metric={item}
+                        className={item.id === 'total' ? 'col-span-2 lg:col-span-1' : ''}
                         value={metricSum(model.hq.points, item.id)}
                         selected={item.id === selectedMetric}
                         onSelect={setSelectedMetric}

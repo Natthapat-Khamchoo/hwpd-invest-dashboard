@@ -1,7 +1,7 @@
 import React from 'react';
 import { Gauge, BarChart3, Calculator } from 'lucide-react';
 import { DeltaTag, CategoryRadar, Panel, PointsBreakdownTable, Stat } from './QualityParts';
-import { bestByCategory, formatCount, perStationCategories, pointsBreakdown, placingOf, RADAR_COLORS, radarRows, toPercent, themed } from './qualityFormat.js';
+import { bestByCategory, formatCount, perStationCategories, pointsBreakdown, placingOf, RADAR_COLORS, radarRows, themed } from './qualityFormat.js';
 
 const StationPanel = ({ model, stationKey, isDarkMode = true }) => {
     const station = model.stations.find((item) => item.key === stationKey);
@@ -11,6 +11,7 @@ const StationPanel = ({ model, stationKey, isDarkMode = true }) => {
     }
 
     const stationName = `ส.ทล.${station.stl}`;
+    const breakdown = pointsBreakdown(station.raw, station.awards);
     const divisionStations = model.stations.filter((item) => item.kk === station.kk);
     const placingRows = divisionStations.map((item) => ({ key: item.key, value: item.total }));
     // Each category as a percent of the best of all stations; the division's per-station average is the compare series
@@ -46,12 +47,7 @@ const StationPanel = ({ model, stationKey, isDarkMode = true }) => {
             </Panel>
 
             <Panel title="ที่มาของคะแนน" icon={Calculator} isDarkMode={isDarkMode}>
-                <PointsBreakdownTable rows={pointsBreakdown(station.raw)} isDarkMode={isDarkMode} />
-                <p className={`mt-4 text-sm ${muted}`}>
-                    รายงานครบ <span className="font-semibold tabular-nums">{station.info.reportDays}</span> จาก {model.period.days} วัน
-                    {' · '}มีผลงาน <span className="font-semibold tabular-nums">{toPercent(station.consistency)}%</span> ของวัน
-                    {' · '}สัดส่วนคดีสำคัญ <span className="font-semibold tabular-nums">{toPercent(station.info.majorShare)}%</span>
-                </p>
+                <PointsBreakdownTable rows={breakdown} isDarkMode={isDarkMode} />
             </Panel>
         </div>
     );

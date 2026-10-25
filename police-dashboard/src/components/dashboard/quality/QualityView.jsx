@@ -1,26 +1,28 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ClipboardCheck, ChevronRight } from 'lucide-react';
 import { buildQualityModel } from '../../../lib/quality/buildQualityModel.js';
-import { formatPeriodRange, themed } from './qualityFormat.js';
+import { latestScoredMonth } from '../../../lib/quality/scoringDates.js';
+import { fiscalYearLabel, formatPeriodRange, monthOptions, sourceNotice, themed } from './qualityFormat.js';
 import HQPanel from './HQPanel';
 import DivisionPanel from './DivisionPanel';
 import StationPanel from './StationPanel';
 
-const PERIOD_OPTIONS = [
-    { id: 'month', label: 'เดือนนี้' },
-    { id: 'fy', label: 'สะสมปีงบประมาณ' },
-];
+// The newest workbook month is the default period. With no workbook at all, the fiscal year view is shown.
+const NEWEST_MONTH = latestScoredMonth();
+const DEFAULT_PERIOD = NEWEST_MONTH ? { kind: 'pastMonth', month: NEWEST_MONTH } : { kind: 'fy' };
+const FY_LABEL = NEWEST_MONTH ? fiscalYearLabel(NEWEST_MONTH) : 'ปีงบประมาณ';
 
 const navTo = (level, fields = {}) => ({ level, kk: null, stationKey: null, ...fields });
 
 const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400';
 
-const QualityView = ({ rawData, isDarkMode = true }) => {
-    const [period, setPeriod] = useState('month');
+const QualityView = ({ isDarkMode = true }) => {
+    const [period, setPeriod] = useState(DEFAULT_PERIOD);
     const [nav, setNav] = useState(navTo('hq'));
-    const model = useMemo(() => buildQualityModel(rawData || {}, period), [rawData, period]);
+    const model = useMemo(() => buildQualityModel(null, period), [period]);
     const rootRef = useRef(null);
     const shownNav = useRef(nav);
+    const months = monthOptions();
 
     // The page scrolls inside App's <main> container, so a drill-down or breadcrumb would otherwise open mid-page
     useEffect(() => {
@@ -43,6 +45,8 @@ const QualityView = ({ rawData, isDarkMode = true }) => {
         if (station) crumbs.push({ label: `ส.ทล.${station.stl}`, target: navTo('station', { kk: nav.kk, stationKey: nav.stationKey }) });
     }
 
+    const fyActive = period.kind === 'fy';
+
     return (
         <div ref={rootRef} className="mx-auto w-full max-w-6xl space-y-6">
             <header className="space-y-3">
@@ -50,33 +54,46 @@ const QualityView = ({ rawData, isDarkMode = true }) => {
                     <ClipboardCheck className={`h-7 w-7 ${themed(isDarkMode, 'text-cyan-400', 'text-cyan-600')}`} aria-hidden="true" />
                     ประเมินคุณภาพงาน
                 </h2>
-                <p className={`rounded-lg border p-3 text-sm ${themed(isDarkMode, 'border-cyan-400/40 bg-cyan-400/10 text-cyan-200', 'border-cyan-300 bg-cyan-50 text-cyan-900')}`}>
-                    Mockup: คะแนนทั้งหมดคิดจากข้อมูลจริงในชีต
-                </p>
+                {NEWEST_MONTH && (
+                    <p className={`rounded-lg border p-3 text-sm ${themed(isDarkMode, 'border-cyan-400/40 bg-cyan-400/10 text-cyan-200', 'border-cyan-300 bg-cyan-50 text-cyan-900')}`}>
+                        {sourceNotice(NEWEST_MONTH)}
+                    </p>
+                )}
             </header>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div
-                    role="group"
-                    aria-label="ช่วงเวลา"
-                    className={`inline-flex w-fit gap-1 rounded-lg border p-1 ${themed(isDarkMode, 'border-white/10 bg-slate-900/40', 'border-slate-200 bg-white')}`}
-                >
-                    {PERIOD_OPTIONS.map((option) => {
-                        const active = period === option.id;
-                        return (
-                            <button
-                                key={option.id}
-                                type="button"
-                                aria-pressed={active}
-                                onClick={() => setPeriod(option.id)}
-                                className={`min-h-[44px] cursor-pointer rounded-md px-4 text-sm font-semibold transition-colors duration-200 ${focusRing} ${active
-                                    ? 'bg-cyan-500 text-white'
-                                    : themed(isDarkMode, 'text-slate-300 hover:bg-white/10', 'text-slate-700 hover:bg-slate-100')}`}
-                            >
-                                {option.label}
-                            </button>
-                        );
-                    })}
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-3">
+                    <div
+                        role="group"
+                        aria-label="ช่วงเวลา"
+                        className={`inline-flex max-w-full flex-wrap gap-1 rounded-lg border p-1 ${themed(isDarkMode, 'border-white/10 bg-slate-900/40', 'border-slate-200 bg-white')}`}
+                    >
+                        <button
+                            type="button"
+                            aria-pressed={fyActive}
+                            onClick={() => setPeriod({ kind: 'fy' })}
+                            className={`min-h-[44px] cursor-pointer rounded-md px-4 text-sm font-semibold transition-colors duration-200 ${focusRing} ${fyActive
+                                ? 'bg-cyan-500 text-white'
+                                : themed(isDarkMode, 'text-slate-300 hover:bg-white/10', 'text-slate-700 hover:bg-slate-100')}`}
+                        >
+                            {FY_LABEL}
+                        </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <label htmlFor="quality-month" className={`text-sm font-medium ${muted}`}>เลือกเดือน</label>
+                        <select
+                            id="quality-month"
+                            value={period.kind === 'pastMonth' ? period.month : ''}
+                            onChange={(event) => setPeriod({ kind: 'pastMonth', month: event.target.value })}
+                            style={{ colorScheme: isDarkMode ? 'dark' : 'light' }}
+                            className={`min-h-[44px] cursor-pointer rounded-md border px-3 text-sm font-semibold ${focusRing} ${themed(isDarkMode, 'border-white/10 bg-slate-900/40 text-white', 'border-slate-200 bg-white text-slate-900')}`}
+                        >
+                            <option value="" disabled>ยังไม่เลือก</option>
+                            {months.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
                 <p className={`text-sm ${muted}`}>{formatPeriodRange(model.period)}</p>
             </div>
