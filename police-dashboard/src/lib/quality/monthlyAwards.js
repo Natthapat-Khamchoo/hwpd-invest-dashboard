@@ -56,7 +56,8 @@ export const MONTHLY_AWARDS = {
     ],
     '2026-03': [
         [1, ['2-4'], false],
-        [2, ['1-4', '1-5'], false],
+        // Rank 2 is ส.ทล.4 กก.1 and ส.ทล.1 กก.5, not 1-5 (user, 2026-10-25)
+        [2, ['1-4', '5-1'], false],
         [3, ['2'], false],
         [4, ['6-4'], false],
         [5, ['8-1'], false],

@@ -96,32 +96,59 @@ test('in 2025-11 ส.ทล.2 กก.2 led the กก.2 case for 2 OP and every 
     for (const key of ['2-1', '2-3', '2-4', '2-5', '2-6']) assert.equal(stationOf(model, key).raw.op, 1);
 });
 
-test('in 2026-03 the shared major case gives 1-4 and 5-1 each 1 point, half of difficulty 2', () => {
+test('in 2026-03 the shared rank-2 monthly award gives 1-4 and 5-1 0.5 each, and 1-5 nothing from it', () => {
     const model = modelOf('2026-03');
 
     for (const key of ['1-4', '5-1']) {
         const station = stationOf(model, key);
-        const item = station.items.major.find((entry) => entry.title.startsWith('ขนแรงงานจีน 2 เคส'));
+        const item = station.items.major.find((entry) => entry.rank === 2);
 
-        assert.equal(item.value, 1);
-        assert.equal(station.raw.major, 1);
+        assert.equal(item.value, 0.5);
+        assert.equal(item.shared, 2);
+        assert.equal(station.raw.major, 0.5);
     }
+    assert.ok(!stationOf(model, '1-5').items.major.some((entry) => entry.rank === 2));
 });
 
-test('in 2026-08 criminal for 3-5 is its six criminal self-arrest fields plus 2 for its important warrant', () => {
+test('in 2026-05 7-1 gets 1 major, because its honourable mention counts like any monthly award', () => {
+    assert.equal(stationOf(modelOf('2026-05'), '7-1').raw.major, 1);
+});
+
+test('fiscal-year major scores match the planning infographic within 0.1', () => {
+    const model = buildQualityModel(null, 'fy', TODAY);
+    const expected = { '6-4': 25.0, '1-4': 24.3, '3-2': 22.9, '5-2': 22.1, '2-1': 14.7, '6-5': 11.8 };
+
+    for (const [key, score] of Object.entries(expected)) close(stationOf(model, key).scores.major, score, 0.1);
+});
+
+// Open for the user: the infographic credits 7-1 with one fewer monthly award than the model (8.8 against 13.2), and
+// one fewer to 2-6 and one more to 2-4. A unit-attribution question for the user, not a formula issue.
+test('fiscal-year major score of 7-1 matches the planning infographic within 0.1', { todo: 'infographic credits 7-1 one fewer award, see comment above' }, () => {
+    close(stationOf(buildQualityModel(null, 'fy', TODAY), '7-1').scores.major, 8.8, 0.1);
+});
+
+test('fiscal-year criminal: the max is 539 cases, 3-2 scores the full 25 and 1-1 about 22.8', () => {
+    const model = buildQualityModel(null, 'fy', TODAY);
+
+    assert.equal(model.max.criminal, 539);
+    close(stationOf(model, '3-2').scores.criminal, 25);
+    close(stationOf(model, '1-1').scores.criminal, 22.8, 0.05);
+});
+
+test('in 2026-08 criminal for 3-5 is exactly the sum of its six criminal self-arrest fields, with no warrant bonus', () => {
     const model = modelOf('2026-08');
     const row = SELF_ARRESTS['2026-08']['3-5'];
 
-    assert.equal(stationOf(model, '3-5').raw.criminal, sum(row.slice(0, 6)) + 2);
+    assert.equal(stationOf(model, '3-5').raw.criminal, sum(row.slice(0, 6)));
     assert.equal(stationOf(model, '3-5').counts.truck, row[6]);
 });
 
-test('in 2026-01 criminal for each station of กก.2 is its six fields plus 2/6 of the division warrant', () => {
+test('in 2026-01 criminal for each station of กก.2 is exactly its six self-arrest fields, with no division warrant share', () => {
     const model = modelOf('2026-01');
 
     for (const key of STATION_KEYS.filter((k) => k.startsWith('2-'))) {
         const row = SELF_ARRESTS['2026-01'][key] ?? ZERO_ROW;
-        close(stationOf(model, key).raw.criminal, sum(row.slice(0, 6)) + 2 / 6);
+        assert.equal(stationOf(model, key).raw.criminal, sum(row.slice(0, 6)));
     }
 });
 

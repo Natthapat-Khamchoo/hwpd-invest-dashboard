@@ -4,7 +4,7 @@ import { INDEX_EXTRA_AWARDS } from './qualityIndexData.js';
 import { isScoredMonth, monthsIn } from './scoringDates.js';
 
 // Index award table: month -> [rank, units, honourable, title, flatPoints?]. Press conferences (แถลงข่าว) are left out
-// because they score only as OP. The monthly awards are cases now (MAJOR_CASES), so they are not here either.
+// because they score only as OP. The monthly awards score as major (MONTHLY_AWARDS), so they are not here either.
 // A rank of null with explicit points is a flat award (no ranking).
 const withoutPressConferences = (entries) => entries.filter(([, , title]) => !title.startsWith('แถลงข่าว'));
 export const INDEX_AWARDS = Object.fromEntries(

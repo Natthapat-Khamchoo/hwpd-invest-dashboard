@@ -13,7 +13,7 @@ export const INDEX_DIMENSIONS = [
     { id: 'criminal', label: 'คดีอาญาจับเอง', weight: 25 },
     { id: 'major', label: 'คดีสำคัญ', weight: 25 },
     { id: 'award', label: 'รางวัล', weight: 15 },
-    { id: 'op', label: 'ปฏิบัติการ (OP)', weight: 15 },
+    { id: 'op', label: 'OP / ยุทธการ', weight: 15 },
     { id: 'truck', label: 'รถหนัก', weight: 10 },
     { id: 'royal', label: 'ถวายความปลอดภัย (ถปภ.)', weight: 10 },
 ];

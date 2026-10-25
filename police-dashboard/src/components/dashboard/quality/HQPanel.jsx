@@ -7,13 +7,13 @@ import { INDEX_DIMENSIONS } from '../../../lib/quality/scoringConfig.js';
 import { dimensionRadarRows, formatThaiDate, indexBarItems, RADAR_COLORS, themed } from './qualityFormat.js';
 
 // How the index is worked out, in the order a reader needs it. Weights come from the config; the per-case points
-// (warrant 3, OP 2/1, award ranks) are typed here and must follow qualityIndexData.js and AWARD_POINTS.
+// (OP 2/1, award ranks) are typed here and must follow qualityIndexData.js and AWARD_POINTS.
 const METHOD_LINES = [
     'คะแนนแต่ละด้าน = ค่าของ ส.ทล. ÷ ค่าสูงสุดของ ส.ทล. ทั้ง 43 ในช่วงเดียวกัน × น้ำหนักของด้าน (ค่าสูงสุดเป็น 0 ให้ 0 คะแนน)',
     'ดัชนีของ ส.ทล. = ผลรวมคะแนนทั้ง 6 ด้าน (เต็ม 100) · ดัชนีของ กก. และ บก.ทล. = ค่าเฉลี่ยของ ส.ทล. ในหน่วยนั้น',
-    'คดีอาญาจับเอง นับทุกคดีเป็น 1 · หมายจับสำคัญนับเป็น 3 รวมหมายที่นับอยู่แล้ว',
-    'คดีสำคัญ มีคะแนนความยาก 1 ถึง 3 ถ้าใช้ร่วมกันแบ่งเท่ากันระหว่างหน่วย',
-    'ปฏิบัติการ (OP) หน่วยนำได้ 2 คะแนน หน่วยร่วมได้ 1 คะแนน',
+    'คดีอาญาจับเอง ทุกคดีที่จับเองนับ 1 ไม่รวมจับร่วมและรถหนัก',
+    'คดีสำคัญ นับครั้งที่ได้รางวัลป้องกันปราบปรามดีเด่นประจำเดือน รางวัลร่วมหารเท่ากัน',
+    'OP / ยุทธการ หน่วยนำได้ 2 คะแนน หน่วยร่วมได้ 1 คะแนน',
     'รางวัล ลำดับ 1 ถึง 3 ได้ 10, 8 และ 6 คะแนน ลำดับถัดไปได้ 5 คะแนน',
     'ถวายความปลอดภัย (ถปภ.) นับเป็นวันที่เสด็จฯ ผ่านพื้นที่ ส.ทล.',
 ];

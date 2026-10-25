@@ -197,7 +197,7 @@ export const BreakdownTable = ({ rows, averaged = false, isDarkMode = true }) =>
     );
 };
 
-// groups come from itemGroupsOf(). Each row is one award, major case, OP case or important warrant that the unit took part in.
+// groups come from itemGroupsOf(). Each row is one award, monthly major award or OP case that the unit took part in.
 export const ItemGroupsList = ({ groups, isDarkMode = true }) => {
     const muted = themed(isDarkMode, 'text-slate-400', 'text-slate-600');
     const divider = themed(isDarkMode, 'border-white/10', 'border-slate-200');
@@ -216,7 +216,7 @@ export const ItemGroupsList = ({ groups, isDarkMode = true }) => {
                                         <span className={`mr-2 whitespace-nowrap text-xs ${muted}`}>{awardLabel(row)}</span>
                                         {row.title}
                                     </span>
-                                    <span className="whitespace-nowrap font-semibold tabular-nums">{group.kind === 'warrant' ? `+${formatCount(row.value)} คดี` : `${formatCount(row.value)} คะแนน`}</span>
+                                    <span className="whitespace-nowrap font-semibold tabular-nums">{group.kind === 'major' ? `${formatCount(row.value)} ครั้ง` : `${formatCount(row.value)} คะแนน`}</span>
                                 </li>
                             ))}
                         </ul>

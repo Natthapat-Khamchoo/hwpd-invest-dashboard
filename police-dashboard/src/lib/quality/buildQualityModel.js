@@ -1,6 +1,7 @@
 import { INDEX_DIMENSIONS, STATIONS_PER_DIVISION, stationsOfUnit } from './scoringConfig.js';
 import { SELF_ARREST_FIELDS, SELF_ARRESTS } from './selfArrests.js';
-import { IMPORTANT_WARRANTS, MAJOR_CASES, OP_CASES, ROYAL_CONVOY_DAYS } from './qualityIndexData.js';
+import { OP_CASES, ROYAL_CONVOY_DAYS } from './qualityIndexData.js';
+import { MONTHLY_AWARDS } from './monthlyAwards.js';
 import { awardsByStation } from './awards.js';
 import { isScoredMonth, latestScoredMonth, monthKeyOf, monthsIn, scoringStartDate } from './scoringDates.js';
 
@@ -67,7 +68,26 @@ export const periodRange = (period, today = new Date()) => {
 
 const zeroDims = () => Object.fromEntries(DIM_IDS.map((id) => [id, 0]));
 const zeroCounts = () => Object.fromEntries(SELF_ARREST_FIELDS.map((field) => [field, 0]));
-const emptyItems = () => ({ award: [], major: [], op: [], warrant: [] });
+const emptyItems = () => ({ award: [], major: [], op: [] });
+
+// Adds one monthly award to major: it counts 1, split equally between its units, and a division unit's share splits
+// across its stations. Each share is listed on its own, so a station in two units lists both.
+const creditMonthlyAward = (raw, items, { month, rank, units }) => {
+    for (const unit of units) {
+        const stations = stationsOfUnit(unit);
+        for (const key of stations) {
+            const value = 1 / (units.length * stations.length);
+            raw[key].major += value;
+            items[key].major.push({
+                month,
+                title: `ป้องกันปราบปรามดีเด่นประจำเดือน ลำดับ ${rank}`,
+                value,
+                ...(units.length > 1 && { shared: units.length }),
+                rank,
+            });
+        }
+    }
+};
 
 // Adds one case to the raw value of each station it names. `amount` is what each unit takes; a division unit splits
 // its amount across its stations. A station in two units gets both shares, listed once.
@@ -102,17 +122,13 @@ const scoreRange = (range) => {
             raw[key].truck += monthCounts.truck;
             raw[key].royal += monthCounts.royal;
         }
-        // Major cases split their difficulty between their units first; then each division unit splits across its stations
-        for (const [difficulty, units, title] of MAJOR_CASES[month] ?? []) {
-            creditCase(raw, items, { dim: 'major', kind: 'major', month, title, units, amount: difficulty / units.length });
+        // Major: every monthly award, honourable mentions included (1 each, same split rules)
+        for (const [rank, units] of MONTHLY_AWARDS[month] ?? []) {
+            creditMonthlyAward(raw, items, { month, rank, units });
         }
         // OP: every unit takes the full points, not a share of them
         for (const [points, units, title] of OP_CASES[month] ?? []) {
             creditCase(raw, items, { dim: 'op', kind: 'op', month, title, units, amount: points });
-        }
-        // An important warrant counts 3 in total: the 1 already in the warrant column plus 2 added here
-        for (const [count, unit, title] of IMPORTANT_WARRANTS[month] ?? []) {
-            creditCase(raw, items, { dim: 'criminal', kind: 'warrant', month, title, units: [unit], amount: 2 * count });
         }
     }
 

@@ -86,7 +86,7 @@ test('fiscalYearLabel names the fiscal year that starts in October, by its Buddh
 test('sourceNotice names the index as experimental, the newest month and the six dimensions', () => {
     assert.equal(
         sourceNotice('2026-09'),
-        'ดัชนีทดลองคิดจากสถิติคดีอาญาจับเองของงานแผน (รายกลุ่มข้อหา) ข้อมูลถึง ก.ย. 2569 รวมคดีสำคัญ รางวัล ปฏิบัติการ (OP) รถหนัก และถวายความปลอดภัย (ถปภ.)'
+        'ดัชนีทดลองคิดจากสถิติคดีอาญาจับเองของงานแผน (รายกลุ่มข้อหา) ข้อมูลถึง ก.ย. 2569 รวมคดีสำคัญ รางวัล OP / ยุทธการ รถหนัก และถวายความปลอดภัย (ถปภ.)'
     );
 });
 
@@ -160,7 +160,7 @@ test('breakdownRows gives each dimension its raw value, the period max, the scor
     );
 
     assert.deepEqual(rows[0], { id: 'criminal', label: 'คดีอาญาจับเอง', unit: 'คดี', raw: 12, max: 24, score: 12.5, weight: 25 });
-    assert.deepEqual(rows.map((row) => row.unit), ['คดี', 'คะแนนความยาก', 'คะแนนรางวัล', 'คะแนน OP', 'คดี', 'วัน']);
+    assert.deepEqual(rows.map((row) => row.unit), ['คดี', 'ครั้ง', 'คะแนนรางวัล', 'คะแนน OP', 'คดี', 'วัน']);
     assert.equal(rows.find((row) => row.id === 'royal').weight, 10);
 });
 
@@ -171,16 +171,15 @@ test('averageRaw averages each dimension over the given stations and gives zeros
     assert.deepEqual(averageRaw([]), zeroDims());
 });
 
-test('itemGroupsOf lists award, major, OP and important warrant in that order, empty groups included', () => {
+test('itemGroupsOf lists award, major and OP in that order, empty groups included', () => {
     const groups = itemGroupsOf({
         award: [{ month: '2026-09', title: 'ผลงาน', value: 10, rank: 1 }],
         major: [],
         op: [],
-        warrant: [{ month: '2026-08', title: 'หมายสำคัญ', value: 2 }],
     });
 
-    assert.deepEqual(groups.map((group) => group.kind), ['award', 'major', 'op', 'warrant']);
-    assert.deepEqual(groups.map((group) => group.label), ['รางวัล', 'คดีสำคัญ', 'ปฏิบัติการ (OP)', 'หมายจับสำคัญ (บวกเพิ่มจากหมายปกติที่นับแล้ว 1 รวมเป็น 3)']);
+    assert.deepEqual(groups.map((group) => group.kind), ['award', 'major', 'op']);
+    assert.deepEqual(groups.map((group) => group.label), ['รางวัล', 'คดีสำคัญ', 'OP / ยุทธการ']);
     assert.equal(groups[0].rows[0].title, 'ผลงาน');
     assert.deepEqual(groups[1].rows, []);
 });

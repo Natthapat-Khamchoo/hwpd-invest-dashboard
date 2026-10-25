@@ -24,7 +24,7 @@ export const fiscalYearLabel = (monthKey) => {
 };
 
 // Header line under the title: the index is experimental, where the workbooks end, and which dimensions it covers
-export const sourceNotice = (newestMonth) => `ดัชนีทดลองคิดจากสถิติคดีอาญาจับเองของงานแผน (รายกลุ่มข้อหา) ข้อมูลถึง ${formatMonthThai(newestMonth)} รวมคดีสำคัญ รางวัล ปฏิบัติการ (OP) รถหนัก และถวายความปลอดภัย (ถปภ.)`;
+export const sourceNotice = (newestMonth) => `ดัชนีทดลองคิดจากสถิติคดีอาญาจับเองของงานแผน (รายกลุ่มข้อหา) ข้อมูลถึง ${formatMonthThai(newestMonth)} รวมคดีสำคัญ รางวัล OP / ยุทธการ รถหนัก และถวายความปลอดภัย (ถปภ.)`;
 
 // "ก.ย. 2569 ลำดับ 1", with the share count and an honourable mention when they apply
 export const awardLabel = ({ month, rank, shared, honourable }) => (
@@ -67,7 +67,7 @@ export const radarTextColor = (stroke, isDarkMode) => themed(isDarkMode, stroke,
 // Unit of each dimension's raw value, as the breakdown table shows it
 export const INDEX_UNITS = {
     criminal: 'คดี',
-    major: 'คะแนนความยาก',
+    major: 'ครั้ง',
     award: 'คะแนนรางวัล',
     op: 'คะแนน OP',
     truck: 'คดี',
@@ -137,7 +137,6 @@ export const averageRaw = (stations) => Object.fromEntries(INDEX_DIMENSIONS.map(
 const ITEM_GROUPS = [
     { kind: 'award', label: 'รางวัล' },
     { kind: 'major', label: 'คดีสำคัญ' },
-    { kind: 'op', label: 'ปฏิบัติการ (OP)' },
-    { kind: 'warrant', label: 'หมายจับสำคัญ (บวกเพิ่มจากหมายปกติที่นับแล้ว 1 รวมเป็น 3)' },
+    { kind: 'op', label: 'OP / ยุทธการ' },
 ];
 export const itemGroupsOf = (items) => ITEM_GROUPS.map(({ kind, label }) => ({ kind, label, rows: items[kind] ?? [] }));
