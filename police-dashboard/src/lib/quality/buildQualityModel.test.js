@@ -97,10 +97,11 @@ test('fiscal-year OP: the max is 10, 2-2 scores the full 15, and 2-1, 2-4 and 2-
     for (const key of ['2-1', '2-4', '2-6']) close(stationOf(model, key).scores.op, 7.5, 0.05);
 });
 
-test('fiscal-year OP raw: 3-2 is 4.2 with its share of the กก.3 sweep, 7-4 is 2, and the 2025-12 values match', () => {
+test('fiscal-year OP raw: 3-2 is 6.2 with its กก.3 sweep share and case-of-the-year bonus, 7-4 is 2, and the 2025-12 values match', () => {
     const fy = buildQualityModel(null, 'fy', TODAY);
 
-    close(stationOf(fy, '3-2').raw.op, 4.2, 0.001);
+    close(stationOf(fy, '3-2').raw.op, 6.2, 0.001);
+    close(stationOf(modelOf('2026-02'), '3-2').raw.op, 2);
     close(stationOf(fy, '7-4').raw.op, 2);
     close(stationOf(modelOf('2025-12'), '4-1').raw.op, 0.2);
     close(stationOf(modelOf('2025-12'), '4-4').raw.op, 1.2);
@@ -195,9 +196,8 @@ test('in 2026-04 the award dimension for 5-1 has no press conference, which coun
     assert.ok(!station.items.award.some((item) => item.title.startsWith('แถลงข่าว')));
 });
 
-
 test('an empty dimension in a month scores 0 for every station, with no NaN', () => {
-    const model = modelOf('2026-02');
+    const model = modelOf('2026-06');
 
     assert.equal(model.max.op, 0);
     for (const station of model.stations) assert.equal(station.scores.op, 0);
