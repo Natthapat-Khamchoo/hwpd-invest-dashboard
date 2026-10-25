@@ -24,7 +24,7 @@ export const fiscalYearLabel = (monthKey) => {
 };
 
 // Header line under the title: where the self-arrest workbooks end, and that awards are added
-export const sourceNotice = (newestMonth) => `คะแนนคิดจากสถิติคดีอาญาจับเองของงานแผน (รายกลุ่มข้อหา) ข้อมูลถึง ${formatMonthThai(newestMonth)} และรวมคะแนนรางวัลด้านปราบปราม (ประจำเดือนและครั้งคราว)`;
+export const sourceNotice = (newestMonth) => `คะแนนคิดจากสถิติคดีอาญาจับเองของงานแผน (รายกลุ่มข้อหา) ข้อมูลถึง ${formatMonthThai(newestMonth)} รวมภารกิจถวายความปลอดภัย (ถปภ.) และคะแนนรางวัลด้านปราบปราม (ประจำเดือนและครั้งคราว)`;
 
 // "ก.ย. 2569 ลำดับ 1", with the share count and an honourable mention when they apply. Points sit in their own column.
 export const awardLabel = ({ month, rank, shared, honourable }) => (
@@ -107,12 +107,13 @@ const SELF_ARREST_ROWS = [
     { field: 'gun', label: 'อาวุธปืน', category: 'flagrant', quantityEach: QUANTITY.flagrant, qualityEach: QUALITY.flagrantExtra.gun },
     { field: 'other', label: 'คดีอาญาอื่น ๆ', category: 'flagrant', quantityEach: QUANTITY.flagrant, qualityEach: 0 },
     { field: 'truck', label: 'รถหนัก', category: 'flagrant', quantityEach: QUANTITY.flagrant, qualityEach: 0 },
+    { field: 'royal', label: 'ถวายความปลอดภัย (ถปภ.)', category: 'royal', quantityEach: QUANTITY.royalConvoy, qualityEach: 0 },
 ];
 
 // One row per self-arrest column (zeros included), then one row per award. The rows add up to the station's points.
 export const pointsBreakdown = (counts, awards = []) => [
     ...SELF_ARREST_ROWS.map(({ field, label, category, quantityEach, qualityEach }) => {
-        const count = counts[field];
+        const count = counts[field] ?? 0;
         const quantity = count * quantityEach;
         const quality = count * qualityEach;
         return { category, label, count, quantity, quality, total: quantity + quality };
@@ -141,6 +142,7 @@ export const scoringRules = () => [
     rule('quantity', 'warrant', 'ทุกหมายจับ', QUANTITY.warrant, 'ต่อหมาย'),
     rule('quantity', 'flagrant', 'ทุกการจับกุมซึ่งหน้า (คนเข้าเมือง ลักทรัพย์ อาวุธปืน คดีอาญาอื่น ๆ รถหนัก)', QUANTITY.flagrant, 'ต่อคดี'),
     rule('quantity', 'drugs', 'ทุกคดียาเสพติด', QUANTITY.drugCaseBase, 'ต่อคดี'),
+    rule('quantity', 'royal', 'ภารกิจถวายความปลอดภัย (ถปภ.) ในพื้นที่สถานี', QUANTITY.royalConvoy, 'ต่อครั้ง'),
     rule('quality', 'flagrant', 'อาวุธปืน (เพิ่มจากปริมาณ)', QUALITY.flagrantExtra.gun, 'ต่อคดี'),
     rule('quality', 'award', 'ลำดับ 1', AWARD_POINTS.byRank[0], 'ต่อรางวัล'),
     rule('quality', 'award', 'ลำดับ 2', AWARD_POINTS.byRank[1], 'ต่อรางวัล'),

@@ -1,5 +1,6 @@
 import { STATIONS_PER_DIVISION } from './scoringConfig.js';
 import { SELF_ARRESTS, SELF_ARREST_FIELDS } from './selfArrests.js';
+import { ROYAL_CONVOYS } from './royalConvoys.js';
 import { unitPoints, addPoints, emptyPoints, pointsIn } from './points.js';
 import { awardsByStation } from './awards.js';
 import { isScoredMonth, latestScoredMonth, monthKeyOf, monthsIn, scoringStartDate } from './scoringDates.js';
@@ -31,10 +32,16 @@ const shiftMonth = (monthKey, delta) => {
     return monthKeyOf(new Date(year, month - 1 + delta, 1));
 };
 
-// Self-arrest counts of one station in one month, keyed by SELF_ARREST_FIELDS; a missing month or row counts as zero
+// Every count a station is scored on: the self-arrest columns, then royal convoys
+const COUNT_FIELDS = [...SELF_ARREST_FIELDS, 'royal'];
+
+// Counts of one station in one month, keyed by COUNT_FIELDS; a missing month or row counts as zero
 export const countsOf = (monthKey, stationKey) => {
     const row = SELF_ARRESTS[monthKey]?.[stationKey] ?? SELF_ARREST_FIELDS.map(() => 0);
-    return Object.fromEntries(SELF_ARREST_FIELDS.map((field, index) => [field, row[index]]));
+    return {
+        ...Object.fromEntries(SELF_ARREST_FIELDS.map((field, index) => [field, row[index]])),
+        royal: ROYAL_CONVOYS[monthKey]?.[stationKey] ?? 0,
+    };
 };
 
 // Nothing before the scoring start counts: the start is clamped to it, and a period that ends before it has 0 days
@@ -73,10 +80,10 @@ const scoreRange = (range) => {
         .map((segment) => segment.key);
 
     const stations = STATIONS.map(({ key, kk, stl }) => {
-        const raw = Object.fromEntries(SELF_ARREST_FIELDS.map((field) => [field, 0]));
+        const raw = Object.fromEntries(COUNT_FIELDS.map((field) => [field, 0]));
         for (const monthKey of counted) {
             const counts = countsOf(monthKey, key);
-            for (const field of SELF_ARREST_FIELDS) raw[field] += counts[field];
+            for (const field of COUNT_FIELDS) raw[field] += counts[field];
         }
         const awards = awardsOf[key] ?? [];
         // Awards come on top of the self-arrest points and are never scaled

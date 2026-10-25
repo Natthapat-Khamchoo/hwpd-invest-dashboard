@@ -103,7 +103,7 @@ const DivisionPanel = ({ model, kk, isDarkMode = true, onSelectStation }) => {
             </Panel>
 
             <Panel title={`ส.ทล. ใน ${division.name}`} icon={Table} isDarkMode={isDarkMode}>
-                <div role="group" aria-label="เลือกตัวชี้วัด" className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7">
+                <div role="group" aria-label="เลือกตัวชี้วัด" className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                     {METRICS.map((item) => (
                         <MetricCard
                             key={item.id}

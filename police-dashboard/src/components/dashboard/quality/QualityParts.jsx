@@ -200,7 +200,7 @@ export const PointsBreakdownTable = ({ rows, isDarkMode = true }) => {
                     ))}
                 </tbody>
             </table>
-            <p className={`mt-3 text-sm ${muted}`}>นับเฉพาะคดีอาญาที่จับกุมเอง จากสถิติรายกลุ่มของงานแผน</p>
+            <p className={`mt-3 text-sm ${muted}`}>คดีอาญานับเฉพาะที่จับกุมเอง จากสถิติรายกลุ่มของงานแผน · ถปภ. นับตามพื้นที่ ส.ทล. ที่เสด็จฯ ผ่าน</p>
         </div>
     );
 };

@@ -16,7 +16,7 @@ const pointsOf = (quantityByCategory = {}, qualityByCategory = {}) => {
 };
 
 // Self-arrest counts of one station-month, every field 0 unless given
-const counts = (overrides = {}) => ({ warrant: 0, drugs: 0, immig: 0, theft: 0, gun: 0, other: 0, truck: 0, ...overrides });
+const counts = (overrides = {}) => ({ warrant: 0, drugs: 0, immig: 0, theft: 0, gun: 0, other: 0, truck: 0, royal: 0, ...overrides });
 
 test('formatThaiDate writes the day, the Thai month and the Buddhist year', () => {
     assert.equal(formatThaiDate(new Date(2026, 9, 1)), '1 ต.ค. 2569');
@@ -124,15 +124,15 @@ test('barItems prefers an explicit key over kk', () => {
     assert.deepEqual(items.map((item) => item.key), ['a', 'b']);
 });
 
-test('pointsBreakdown lists the seven self-arrest rows, zeros included, with case counts and points', () => {
+test('pointsBreakdown lists the seven self-arrest rows and the royal-convoy row, zeros included', () => {
     const rows = pointsBreakdown(counts());
 
-    assert.deepEqual(rows.map((row) => row.label), ['หมายจับ', 'ยาเสพติด', 'คนเข้าเมือง', 'ลักทรัพย์', 'อาวุธปืน', 'คดีอาญาอื่น ๆ', 'รถหนัก']);
+    assert.deepEqual(rows.map((row) => row.label), ['หมายจับ', 'ยาเสพติด', 'คนเข้าเมือง', 'ลักทรัพย์', 'อาวุธปืน', 'คดีอาญาอื่น ๆ', 'รถหนัก', 'ถวายความปลอดภัย (ถปภ.)']);
     assert.ok(rows.every((row) => row.count === 0 && row.total === 0));
 });
 
 test('pointsBreakdown gives each self-arrest row its count, quantity, quality and total', () => {
-    const rows = pointsBreakdown(counts({ warrant: 3, drugs: 2, immig: 1, theft: 2, gun: 1, other: 4, truck: 1 }), [
+    const rows = pointsBreakdown(counts({ warrant: 3, drugs: 2, immig: 1, theft: 2, gun: 1, other: 4, truck: 1, royal: 2 }), [
         { month: '2026-09', rank: 1, points: 10, shared: 1, honourable: false },
         { month: '2026-04', rank: 2, points: 8, shared: 1, honourable: false, title: 'จับเมาแล้วขับสูงสุด เทศกาลสงกรานต์ 2569' },
     ]);
@@ -145,13 +145,14 @@ test('pointsBreakdown gives each self-arrest row its count, quantity, quality an
         { category: 'flagrant', label: 'อาวุธปืน', count: 1, quantity: 1, quality: 4, total: 5 },
         { category: 'flagrant', label: 'คดีอาญาอื่น ๆ', count: 4, quantity: 4, quality: 0, total: 4 },
         { category: 'flagrant', label: 'รถหนัก', count: 1, quantity: 1, quality: 0, total: 1 },
+        { category: 'royal', label: 'ถวายความปลอดภัย (ถปภ.)', count: 2, quantity: 4, quality: 0, total: 4 },
         { category: 'award', label: 'ผลงานดีเด่น ก.ย. 2569 ลำดับ 1', count: 1, quantity: 0, quality: 10, total: 10 },
         { category: 'award', label: 'จับเมาแล้วขับสูงสุด เทศกาลสงกรานต์ 2569 เม.ย. 2569 ลำดับ 2', count: 1, quantity: 0, quality: 8, total: 8 },
     ]);
 });
 
 test('pointsBreakdown reconciles with unitPoints and the award points, category by category', () => {
-    const raw = counts({ warrant: 3, drugs: 2, immig: 1, theft: 2, gun: 1, other: 4, truck: 1 });
+    const raw = counts({ warrant: 3, drugs: 2, immig: 1, theft: 2, gun: 1, other: 4, truck: 1, royal: 3 });
     const awards = [{ month: '2026-09', rank: 4, points: 5, shared: 1, honourable: true }];
     const expected = unitPoints(raw);
     const rows = pointsBreakdown(raw, awards);
@@ -182,7 +183,8 @@ test('scoringRules lists the warrant, flagrant, drug and gun rules with the conf
     assert.equal(find('quantity', 'flagrant', 'ซึ่งหน้า').points, QUANTITY.flagrant);
     assert.equal(find('quantity', 'drugs', 'ยาเสพติด').points, QUANTITY.drugCaseBase);
     assert.equal(find('quality', 'flagrant', 'อาวุธปืน').points, QUALITY.flagrantExtra.gun);
-    assert.ok(rules.every((rule) => ['warrant', 'flagrant', 'drugs', 'award'].includes(rule.category)), 'only known categories');
+    assert.equal(find('quantity', 'royal', 'ถปภ.').points, QUANTITY.royalConvoy);
+    assert.ok(rules.every((rule) => ['warrant', 'flagrant', 'drugs', 'royal', 'award'].includes(rule.category)), 'only known categories');
     assert.ok(rules.every((rule) => ['quantity', 'quality'].includes(rule.kind) && rule.points > 0 && rule.text.length > 0));
 });
 
@@ -262,10 +264,10 @@ test('radarSummary lists each category percent for one series', () => {
     assert.equal(radarSummary(rows, 'บก.ทล.'), 'หมายจับ 100%, ซึ่งหน้า 45.5%');
 });
 
-test('radar rows have four axes, one per criminal-case category and the award category', () => {
+test('radar rows have five axes: the criminal-case categories, royal convoys and awards', () => {
     const categories = pointsOf().categories;
     const rows = radarRows([{ name: 'กก.1', categories }], bestByCategory([categories]));
-    assert.deepEqual(rows.map((row) => row.label), ['หมายจับ', 'ซึ่งหน้า', 'ยาเสพติด', 'ผลงานดีเด่น']);
+    assert.deepEqual(rows.map((row) => row.label), ['หมายจับ', 'ซึ่งหน้า', 'ยาเสพติด', 'ถวายความปลอดภัย', 'ผลงานดีเด่น']);
 });
 
 test('awardLabel gives the Thai month and rank, with the share and honourable mention when they apply', () => {
@@ -303,6 +305,6 @@ test('fiscalYearLabel names the fiscal year that starts in October, by its Buddh
 test('sourceNotice names the newest workbook month and the award rule', () => {
     assert.equal(
         sourceNotice('2026-09'),
-        'คะแนนคิดจากสถิติคดีอาญาจับเองของงานแผน (รายกลุ่มข้อหา) ข้อมูลถึง ก.ย. 2569 และรวมคะแนนรางวัลด้านปราบปราม (ประจำเดือนและครั้งคราว)'
+        'คะแนนคิดจากสถิติคดีอาญาจับเองของงานแผน (รายกลุ่มข้อหา) ข้อมูลถึง ก.ย. 2569 รวมภารกิจถวายความปลอดภัย (ถปภ.) และคะแนนรางวัลด้านปราบปราม (ประจำเดือนและครั้งคราว)'
     );
 });

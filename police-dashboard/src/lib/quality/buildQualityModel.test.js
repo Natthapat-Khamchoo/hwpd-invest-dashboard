@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { buildQualityModel, countsOf, deltaOf, periodRange } from './buildQualityModel.js';
 import { SELF_ARRESTS } from './selfArrests.js';
 import { ALL_AWARDS } from './awards.js';
+import { ROYAL_CONVOYS } from './royalConvoys.js';
 import { STATIONS_PER_DIVISION } from './scoringConfig.js';
 
 const TODAY = new Date(2026, 9, 25);
@@ -11,6 +12,9 @@ const TODAY = new Date(2026, 9, 25);
 const rankPoints = (rank) => [10, 8, 6][rank - 1] ?? 5;
 
 // A self-arrest row scored straight from the rules: 2 per warrant, 1 per drug case, 1 per flagrant case, 4 more per gun case
+// Royal convoys of a station in a month, 2 points each
+const royalPoints = (monthKey, stationKey) => (ROYAL_CONVOYS[monthKey]?.[stationKey] ?? 0) * 2;
+
 const scoreRow = ([warrant, drugs, immig, theft, gun, other, truck]) => (
     warrant * 2 + drugs * 1 + (immig + theft + gun + other + truck) * 1 + gun * 4
 );
@@ -25,11 +29,11 @@ const awardPointsOf = (monthKey, stationKey) => (ALL_AWARDS[monthKey] ?? []).red
 }, 0);
 
 test('countsOf reads a station-month row in the field order of SELF_ARRESTS', () => {
-    assert.deepEqual(countsOf('2026-08', '5-1'), { warrant: 15, drugs: 0, immig: 4, theft: 0, gun: 0, other: 0, truck: 0 });
+    assert.deepEqual(countsOf('2026-08', '5-1'), { warrant: 15, drugs: 0, immig: 4, theft: 0, gun: 0, other: 0, truck: 0, royal: 0 });
 });
 
 test('countsOf gives zeros for a month or station with no row', () => {
-    const zeros = { warrant: 0, drugs: 0, immig: 0, theft: 0, gun: 0, other: 0, truck: 0 };
+    const zeros = { warrant: 0, drugs: 0, immig: 0, theft: 0, gun: 0, other: 0, truck: 0, royal: 0 };
     assert.deepEqual(countsOf('2026-10', '1-1'), zeros);
     assert.deepEqual(countsOf('2026-08', '9-9'), zeros);
 });
@@ -58,15 +62,16 @@ test('station 5-1 in 2026-08 scores its own row: 15 warrants and 4 flagrant case
     const model = buildQualityModel(null, { kind: 'pastMonth', month: '2026-08' }, TODAY);
     const station = model.stations.find((s) => s.key === '5-1');
 
-    assert.deepEqual(station.raw, { warrant: 15, drugs: 0, immig: 4, theft: 0, gun: 0, other: 0, truck: 0 });
+    assert.deepEqual(station.raw, { warrant: 15, drugs: 0, immig: 4, theft: 0, gun: 0, other: 0, truck: 0, royal: 0 });
     assert.equal(station.total, 34);
-    assert.equal(station.total, scoreRow(SELF_ARRESTS['2026-08']['5-1']) + awardPointsOf('2026-08', '5-1'));
+    assert.equal(station.total, scoreRow(SELF_ARRESTS['2026-08']['5-1']) + royalPoints('2026-08', '5-1') + awardPointsOf('2026-08', '5-1'));
 });
 
 test('the fiscal year total is every row and award from 2026-01 to 2026-09, and nothing from 2025', () => {
     const model = buildQualityModel(null, 'fy', TODAY);
     const months = Object.keys(SELF_ARRESTS).filter((month) => month >= '2026-01' && month <= '2026-09');
-    const rowTotal = months.flatMap((month) => Object.values(SELF_ARRESTS[month])).reduce((total, row) => total + scoreRow(row), 0);
+    const rowTotal = months.flatMap((month) => Object.values(SELF_ARRESTS[month])).reduce((total, row) => total + scoreRow(row), 0)
+        + months.flatMap((month) => Object.values(ROYAL_CONVOYS[month] ?? {})).reduce((total, convoys) => total + convoys * 2, 0);
     const awardTotal = months.flatMap((month) => ALL_AWARDS[month] ?? []).reduce((total, [rank]) => total + rankPoints(rank), 0);
 
     assert.equal(model.hq.total, rowTotal + awardTotal);
@@ -79,7 +84,7 @@ test('occasional awards count in their meeting month: 3-2 gets the New Year drun
     const titles = station.awards.map((award) => award.title);
 
     assert.ok(titles.includes('จับเมาแล้วขับสูงสุด เทศกาลปีใหม่ 2569'));
-    assert.equal(station.total, scoreRow(SELF_ARRESTS['2026-01']['3-2']) + awardPointsOf('2026-01', '3-2'));
+    assert.equal(station.total, scoreRow(SELF_ARRESTS['2026-01']['3-2']) + royalPoints('2026-01', '3-2') + awardPointsOf('2026-01', '3-2'));
 });
 
 test('a division-level occasional award splits across its stations: กก.5 investigation award gives 10 / 6 to 5-1 in 2026-02', () => {
@@ -98,7 +103,7 @@ test('2025-12 data is excluded: that month scores zero for every station', () =>
 });
 
 test('a month with no data scores zeros without errors', () => {
-    const model = buildQualityModel(null, { kind: 'pastMonth', month: '2026-10' }, TODAY);
+    const model = buildQualityModel(null, { kind: 'pastMonth', month: '2026-12' }, TODAY);
 
     assert.equal(model.period.days, 31);
     assert.ok(model.stations.every((station) => station.total === 0));
@@ -118,9 +123,9 @@ test('a station delta for 2026-02 equals its 2026-02 total minus its 2026-01 tot
     const febStation = feb.stations.find((s) => s.key === '5-1');
     const janStation = jan.stations.find((s) => s.key === '5-1');
 
-    assert.equal(janStation.total, scoreRow(SELF_ARRESTS['2026-01']['5-1']) + awardPointsOf('2026-01', '5-1'));
+    assert.equal(janStation.total, scoreRow(SELF_ARRESTS['2026-01']['5-1']) + royalPoints('2026-01', '5-1') + awardPointsOf('2026-01', '5-1'));
     // Totals are stored to one decimal; the กก.5 investigation award adds a 10 / 6 share in February
-    assert.equal(febStation.total, Math.round((scoreRow(SELF_ARRESTS['2026-02']['5-1']) + awardPointsOf('2026-02', '5-1')) * 10) / 10);
+    assert.equal(febStation.total, Math.round((scoreRow(SELF_ARRESTS['2026-02']['5-1']) + royalPoints('2026-02', '5-1') + awardPointsOf('2026-02', '5-1')) * 10) / 10);
     assert.equal(febStation.delta, deltaOf(febStation.total, janStation.total));
 });
 
