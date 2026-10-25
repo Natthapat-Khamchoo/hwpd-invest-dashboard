@@ -1,16 +1,27 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList, Tooltip as RechartsTooltip, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from 'recharts';
-import { CATEGORIES } from '../../../lib/quality/scoringConfig.js';
-import { formatAverage, formatCount, formatDelta, radarSummary, radarTextColor, themed } from './qualityFormat.js';
+import { awardLabel, formatAverage, formatCount, formatDelta, radarSummary, radarTextColor, themed } from './qualityFormat.js';
 
 const BAR_FILL = '#06b6d4';
 
 const formatValue = (value, decimals) => (decimals > 0 ? formatAverage(value) : formatCount(value));
 const formatPercent = (value) => `${formatCount(value)}%`;
 
-// Series with decimals > 0 hold per-station averages, so their raw points say so
-const averageNote = (item) => (item.decimals > 0 ? ' (เฉลี่ยต่อ ส.ทล.)' : '');
+// The index figure with its experimental badge and the change from the previous month
+export const IndexFigure = ({ index, delta, isDarkMode = true }) => (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <p className="flex flex-wrap items-baseline gap-x-2">
+            <span className="text-base font-semibold">ดัชนีคุณภาพ</span>
+            <span className="text-4xl font-bold tabular-nums">{formatAverage(index)}</span>
+            <span className={`text-base font-semibold ${themed(isDarkMode, 'text-slate-400', 'text-slate-600')}`}>/ 100</span>
+        </p>
+        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${themed(isDarkMode, 'border-amber-400/50 bg-amber-400/10 text-amber-200', 'border-amber-500 bg-amber-50 text-amber-800')}`}>
+            ดัชนีทดลอง
+        </span>
+        <DeltaTag delta={delta} isDarkMode={isDarkMode} />
+    </div>
+);
 
 export const ScoreBarTooltip = ({ active, payload, isDarkMode, valueLabel, decimals }) => {
     if (!active || !payload?.length) return null;
@@ -19,12 +30,11 @@ export const ScoreBarTooltip = ({ active, payload, isDarkMode, valueLabel, decim
         <div className={`rounded-xl border px-3 py-2 text-sm shadow-lg ${themed(isDarkMode, 'border-white/10 bg-slate-800/95 text-white', 'border-slate-200 bg-white/95 text-slate-900')}`}>
             <p className="font-semibold">{item.label}</p>
             <p className="tabular-nums">{valueLabel} {formatValue(item.value, decimals)}</p>
-            {item.total !== item.value && <p className="tabular-nums">คะแนนรวม {formatCount(item.total)}</p>}
         </div>
     );
 };
 
-// items come from barItems(); onSelect receives the item key. Every bar is one colour; the value axis starts at 0.
+// items come from indexBarItems(); onSelect receives the item key. Every bar is one colour; the value axis starts at 0.
 export const ScoreBarChart = ({ items, onSelect, isDarkMode = true, ariaLabel, valueLabel = 'คะแนน', decimals = 0 }) => {
     const tickColor = themed(isDarkMode, '#cbd5e1', '#334155');
     const gridColor = themed(isDarkMode, 'rgba(255,255,255,0.12)', '#cbd5e1');
@@ -96,9 +106,7 @@ const RadarTooltip = ({ active, payload, isDarkMode, series }) => {
                 return (
                     <div key={item.name} className="mt-1">
                         <p className="tabular-nums"><span style={{ color: radarTextColor(item.color, isDarkMode) }}>{item.name}</span> {formatPercent(row[item.name])}</p>
-                        <p className="text-xs tabular-nums">
-                            ปริมาณ {formatValue(raw.quantity, item.decimals)} · คุณภาพ {formatValue(raw.quality, item.decimals)} · รวม {formatValue(raw.total, item.decimals)}{averageNote(item)}
-                        </p>
+                        <p className="text-xs tabular-nums">คะแนน {formatAverage(raw.score)} / {raw.weight}</p>
                     </div>
                 );
             })}
@@ -106,8 +114,7 @@ const RadarTooltip = ({ active, payload, isDarkMode, series }) => {
     );
 };
 
-// rows come from radarRows(). series: [{ name, color, dashed?, decimals? }]; the first series is the one the aria-label summarises.
-// decimals > 0 marks per-station averages, which the tooltip and text list show with one decimal.
+// rows come from dimensionRadarRows(). series: [{ name, color, dashed? }]; the first series is the one the aria-label summarises.
 export const CategoryRadar = ({ rows, series, subtitle, isDarkMode = true }) => {
     const mainName = series[0].name;
     // Spokes are 360 / rows.length degrees apart, starting at the top (90). The radius axis sits midway between the first two spokes, so its ticks never meet a category label.
@@ -150,7 +157,7 @@ export const CategoryRadar = ({ rows, series, subtitle, isDarkMode = true }) => 
                     const prefix = series.length > 1 ? `${item.name} · ` : '';
                     return (
                         <li key={`${row.id}-${item.name}`}>
-                            {prefix}{row.label}: ปริมาณ {formatValue(raw.quantity, item.decimals)}, คุณภาพ {formatValue(raw.quality, item.decimals)}, รวม {formatValue(raw.total, item.decimals)}{averageNote(item)}
+                            {prefix}{row.label}: {formatPercent(row[item.name])}, คะแนน {formatAverage(raw.score)} จาก {raw.weight}
                         </li>
                     );
                 }))}
@@ -159,48 +166,63 @@ export const CategoryRadar = ({ rows, series, subtitle, isDarkMode = true }) => 
     );
 };
 
-// rows come from pointsBreakdown(raw), grouped under their category heading
-export const PointsBreakdownTable = ({ rows, isDarkMode = true }) => {
+// rows come from breakdownRows(). averaged = the raw values are per-station averages, not totals.
+export const BreakdownTable = ({ rows, averaged = false, isDarkMode = true }) => {
     const muted = themed(isDarkMode, 'text-slate-400', 'text-slate-600');
     const divider = themed(isDarkMode, 'border-white/10', 'border-slate-200');
-    if (rows.length === 0) return <p className={`text-sm ${muted}`}>ยังไม่มีผลงานที่ให้คะแนนในช่วงนี้</p>;
-    const groups = CATEGORIES
-        .map((category) => ({ category, rows: rows.filter((row) => row.category === category.id) }))
-        .filter((group) => group.rows.length > 0);
+    const formatRaw = averaged ? formatAverage : formatCount;
     return (
         <div className="overflow-x-auto">
-            <table className="w-full min-w-[480px] text-sm">
+            <table className="w-full min-w-[520px] text-sm">
                 <thead>
                     <tr className={`border-b text-left text-xs ${muted} ${divider}`}>
-                        <th scope="col" className="whitespace-nowrap px-3 py-2 font-semibold">รายการ</th>
-                        <th scope="col" className="whitespace-nowrap px-3 py-2 text-right font-semibold">จำนวน</th>
-                        <th scope="col" className="whitespace-nowrap px-3 py-2 text-right font-semibold">ปริมาณ</th>
-                        <th scope="col" className="whitespace-nowrap px-3 py-2 text-right font-semibold">คุณภาพ</th>
-                        <th scope="col" className="whitespace-nowrap px-3 py-2 text-right font-semibold">รวม</th>
+                        <th scope="col" className="whitespace-nowrap px-3 py-2 font-semibold">ด้าน</th>
+                        <th scope="col" className="whitespace-nowrap px-3 py-2 text-right font-semibold">{averaged ? 'เฉลี่ยต่อ ส.ทล.' : 'ค่า'}</th>
+                        <th scope="col" className="whitespace-nowrap px-3 py-2 text-right font-semibold">สูงสุดในช่วง</th>
+                        <th scope="col" className="whitespace-nowrap px-3 py-2 text-right font-semibold">คะแนน / น้ำหนัก</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {groups.map(({ category, rows: groupRows }) => (
-                        <React.Fragment key={category.id}>
-                            <tr>
-                                <th scope="rowgroup" colSpan={5} className={`px-3 pb-1 pt-4 text-left text-xs font-bold ${themed(isDarkMode, 'text-cyan-300', 'text-cyan-700')}`}>
-                                    {category.label}
-                                </th>
-                            </tr>
-                            {groupRows.map((row) => (
-                                <tr key={row.label} className={`border-b ${divider}`}>
-                                    <td className="px-3 py-2">{row.label}</td>
-                                    <td className="px-3 py-2 text-right tabular-nums">{formatCount(row.count)}</td>
-                                    <td className="px-3 py-2 text-right tabular-nums">{formatCount(row.quantity)}</td>
-                                    <td className="px-3 py-2 text-right tabular-nums">{formatCount(row.quality)}</td>
-                                    <td className="px-3 py-2 text-right font-semibold tabular-nums">{formatCount(row.total)}</td>
-                                </tr>
-                            ))}
-                        </React.Fragment>
+                    {rows.map((row) => (
+                        <tr key={row.id} className={`border-b ${divider}`}>
+                            <th scope="row" className="px-3 py-2 text-left font-medium">{row.label}</th>
+                            <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{formatRaw(row.raw)} {row.unit}</td>
+                            <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{formatRaw(row.max)} {row.unit}</td>
+                            <td className="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums">{formatAverage(row.score)} / {row.weight}</td>
+                        </tr>
                     ))}
                 </tbody>
             </table>
-            <p className={`mt-3 text-sm ${muted}`}>คดีอาญานับเฉพาะที่จับกุมเอง จากสถิติรายกลุ่มของงานแผน · ถปภ. นับตามพื้นที่ ส.ทล. ที่เสด็จฯ ผ่าน</p>
+        </div>
+    );
+};
+
+// groups come from itemGroupsOf(). Each row is one award, major case, OP case or important warrant that the unit took part in.
+export const ItemGroupsList = ({ groups, isDarkMode = true }) => {
+    const muted = themed(isDarkMode, 'text-slate-400', 'text-slate-600');
+    const divider = themed(isDarkMode, 'border-white/10', 'border-slate-200');
+    return (
+        <div className="space-y-5">
+            {groups.map((group) => (
+                <section key={group.kind} aria-labelledby={`items-${group.kind}`}>
+                    <h4 id={`items-${group.kind}`} className="mb-2 text-sm font-semibold">{group.label}</h4>
+                    {group.rows.length === 0 ? (
+                        <p className={`text-sm ${muted}`}>ไม่มีรายการ</p>
+                    ) : (
+                        <ul className="text-sm">
+                            {group.rows.map((row, index) => (
+                                <li key={`${row.month}-${index}`} className={`flex flex-wrap justify-between gap-x-4 gap-y-1 border-b py-2 ${divider}`}>
+                                    <span className="min-w-0 break-words">
+                                        <span className={`mr-2 whitespace-nowrap text-xs ${muted}`}>{awardLabel(row)}</span>
+                                        {row.title}
+                                    </span>
+                                    <span className="whitespace-nowrap font-semibold tabular-nums">{formatCount(row.value)} {group.kind === 'warrant' ? 'คดี' : 'คะแนน'}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </section>
+            ))}
         </div>
     );
 };
@@ -230,7 +252,7 @@ export const MetricCard = ({ metric, value, selected, onSelect, isDarkMode, clas
             className={`flex min-h-[44px] w-full min-w-0 cursor-pointer flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${stateClass} ${className}`}
         >
             <span className="break-words text-xs font-semibold">{metric.label}</span>
-            <span className="max-w-full break-words text-lg font-bold tabular-nums sm:text-xl">{formatCount(value)}</span>
+            <span className="max-w-full break-words text-lg font-bold tabular-nums sm:text-xl">{formatAverage(value)}</span>
         </button>
     );
 };

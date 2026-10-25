@@ -1,7 +1,7 @@
 import React from 'react';
-import { Gauge, BarChart3, Calculator } from 'lucide-react';
-import { DeltaTag, CategoryRadar, Panel, PointsBreakdownTable, Stat } from './QualityParts';
-import { bestByCategory, formatCount, perStationCategories, pointsBreakdown, placingOf, RADAR_COLORS, radarRows, themed } from './qualityFormat.js';
+import { Gauge, BarChart3, Calculator, ListChecks } from 'lucide-react';
+import { BreakdownTable, CategoryRadar, IndexFigure, ItemGroupsList, Panel, Stat } from './QualityParts';
+import { breakdownRows, dimensionRadarRows, formatAverage, itemGroupsOf, placingOf, RADAR_COLORS, themed } from './qualityFormat.js';
 
 const StationPanel = ({ model, stationKey, isDarkMode = true }) => {
     const station = model.stations.find((item) => item.key === stationKey);
@@ -11,43 +11,43 @@ const StationPanel = ({ model, stationKey, isDarkMode = true }) => {
     }
 
     const stationName = `ส.ทล.${station.stl}`;
-    const breakdown = pointsBreakdown(station.raw, station.awards);
     const divisionStations = model.stations.filter((item) => item.kk === station.kk);
-    const placingRows = divisionStations.map((item) => ({ key: item.key, value: item.total }));
-    // Each category as a percent of the best of all stations; the division's per-station average is the compare series
-    const best = bestByCategory(model.stations.map((item) => item.points.categories));
+    const placingRows = divisionStations.map((item) => ({ key: item.key, value: item.index }));
     const division = model.divisions.find((item) => item.kk === station.kk);
-    const radar = radarRows([
-        { name: stationName, categories: station.points.categories },
-        { name: 'เฉลี่ย กก.', categories: perStationCategories(division.points.categories, division.stationCount) },
-    ], best);
+    const radar = dimensionRadarRows([
+        { name: stationName, scores: station.scores },
+        { name: division.name, scores: division.scores },
+    ]);
+    const breakdown = breakdownRows(station.raw, model.max, station.scores);
 
     return (
         <div className="space-y-6">
-            <Panel title={`คะแนนรวม ${stationName} กก.${station.kk}`} icon={Gauge} isDarkMode={isDarkMode}>
-                <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    <Stat label="คะแนนรวม" value={formatCount(station.total)} emphasis isDarkMode={isDarkMode} />
-                    <Stat label="ปริมาณ" value={formatCount(station.points.quantity)} isDarkMode={isDarkMode} />
-                    <Stat label="คุณภาพ" value={formatCount(station.points.quality)} isDarkMode={isDarkMode} />
-                    <Stat label={`อันดับใน กก.${station.kk}`} value={`ที่ ${placingOf(placingRows, stationKey)} จาก ${divisionStations.length}`} isDarkMode={isDarkMode} />
+            <Panel title={`ดัชนีคุณภาพ ${stationName} กก.${station.kk}`} icon={Gauge} isDarkMode={isDarkMode}>
+                <IndexFigure index={station.index} delta={station.delta} isDarkMode={isDarkMode} />
+                <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Stat label={`อันดับใน ${division.name}`} value={`ที่ ${placingOf(placingRows, stationKey)} จาก ${divisionStations.length}`} isDarkMode={isDarkMode} />
+                    <Stat label={`ดัชนีเฉลี่ยของ ${division.name}`} value={formatAverage(division.index)} isDarkMode={isDarkMode} />
                 </dl>
-                <div className="mt-3"><DeltaTag delta={station.delta} isDarkMode={isDarkMode} /></div>
             </Panel>
 
-            <Panel title="คะแนนแยกตามเรื่อง" icon={BarChart3} isDarkMode={isDarkMode}>
+            <Panel title="คะแนนแยกตามด้าน" icon={BarChart3} isDarkMode={isDarkMode}>
                 <CategoryRadar
                     rows={radar}
                     series={[
                         { name: stationName, color: RADAR_COLORS.main },
-                        { name: 'เฉลี่ย กก.', color: RADAR_COLORS.compare, dashed: true, decimals: 1 },
+                        { name: division.name, color: RADAR_COLORS.compare, dashed: true },
                     ]}
-                    subtitle="แต่ละแกนเทียบกับ ส.ทล. ที่ทำได้สูงสุดในเรื่องนั้น (= 100%)"
+                    subtitle={`แต่ละด้านเทียบกับน้ำหนักเต็มของด้านนั้น (= 100%) เส้นประคือ ${division.name} โดยเฉลี่ย`}
                     isDarkMode={isDarkMode}
                 />
             </Panel>
 
-            <Panel title="ที่มาของคะแนน" icon={Calculator} isDarkMode={isDarkMode}>
-                <PointsBreakdownTable rows={breakdown} isDarkMode={isDarkMode} />
+            <Panel title="ที่มาของดัชนี" icon={Calculator} isDarkMode={isDarkMode}>
+                <BreakdownTable rows={breakdown} isDarkMode={isDarkMode} />
+            </Panel>
+
+            <Panel title="รายการที่นับคะแนน" icon={ListChecks} isDarkMode={isDarkMode}>
+                <ItemGroupsList groups={itemGroupsOf(station.items)} isDarkMode={isDarkMode} />
             </Panel>
         </div>
     );

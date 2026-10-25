@@ -1,78 +1,70 @@
 import React from 'react';
 import { Gauge, BarChart3, Calculator } from 'lucide-react';
-import { DeltaTag, ScoreBarChart, CategoryRadar, Panel, Stat } from './QualityParts';
+import { IndexFigure, CategoryRadar, Panel, ScoreBarChart } from './QualityParts';
 import StationCompare from './StationCompare';
 import { scoringStartDate } from '../../../lib/quality/scoringDates.js';
-import { barItems, bestByCategory, formatAverage, formatCount, formatThaiDate, perStationCategories, RADAR_COLORS, radarRows, scoringRules, themed } from './qualityFormat.js';
+import { INDEX_DIMENSIONS } from '../../../lib/quality/scoringConfig.js';
+import { dimensionRadarRows, formatThaiDate, indexBarItems, RADAR_COLORS, themed } from './qualityFormat.js';
 
-const RULES = scoringRules();
-const KIND_HEADINGS = [
-    { kind: 'quantity', label: 'ปริมาณ' },
-    { kind: 'quality', label: 'คุณภาพ' },
+// How the index is worked out, in the order a reader needs it. Numbers come from the config, never typed in here.
+const METHOD_LINES = [
+    'คะแนนแต่ละด้าน = ค่าของ ส.ทล. ÷ ค่าสูงสุดของ ส.ทล. ทั้ง 43 ในช่วงเดียวกัน × น้ำหนักของด้าน (ค่าสูงสุดเป็น 0 ให้ 0 คะแนน)',
+    'ดัชนีของ ส.ทล. = ผลรวมคะแนนทั้ง 6 ด้าน (เต็ม 100) · ดัชนีของ กก. และ บก.ทล. = ค่าเฉลี่ยของ ส.ทล. ในหน่วยนั้น',
+    'คดีอาญาจับเอง นับทุกคดีเป็น 1 · หมายจับสำคัญนับเป็น 3 รวมหมายที่นับอยู่แล้ว',
+    'คดีสำคัญ มีคะแนนความยาก 1 ถึง 3 ถ้าใช้ร่วมกันแบ่งเท่ากันระหว่างหน่วย',
+    'ปฏิบัติการ (OP) หน่วยนำได้ 2 คะแนน หน่วยร่วมได้ 1 คะแนน',
+    'รางวัล ลำดับ 1 ถึง 3 ได้ 10, 8 และ 6 คะแนน ลำดับถัดไปได้ 5 คะแนน',
+    'ถวายความปลอดภัย (ถปภ.) นับเป็นวันที่เสด็จฯ ผ่านพื้นที่ ส.ทล.',
 ];
 
 const HQPanel = ({ model, isDarkMode = true, onSelectDivision, onSelectStation }) => {
     const { hq, divisions } = model;
     const muted = themed(isDarkMode, 'text-slate-400', 'text-slate-600');
-    // HQ per-station average in each category, as a percent of the best division's per-station average
-    const hqAverages = perStationCategories(hq.points.categories, model.stations.length);
-    const divisionAverages = divisions.map((division) => perStationCategories(division.points.categories, division.stationCount));
-    const radar = radarRows([{ name: 'บก.ทล.', categories: hqAverages }], bestByCategory(divisionAverages));
-    const divisionBars = barItems(divisions, 'average', (division) => division.name);
+    const radar = dimensionRadarRows([{ name: 'บก.ทล.', scores: hq.scores }]);
+    const divisionBars = indexBarItems(divisions, 'index', (division) => division.name);
 
     return (
         <div className="space-y-6">
-            <Panel title="คะแนนรวม บก.ทล." icon={Gauge} isDarkMode={isDarkMode}>
-                <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    <Stat label="คะแนนรวม" value={formatCount(hq.total)} emphasis isDarkMode={isDarkMode} />
-                    <Stat label="ปริมาณ" value={formatCount(hq.points.quantity)} isDarkMode={isDarkMode} />
-                    <Stat label="คุณภาพ" value={formatCount(hq.points.quality)} isDarkMode={isDarkMode} />
-                    <Stat label="เฉลี่ยต่อ ส.ทล." value={formatAverage(hq.average)} isDarkMode={isDarkMode} />
-                </dl>
-                <div className="mt-3"><DeltaTag delta={hq.delta} isDarkMode={isDarkMode} /></div>
+            <Panel title="ดัชนีคุณภาพ บก.ทล." icon={Gauge} isDarkMode={isDarkMode}>
+                <IndexFigure index={hq.index} delta={hq.delta} isDarkMode={isDarkMode} />
                 <div className="mt-6">
                     <CategoryRadar
                         rows={radar}
-                        series={[{ name: 'บก.ทล.', color: RADAR_COLORS.main, decimals: 1 }]}
-                        subtitle="คะแนนเฉลี่ยต่อ ส.ทล. ของ บก.ทล. แต่ละแกนเทียบกับ กก. ที่ทำได้สูงสุดในเรื่องนั้น (= 100%)"
+                        series={[{ name: 'บก.ทล.', color: RADAR_COLORS.main }]}
+                        subtitle="คะแนนเฉลี่ยต่อ ส.ทล. ของแต่ละด้าน เทียบกับน้ำหนักเต็มของด้านนั้น (= 100%)"
                         isDarkMode={isDarkMode}
                     />
                 </div>
             </Panel>
 
-            <Panel title="เปรียบเทียบคะแนน 8 กก." icon={BarChart3} isDarkMode={isDarkMode}>
-                <p className={`mb-3 text-sm ${muted}`}>คะแนนเฉลี่ยต่อ ส.ทล.</p>
+            <Panel title="เปรียบเทียบดัชนี 8 กก." icon={BarChart3} isDarkMode={isDarkMode}>
+                <p className={`mb-3 text-sm ${muted}`}>ดัชนีคุณภาพเฉลี่ยของแต่ละ กก. · กดแท่งเพื่อดูรายละเอียด</p>
                 <ScoreBarChart
                     items={divisionBars}
                     onSelect={onSelectDivision}
                     isDarkMode={isDarkMode}
-                    ariaLabel="เปรียบเทียบคะแนนเฉลี่ยต่อ ส.ทล. ของ 8 กก."
-                    valueLabel="เฉลี่ยต่อ ส.ทล."
+                    ariaLabel="เปรียบเทียบดัชนีคุณภาพของ 8 กก."
+                    valueLabel="ดัชนี"
                     decimals={1}
                 />
             </Panel>
 
             <StationCompare model={model} isDarkMode={isDarkMode} onSelectStation={onSelectStation} />
 
-            <Panel title="วิธีคิดคะแนน" icon={Calculator} isDarkMode={isDarkMode}>
-                <p className={`mb-4 text-sm ${muted}`}>คะแนนรวม = ปริมาณ + คุณภาพ</p>
-                <div className="space-y-5">
-                    {KIND_HEADINGS.map(({ kind, label }) => (
-                        <div key={kind}>
-                            <h4 className="mb-2 text-sm font-semibold">{label}</h4>
-                            <ul className="space-y-2 text-sm">
-                                {RULES.filter((rule) => rule.kind === kind).map((rule) => (
-                                    <li key={`${rule.category}-${rule.text}`} className="flex flex-wrap justify-between gap-x-4">
-                                        <span>{rule.categoryLabel} · {rule.text}</span>
-                                        <span className="whitespace-nowrap font-semibold tabular-nums">{rule.points} คะแนน {rule.unit}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+            <Panel title="วิธีคิดดัชนี" icon={Calculator} isDarkMode={isDarkMode}>
+                <p className={`mb-4 text-sm ${muted}`}>ดัชนีคุณภาพเต็ม 100 แบ่งเป็น 6 ด้าน</p>
+                <ul className="mb-5 space-y-2 text-sm">
+                    {INDEX_DIMENSIONS.map(({ id, label, weight }) => (
+                        <li key={id} className="flex flex-wrap justify-between gap-x-4">
+                            <span>{label}</span>
+                            <span className="whitespace-nowrap font-semibold tabular-nums">น้ำหนัก {weight}</span>
+                        </li>
                     ))}
-                </div>
-                <p className={`mt-5 text-sm ${muted}`}>รางวัลด้านปราบปราม ทั้งรางวัลประจำเดือนและรางวัลครั้งคราว (ระดมกวาดล้างอาชญากรรม จับเมาแล้วขับช่วงเทศกาล คดียอดเยี่ยมแห่งปี พัฒนางานสืบสวน) ลำดับ 1 ถึง 3 ได้ 10, 8 และ 6 คะแนน ลำดับถัดไปได้ 5 คะแนน นับในเดือนที่ประกาศรางวัล ผลงานที่ใช้ร่วมกันแบ่งเท่ากันระหว่างหน่วย และผลงานระดับ กก. แบ่งเท่ากันระหว่าง ส.ทล. ใน กก. นั้น</p>
-                <p className={`mt-3 text-sm ${muted}`}>เริ่มคิดคะแนนตั้งแต่ {formatThaiDate(scoringStartDate())}</p>
+                </ul>
+                <ul className="list-disc space-y-2 pl-5 text-sm">
+                    {METHOD_LINES.map((line) => <li key={line}>{line}</li>)}
+                </ul>
+                <p className={`mt-5 text-sm ${muted}`}>เริ่มคิดคะแนนตั้งแต่ {formatThaiDate(scoringStartDate())}</p>
             </Panel>
         </div>
     );

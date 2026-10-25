@@ -183,6 +183,14 @@ test('a month with no data scores zeros, and its items are empty lists', () => {
     assert.ok(model.stations.every((station) => Object.values(station.items).every((list) => list.length === 0)));
 });
 
+test('in 2026-09 max of each dimension is the largest raw value among the 43 stations', () => {
+    const model = modelOf('2026-09');
+
+    for (const id of DIM_IDS) {
+        assert.equal(model.max[id], Math.max(...model.stations.map((station) => station.raw[id])), id);
+    }
+});
+
 test('the first scored month has no delta, because its previous month is before the scoring start', () => {
     const model = modelOf('2025-10');
 
