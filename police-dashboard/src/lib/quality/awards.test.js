@@ -66,11 +66,20 @@ test('INDEX_AWARDS keeps the special awards of a month', () => {
     });
 });
 
-test('INDEX_AWARDS adds the sweep awards, such as the 2025-11 station-level sweep for 1-4 at 10 points', () => {
-    const byStation = awardsByStation({ start: new Date(2025, 10, 1), end: new Date(2025, 10, 30) });
-    const sweep = byStation['1-4'].find((award) => award.title.endsWith('(ระดับสถานี)'));
+test('INDEX_AWARDS leaves out sweeps (ระดมกวาดล้าง), which count only as OP', () => {
+    const titles = Object.values(INDEX_AWARDS).flat().map((entry) => entry[3]);
 
-    assert.equal(sweep.points, 10);
+    assert.ok(titles.every((title) => !title.startsWith('ระดมกวาดล้าง')));
+    assert.equal(awardsByStation({ start: new Date(2025, 10, 1), end: new Date(2025, 10, 30) })['1-4'], undefined);
+});
+
+test('INDEX_AWARDS adds the 2026-09 outstanding lodging and training contest awards at 10 points each', () => {
+    const byStation = awardsByStation({ start: new Date(2026, 8, 1), end: new Date(2026, 8, 30) });
+
+    for (const key of ['7-1', '2-3', '6-4', '7-3']) {
+        assert.ok(byStation[key].some((award) => award.title === 'อาคารที่พักดีเด่น ระดับ ตร.' && award.points === 10), key);
+    }
+    assert.ok(byStation['8-3'].some((award) => award.title === 'ชนะเลิศประกวดการฝึก ประเภทหน่วยงาน (หน่วยหลัก)' && award.points === 10));
 });
 
 test('awardsByStation gives nothing for a month the period covers only partly', () => {

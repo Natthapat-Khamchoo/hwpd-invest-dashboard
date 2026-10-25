@@ -72,21 +72,54 @@ test('in 2026-09 each dimension with a max gives its best station the full weigh
     }
 });
 
-test('in 2025-10 OP gives each unit its full points: 2-4 gets 2, 2-5 gets 1, 1-3 gets 2 and 3-2 gets 2', () => {
+test('in 2025-10 OP gives each unit its full points: 2-2 leads for 2, 2-4 supports for 1, 1-3 and 3-2 lead for 2', () => {
     const model = modelOf('2025-10');
 
-    assert.equal(stationOf(model, '2-4').raw.op, 2);
-    assert.equal(stationOf(model, '2-5').raw.op, 1);
-    assert.equal(stationOf(model, '1-3').raw.op, 2);
+    assert.equal(stationOf(model, '2-2').raw.op, 2);
+    assert.equal(stationOf(model, '2-4').raw.op, 1);
     assert.equal(stationOf(model, '3-2').raw.op, 2);
+    assert.equal(stationOf(model, '1-3').raw.op, 2);
 });
 
-test('in 2025-11 every station of กก.5 gets 2/6 OP, the division points split across six stations', () => {
+test('in 2025-11 every station of กก.5 gets 1 OP from the Car Scams support case, and 5-2 and 5-5 also get 1 from the sweep', () => {
     const model = modelOf('2025-11');
 
     for (const key of STATION_KEYS.filter((k) => k.startsWith('5-'))) {
-        close(stationOf(model, key).raw.op, 2 / 6);
+        assert.equal(stationOf(model, key).raw.op, ['5-2', '5-5'].includes(key) ? 2 : 1, key);
     }
+});
+
+test('fiscal-year OP: the max is 10, 2-2 scores the full 15, and 2-1, 2-4 and 2-6 score 7.5 each', () => {
+    const model = buildQualityModel(null, 'fy', TODAY);
+
+    assert.equal(model.max.op, 10);
+    close(stationOf(model, '2-2').scores.op, 15);
+    for (const key of ['2-1', '2-4', '2-6']) close(stationOf(model, key).scores.op, 7.5, 0.05);
+});
+
+test('fiscal-year OP raw: 3-2 is 4.2 with its share of the กก.3 sweep, 7-4 is 2, and the 2025-12 values match', () => {
+    const fy = buildQualityModel(null, 'fy', TODAY);
+
+    close(stationOf(fy, '3-2').raw.op, 4.2, 0.001);
+    close(stationOf(fy, '7-4').raw.op, 2);
+    close(stationOf(modelOf('2025-12'), '4-1').raw.op, 0.2);
+    close(stationOf(modelOf('2025-12'), '4-4').raw.op, 1.2);
+});
+
+test('no award item in the fiscal year is a sweep or a press conference', () => {
+    const fy = buildQualityModel(null, 'fy', TODAY);
+    const titles = fy.stations.flatMap((station) => station.items.award.map((item) => item.title));
+
+    assert.ok(titles.length > 0);
+    assert.ok(titles.every((title) => !title.startsWith('ระดมกวาดล้าง') && !title.startsWith('แถลงข่าว')));
+});
+
+test('in 2026-09 8-3 gets the training contest worth 10, and 7-1 gets the outstanding lodging award worth 10', () => {
+    const model = modelOf('2026-09');
+    const hasAward = (key, title) => stationOf(model, key).items.award.some((item) => item.title === title && item.value === 10);
+
+    assert.ok(hasAward('8-3', 'ชนะเลิศประกวดการฝึก ประเภทหน่วยงาน (หน่วยหลัก)'));
+    assert.ok(hasAward('7-1', 'อาคารที่พักดีเด่น ระดับ ตร.'));
 });
 
 test('in 2025-11 ส.ทล.2 กก.2 led the กก.2 case for 2 OP and every other กก.2 station supported it for 1', () => {
@@ -162,11 +195,6 @@ test('in 2026-04 the award dimension for 5-1 has no press conference, which coun
     assert.ok(!station.items.award.some((item) => item.title.startsWith('แถลงข่าว')));
 });
 
-test('in 2025-11 the award dimension for 1-4 includes the station-level sweep worth 10', () => {
-    const item = stationOf(modelOf('2025-11'), '1-4').items.award.find((entry) => entry.title.endsWith('(ระดับสถานี)'));
-
-    assert.equal(item.value, 10);
-});
 
 test('an empty dimension in a month scores 0 for every station, with no NaN', () => {
     const model = modelOf('2026-02');

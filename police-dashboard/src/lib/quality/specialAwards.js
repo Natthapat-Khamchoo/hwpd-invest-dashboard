@@ -1,8 +1,8 @@
 // Occasional crime awards handed out at ประชุมบริหาร บก.ทล. (วาระที่ 2), keyed by the month of the meeting that
 // announced them: month 'YYYY-MM' -> [rank, units, title, points?]; points, when given, replaces the rank points. Units follow MONTHLY_AWARDS ('kk-stl' or a whole division 'kk').
 // Service, traffic-gentleman, volunteer and ethics awards are left out on purpose: they are not criminal cases.
-// Press conferences (แถลงข่าว) score 10 per case for each unit that made the arrest (user, 2026-10-25); a whole-division
-// unit splits its 10 across its stations, and the 16 Sep 2026 Scam Hunter EP.4 / Chinese-Taiwanese smuggling briefing counts once.
+// Press conferences (แถลงข่าว) and sweeps (ระดมกวาดล้าง) stay listed here for the record, but the quality index leaves
+// them out of the award dimension: both now score in OP from OP_CASES in qualityIndexData.js (user, 2026-10-26).
 // The 21 Aug 2025 briefing (ยาบ้า 1,000,000 เม็ด, ส.ทล.4 กก.2) falls in FY 2568, before the scoring start, so it is not listed.
 export const SPECIAL_AWARDS = {
     '2025-10': [
