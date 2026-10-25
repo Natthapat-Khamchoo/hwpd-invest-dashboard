@@ -44,7 +44,10 @@ test('awardsByStation gives a station and a division in one award their own shar
 test('awardsByStation counts a 2026-09 award for the month', () => {
     const byStation = awardsByStation({ start: new Date(2026, 8, 1), end: new Date(2026, 8, 30) });
 
-    assert.deepEqual(byStation['5-3'], [{ month: '2026-09', rank: 1, points: 10, shared: 1, honourable: false, title: 'ป้องกันปราบปรามดีเด่นประจำเดือน' }]);
+    assert.deepEqual(byStation['5-3'], [
+        { month: '2026-09', rank: 1, points: 10, shared: 1, honourable: false, title: 'ป้องกันปราบปรามดีเด่นประจำเดือน' },
+        { month: '2026-09', rank: 1, points: 10, shared: 1, honourable: false, title: 'วันตำรวจ 2569 ปราบปรามยาเสพติดดีเด่น (ด.ต.สายชล ศิลาไศล)' },
+    ]);
 });
 
 test('awardsByStation gives nothing for a month the period covers only partly', () => {
