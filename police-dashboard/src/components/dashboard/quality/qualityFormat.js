@@ -28,7 +28,7 @@ export const sourceNotice = (newestMonth) => `คะแนนคิดจาก�
 
 // "ก.ย. 2569 ลำดับ 1", with the share count and an honourable mention when they apply. Points sit in their own column.
 export const awardLabel = ({ month, rank, shared, honourable }) => (
-    `${formatMonthThai(month)} ลำดับ ${rank}`
+    `${formatMonthThai(month)}${rank ? ` ลำดับ ${rank}` : ''}`
     + (shared > 1 ? ` (แบ่ง ${shared} หน่วย)` : '')
     + (honourable ? ' · ชมเชย' : '')
 );

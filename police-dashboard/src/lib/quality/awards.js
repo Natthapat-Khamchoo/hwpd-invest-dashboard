@@ -5,11 +5,12 @@ import { isScoredMonth, monthsIn } from './scoringDates.js';
 
 export const MONTHLY_AWARD_TITLE = 'ป้องกันปราบปรามดีเด่นประจำเดือน';
 
-// Monthly and occasional awards in one table: month -> [rank, units, honourable, title]
+// Monthly and occasional awards in one table: month -> [rank, units, honourable, title, points?].
+// A rank of null with explicit points is a flat award (no ranking).
 export const ALL_AWARDS = Object.fromEntries(
     [...new Set([...Object.keys(MONTHLY_AWARDS), ...Object.keys(SPECIAL_AWARDS)])].sort().map((month) => [month, [
         ...(MONTHLY_AWARDS[month] ?? []).map(([rank, units, honourable]) => [rank, units, honourable, MONTHLY_AWARD_TITLE]),
-        ...(SPECIAL_AWARDS[month] ?? []).map(([rank, units, title]) => [rank, units, false, title]),
+        ...(SPECIAL_AWARDS[month] ?? []).map(([rank, units, title, points]) => [rank, units, false, title, points]),
     ]])
 );
 
@@ -28,9 +29,9 @@ export const awardsByStation = (range, table = ALL_AWARDS) => {
     const byStation = {};
     for (const segment of monthsIn(range)) {
         if (!segment.full || !isScoredMonth(segment.key)) continue;
-        for (const [rank, units, honourable, title = MONTHLY_AWARD_TITLE] of table[segment.key] ?? []) {
-            // Each unit takes an equal share of the rank points; a division unit then splits its share across its stations
-            const unitShare = awardPointsOf(rank) / units.length;
+        for (const [rank, units, honourable, title = MONTHLY_AWARD_TITLE, flatPoints] of table[segment.key] ?? []) {
+            // Each unit takes an equal share of the award points; a division unit then splits its share across its stations
+            const unitShare = (flatPoints ?? awardPointsOf(rank)) / units.length;
             const pointsOfStation = new Map();
             for (const unit of units) {
                 const stations = stationsOfUnit(unit);

@@ -20,8 +20,8 @@ const scoreRow = ([warrant, drugs, immig, theft, gun, other, truck]) => (
 );
 
 // Award points a station gets in a month: its unit's share, and a division unit's share split across the division's stations
-const awardPointsOf = (monthKey, stationKey) => (ALL_AWARDS[monthKey] ?? []).reduce((total, [rank, units]) => {
-    const share = rankPoints(rank) / units.length;
+const awardPointsOf = (monthKey, stationKey) => (ALL_AWARDS[monthKey] ?? []).reduce((total, [rank, units, , , points]) => {
+    const share = (points ?? rankPoints(rank)) / units.length;
     const kk = stationKey.split('-')[0];
     return total
         + (units.includes(stationKey) ? share : 0)
@@ -72,7 +72,7 @@ test('the fiscal year total is every row and award from 2026-01 to 2026-09, and 
     const months = Object.keys(SELF_ARRESTS).filter((month) => month >= '2026-01' && month <= '2026-09');
     const rowTotal = months.flatMap((month) => Object.values(SELF_ARRESTS[month])).reduce((total, row) => total + scoreRow(row), 0)
         + months.flatMap((month) => Object.values(ROYAL_CONVOYS[month] ?? {})).reduce((total, convoys) => total + convoys * 2, 0);
-    const awardTotal = months.flatMap((month) => ALL_AWARDS[month] ?? []).reduce((total, [rank]) => total + rankPoints(rank), 0);
+    const awardTotal = months.flatMap((month) => ALL_AWARDS[month] ?? []).reduce((total, [rank, , , , points]) => total + (points ?? rankPoints(rank)), 0);
 
     assert.equal(model.hq.total, rowTotal + awardTotal);
     assert.ok(Math.abs(model.hq.points.categories.award.quality - awardTotal) < 1e-9);
