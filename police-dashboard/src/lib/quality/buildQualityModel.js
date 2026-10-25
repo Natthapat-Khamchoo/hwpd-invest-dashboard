@@ -72,7 +72,8 @@ const emptyItems = () => ({ award: [], major: [], op: [] });
 
 // Adds one monthly award to major: it counts 1, split equally between its units, and a division unit's share splits
 // across its stations. Each share is listed on its own, so a station in two units lists both.
-const creditMonthlyAward = (raw, items, { month, rank, units }) => {
+// The item label adds the rank and any honourable mention, so the title stays plain.
+const creditMonthlyAward = (raw, items, { month, rank, units, honourable }) => {
     for (const unit of units) {
         const stations = stationsOfUnit(unit);
         for (const key of stations) {
@@ -80,10 +81,11 @@ const creditMonthlyAward = (raw, items, { month, rank, units }) => {
             raw[key].major += value;
             items[key].major.push({
                 month,
-                title: `ป้องกันปราบปรามดีเด่นประจำเดือน ลำดับ ${rank}`,
+                title: 'ป้องกันปราบปรามดีเด่นประจำเดือน',
                 value,
                 ...(units.length > 1 && { shared: units.length }),
                 rank,
+                honourable,
             });
         }
     }
@@ -123,8 +125,8 @@ const scoreRange = (range) => {
             raw[key].royal += monthCounts.royal;
         }
         // Major: every monthly award, honourable mentions included (1 each, same split rules)
-        for (const [rank, units] of MONTHLY_AWARDS[month] ?? []) {
-            creditMonthlyAward(raw, items, { month, rank, units });
+        for (const [rank, units, honourable] of MONTHLY_AWARDS[month] ?? []) {
+            creditMonthlyAward(raw, items, { month, rank, units, honourable });
         }
         // OP: every unit takes the full points, not a share of them
         for (const [points, units, title] of OP_CASES[month] ?? []) {
