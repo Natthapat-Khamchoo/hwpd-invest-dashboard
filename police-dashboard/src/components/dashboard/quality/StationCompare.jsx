@@ -22,8 +22,11 @@ const StationCompare = ({ model, isDarkMode = true, onSelectStation }) => {
     const labelColor = themed(isDarkMode, '#f1f5f9', '#0f172a');
     const metric = METRICS.find((item) => item.id === selectedMetric);
 
-    const items = barItems(model.stations, selectedMetric, (station) => `กก.${station.kk} ส.ทล.${station.stl}`)
-        .map((item, index) => ({ ...item, fill: BAR_FILLS[Number(model.stations.find((s) => s.key === item.key).kk) % 2], index }));
+    // Labels read ส.ทล. first, but unit order stays กก. then ส.ทล., so sort by the 'kk-stl' key rather than the label
+    const unitOrder = (key) => key.split('-').map(Number);
+    const items = barItems(model.stations, selectedMetric, (station) => `ส.ทล.${station.stl} กก.${station.kk}`)
+        .sort((a, b) => { const [ak, as] = unitOrder(a.key); const [bk, bs] = unitOrder(b.key); return ak - bk || as - bs; })
+        .map((item, index) => ({ ...item, fill: BAR_FILLS[unitOrder(item.key)[0] % 2], index }));
     if (sort === 'score') items.sort((a, b) => b.value - a.value || a.index - b.index);
 
     return (
