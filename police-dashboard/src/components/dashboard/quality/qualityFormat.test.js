@@ -288,12 +288,12 @@ test('formatMonthThai writes the short Thai month and the Buddhist year', () => 
     assert.equal(formatMonthThai('2025-11'), 'พ.ย. 2568');
 });
 
-test('monthOptions lists the workbook months from January 2026, newest first', () => {
+test('monthOptions lists the workbook months from October 2025, newest first', () => {
     const options = monthOptions();
 
-    assert.equal(options.length, 9);
+    assert.equal(options.length, 12);
     assert.deepEqual(options[0], { value: '2026-09', label: 'ก.ย. 2569' });
-    assert.deepEqual(options[options.length - 1], { value: '2026-01', label: 'ม.ค. 2569' });
+    assert.deepEqual(options[options.length - 1], { value: '2025-10', label: 'ต.ค. 2568' });
 });
 
 test('fiscalYearLabel names the fiscal year that starts in October, by its Buddhist year', () => {

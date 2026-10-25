@@ -22,14 +22,15 @@ test('monthsIn returns no segment when the range ends before it starts', () => {
     assert.deepEqual(monthsIn({ start: new Date(2026, 0, 1), end: new Date(2025, 10, 30) }), []);
 });
 
-test('isScoredMonth is false for 2025 months and true from January 2026', () => {
-    assert.equal(isScoredMonth('2025-12'), false);
+test('isScoredMonth is false before October 2025 and true from October 2025, the start of FY 2569', () => {
+    assert.equal(isScoredMonth('2025-09'), false);
+    assert.equal(isScoredMonth('2025-10'), true);
     assert.equal(isScoredMonth('2026-01'), true);
 });
 
-test('scoredDataMonths lists the workbook months from January 2026 only, oldest first', () => {
+test('scoredDataMonths lists the workbook months from October 2025, oldest first', () => {
     assert.deepEqual(scoredDataMonths(), [
-        '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09',
+        '2025-10', '2025-11', '2025-12', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09',
     ]);
 });
 

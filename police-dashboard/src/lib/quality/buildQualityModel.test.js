@@ -38,12 +38,12 @@ test('countsOf gives zeros for a month or station with no row', () => {
     assert.deepEqual(countsOf('2026-08', '9-9'), zeros);
 });
 
-test('periodRange fy is the fiscal year of the newest workbook month, clamped to January 2026', () => {
+test('periodRange fy is the whole fiscal year of the newest workbook month, October 2025 to September 2026', () => {
     const range = periodRange('fy', TODAY);
 
-    assert.deepEqual(range.start, new Date(2026, 0, 1));
+    assert.deepEqual(range.start, new Date(2025, 9, 1));
     assert.deepEqual(range.end, new Date(2026, 8, 30));
-    assert.equal(range.days, 273);
+    assert.equal(range.days, 365);
 });
 
 test('periodRange pastMonth covers the whole named month', () => {
@@ -55,7 +55,7 @@ test('periodRange pastMonth covers the whole named month', () => {
 });
 
 test('periodRange gives 0 days for a pastMonth that ends before the scoring start', () => {
-    assert.equal(periodRange({ kind: 'pastMonth', month: '2025-12' }, TODAY).days, 0);
+    assert.equal(periodRange({ kind: 'pastMonth', month: '2025-09' }, TODAY).days, 0);
 });
 
 test('station 5-1 in 2026-08 scores its own row: 15 warrants and 4 flagrant cases, 34 points', () => {
@@ -67,9 +67,9 @@ test('station 5-1 in 2026-08 scores its own row: 15 warrants and 4 flagrant case
     assert.equal(station.total, scoreRow(SELF_ARRESTS['2026-08']['5-1']) + royalPoints('2026-08', '5-1') + awardPointsOf('2026-08', '5-1'));
 });
 
-test('the fiscal year total is every row and award from 2026-01 to 2026-09, and nothing from 2025', () => {
+test('the fiscal year total is every row, convoy and award from 2025-10 to 2026-09', () => {
     const model = buildQualityModel(null, 'fy', TODAY);
-    const months = Object.keys(SELF_ARRESTS).filter((month) => month >= '2026-01' && month <= '2026-09');
+    const months = Object.keys(SELF_ARRESTS).filter((month) => month >= '2025-10' && month <= '2026-09');
     const rowTotal = months.flatMap((month) => Object.values(SELF_ARRESTS[month])).reduce((total, row) => total + scoreRow(row), 0)
         + months.flatMap((month) => Object.values(ROYAL_CONVOYS[month] ?? {})).reduce((total, convoys) => total + convoys * 2, 0);
     const awardTotal = months.flatMap((month) => ALL_AWARDS[month] ?? []).reduce((total, [rank, , , , points]) => total + (points ?? rankPoints(rank)), 0);
@@ -94,8 +94,16 @@ test('a division-level occasional award splits across its stations: กก.5 inv
     assert.ok(Math.abs(award.points - 10 / 6) < 1e-9);
 });
 
-test('2025-12 data is excluded: that month scores zero for every station', () => {
-    const model = buildQualityModel(null, { kind: 'pastMonth', month: '2025-12' }, TODAY);
+test('October 2025 counts: station 3-2 scores its row, convoys, monthly award and press conference', () => {
+    const model = buildQualityModel(null, { kind: 'pastMonth', month: '2025-10' }, TODAY);
+    const station = model.stations.find((s) => s.key === '3-2');
+
+    assert.ok(station.awards.some((award) => award.title.startsWith('แถลงข่าว 10 ต.ค.68')));
+    assert.equal(station.total, scoreRow(SELF_ARRESTS['2025-10']['3-2']) + royalPoints('2025-10', '3-2') + awardPointsOf('2025-10', '3-2'));
+});
+
+test('a month before the scoring start scores zero for every station', () => {
+    const model = buildQualityModel(null, { kind: 'pastMonth', month: '2025-09' }, TODAY);
 
     assert.equal(model.period.days, 0);
     assert.ok(model.stations.every((station) => station.total === 0));
@@ -111,7 +119,7 @@ test('a month with no data scores zeros without errors', () => {
 });
 
 test('the first scored month has no delta, because its previous month is before the scoring start', () => {
-    const model = buildQualityModel(null, { kind: 'pastMonth', month: '2026-01' }, TODAY);
+    const model = buildQualityModel(null, { kind: 'pastMonth', month: '2025-10' }, TODAY);
 
     assert.equal(model.hq.delta, null);
     assert.ok(model.stations.every((station) => station.delta === null));

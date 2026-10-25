@@ -54,6 +54,7 @@ test('awardsByStation gives nothing for a month the period covers only partly', 
     assert.deepEqual(awardsByStation({ start: new Date(2026, 8, 1), end: new Date(2026, 8, 15) }), {});
 });
 
-test('awardsByStation leaves out 2025 awards, even when the range covers those whole months', () => {
-    assert.deepEqual(awardsByStation({ start: new Date(2025, 9, 1), end: new Date(2025, 11, 31) }), {});
+test('awardsByStation leaves out awards before October 2025, even when the range covers the whole month', () => {
+    const table = { '2025-09': [[1, ['1-1'], false]] };
+    assert.deepEqual(awardsByStation({ start: new Date(2025, 8, 1), end: new Date(2025, 8, 30) }, table), {});
 });

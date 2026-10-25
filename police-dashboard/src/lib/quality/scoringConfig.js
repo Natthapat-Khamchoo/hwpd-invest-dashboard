@@ -9,8 +9,9 @@ export const CATEGORIES = [
     { id: 'award', label: 'ผลงานดีเด่น' },
 ];
 
-// Nothing before this date counts, even though the workbooks also have Oct to Dec 2025 months
-export const SCORING_START = { year: 2026, month: 0, day: 1 };
+// Scoring covers fiscal year 2569 from its first day, the first month of the planning team's self-arrest workbooks
+// (user, 2026-10-25). Nothing before this date counts.
+export const SCORING_START = { year: 2025, month: 9, day: 1 };
 
 // Quality points for a monthly crime-prevention award by rank; ranks past the third score `other`
 export const AWARD_POINTS = { byRank: [10, 8, 6], other: 5 };

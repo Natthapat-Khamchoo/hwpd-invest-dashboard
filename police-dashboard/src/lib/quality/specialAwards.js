@@ -3,7 +3,18 @@
 // Service, traffic-gentleman, volunteer and ethics awards are left out on purpose: they are not criminal cases.
 // Press conferences (แถลงข่าว) score 10 per case for each unit that made the arrest (user, 2026-10-25); a whole-division
 // unit splits its 10 across its stations, and the 16 Sep 2026 Scam Hunter EP.4 / Chinese-Taiwanese smuggling briefing counts once.
+// The 21 Aug 2025 briefing (ยาบ้า 1,000,000 เม็ด, ส.ทล.4 กก.2) falls in FY 2568, before the scoring start, so it is not listed.
 export const SPECIAL_AWARDS = {
+    '2025-10': [
+        [1, ['1-3'], 'แถลงข่าว 10 ต.ค.68 ทลายเครือข่ายเช่าแล้วเชิด ส่งขายรถต่างประเทศ'],
+        [1, ['3-2'], 'แถลงข่าว 10 ต.ค.68 จับแก๊งหลอกเช่ารถขายต่างประเทศ เพจลักกี้ ออโต้คาร์'],
+        [1, ['2-4'], 'แถลงข่าว 31 ต.ค.68 ปิดเกมเครือข่ายน้าไข่แดง ยาบ้า 590,000 เม็ด'],
+        [1, ['2-5'], 'แถลงข่าว 31 ต.ค.68 ปิดเกมเครือข่ายน้าไข่แดง ยาบ้า 590,000 เม็ด'],
+    ],
+    '2025-11': [
+        [1, ['2'], 'แถลงข่าว 12 พ.ย.68 ทลายเครือข่าย Car Scams หลอกซื้อขายรถยนต์ออนไลน์ (กก.2)'],
+        [1, ['5'], 'แถลงข่าว 12 พ.ย.68 ทลายเครือข่าย Car Scams หลอกซื้อขายรถยนต์ออนไลน์ (กก.5)'],
+    ],
     '2026-01': [
         [1, ['2'], 'แถลงข่าว 21 ม.ค.69 ทลายคอกม้าพูลวิลล่า (ร่วม ACSC)'],
         [1, ['4'], 'ระดมกวาดล้างอาชญากรรม 17–25 ธ.ค.68 (ระดับ กก.)'],
