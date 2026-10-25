@@ -134,6 +134,7 @@ test('pointsBreakdown lists the seven self-arrest rows, zeros included, with cas
 test('pointsBreakdown gives each self-arrest row its count, quantity, quality and total', () => {
     const rows = pointsBreakdown(counts({ warrant: 3, drugs: 2, immig: 1, theft: 2, gun: 1, other: 4, truck: 1 }), [
         { month: '2026-09', rank: 1, points: 10, shared: 1, honourable: false },
+        { month: '2026-04', rank: 2, points: 8, shared: 1, honourable: false, title: 'จับเมาแล้วขับสูงสุด เทศกาลสงกรานต์ 2569' },
     ]);
 
     assert.deepEqual(rows, [
@@ -145,6 +146,7 @@ test('pointsBreakdown gives each self-arrest row its count, quantity, quality an
         { category: 'flagrant', label: 'คดีอาญาอื่น ๆ', count: 4, quantity: 4, quality: 0, total: 4 },
         { category: 'flagrant', label: 'รถหนัก', count: 1, quantity: 1, quality: 0, total: 1 },
         { category: 'award', label: 'ผลงานดีเด่น ก.ย. 2569 ลำดับ 1', count: 1, quantity: 0, quality: 10, total: 10 },
+        { category: 'award', label: 'จับเมาแล้วขับสูงสุด เทศกาลสงกรานต์ 2569 เม.ย. 2569 ลำดับ 2', count: 1, quantity: 0, quality: 8, total: 8 },
     ]);
 });
 
@@ -301,6 +303,6 @@ test('fiscalYearLabel names the fiscal year that starts in October, by its Buddh
 test('sourceNotice names the newest workbook month and the award rule', () => {
     assert.equal(
         sourceNotice('2026-09'),
-        'คะแนนคิดจากสถิติคดีอาญาจับเองของงานแผน (รายกลุ่มข้อหา) ข้อมูลถึง ก.ย. 2569 และรวมคะแนนผลงานดีเด่นประจำเดือน'
+        'คะแนนคิดจากสถิติคดีอาญาจับเองของงานแผน (รายกลุ่มข้อหา) ข้อมูลถึง ก.ย. 2569 และรวมคะแนนรางวัลด้านปราบปราม (ประจำเดือนและครั้งคราว)'
     );
 });

@@ -13,8 +13,8 @@ test('awardsByStation splits a shared award equally between its stations', () =>
     const table = { '2026-01': [[3, ['2-4', '2-5'], false]] };
     const byStation = awardsByStation({ start: new Date(2026, 0, 1), end: new Date(2026, 0, 31) }, table);
 
-    assert.deepEqual(byStation['2-4'], [{ month: '2026-01', rank: 3, points: 3, shared: 2, honourable: false }]);
-    assert.deepEqual(byStation['2-5'], [{ month: '2026-01', rank: 3, points: 3, shared: 2, honourable: false }]);
+    assert.deepEqual(byStation['2-4'], [{ month: '2026-01', rank: 3, points: 3, shared: 2, honourable: false, title: 'ป้องกันปราบปรามดีเด่นประจำเดือน' }]);
+    assert.deepEqual(byStation['2-5'], [{ month: '2026-01', rank: 3, points: 3, shared: 2, honourable: false, title: 'ป้องกันปราบปรามดีเด่นประจำเดือน' }]);
 });
 
 test('awardsByStation splits a division award across its stations', () => {
@@ -33,9 +33,9 @@ test('awardsByStation gives a station and a division in one award their own shar
     const table = { '2026-01': [[3, ['2-4', '2'], false]] };
     const byStation = awardsByStation({ start: new Date(2026, 0, 1), end: new Date(2026, 0, 31) }, table);
 
-    assert.deepEqual(byStation['2-4'], [{ month: '2026-01', rank: 3, points: 3.5, shared: 2, honourable: false }]);
+    assert.deepEqual(byStation['2-4'], [{ month: '2026-01', rank: 3, points: 3.5, shared: 2, honourable: false, title: 'ป้องกันปราบปรามดีเด่นประจำเดือน' }]);
     for (const key of ['2-1', '2-2', '2-3', '2-5', '2-6']) {
-        assert.deepEqual(byStation[key], [{ month: '2026-01', rank: 3, points: 0.5, shared: 2, honourable: false }]);
+        assert.deepEqual(byStation[key], [{ month: '2026-01', rank: 3, points: 0.5, shared: 2, honourable: false, title: 'ป้องกันปราบปรามดีเด่นประจำเดือน' }]);
     }
     const total = Object.values(byStation).flat().reduce((sum, award) => sum + award.points, 0);
     assert.equal(total, 6);
@@ -44,7 +44,7 @@ test('awardsByStation gives a station and a division in one award their own shar
 test('awardsByStation counts a 2026-09 award for the month', () => {
     const byStation = awardsByStation({ start: new Date(2026, 8, 1), end: new Date(2026, 8, 30) });
 
-    assert.deepEqual(byStation['5-3'], [{ month: '2026-09', rank: 1, points: 10, shared: 1, honourable: false }]);
+    assert.deepEqual(byStation['5-3'], [{ month: '2026-09', rank: 1, points: 10, shared: 1, honourable: false, title: 'ป้องกันปราบปรามดีเด่นประจำเดือน' }]);
 });
 
 test('awardsByStation gives nothing for a month the period covers only partly', () => {

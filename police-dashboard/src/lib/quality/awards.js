@@ -1,6 +1,17 @@
 import { AWARD_POINTS, STATIONS_PER_DIVISION } from './scoringConfig.js';
 import { MONTHLY_AWARDS } from './monthlyAwards.js';
+import { SPECIAL_AWARDS } from './specialAwards.js';
 import { isScoredMonth, monthsIn } from './scoringDates.js';
+
+export const MONTHLY_AWARD_TITLE = 'ป้องกันปราบปรามดีเด่นประจำเดือน';
+
+// Monthly and occasional awards in one table: month -> [rank, units, honourable, title]
+export const ALL_AWARDS = Object.fromEntries(
+    [...new Set([...Object.keys(MONTHLY_AWARDS), ...Object.keys(SPECIAL_AWARDS)])].sort().map((month) => [month, [
+        ...(MONTHLY_AWARDS[month] ?? []).map(([rank, units, honourable]) => [rank, units, honourable, MONTHLY_AWARD_TITLE]),
+        ...(SPECIAL_AWARDS[month] ?? []).map(([rank, units, title]) => [rank, units, false, title]),
+    ]])
+);
 
 // Points for one award by its rank. Honourable mentions follow the same rank rule.
 export const awardPointsOf = (rank) => (
@@ -13,11 +24,11 @@ const stationsOfUnit = (unit) => (unit.includes('-')
     : Array.from({ length: STATIONS_PER_DIVISION[unit] ?? 0 }, (_, i) => `${unit}-${i + 1}`));
 
 // Awards of the scored months the range covers fully, keyed by station. A shared award splits equally between its stations.
-export const awardsByStation = (range, table = MONTHLY_AWARDS) => {
+export const awardsByStation = (range, table = ALL_AWARDS) => {
     const byStation = {};
     for (const segment of monthsIn(range)) {
         if (!segment.full || !isScoredMonth(segment.key)) continue;
-        for (const [rank, units, honourable] of table[segment.key] ?? []) {
+        for (const [rank, units, honourable, title = MONTHLY_AWARD_TITLE] of table[segment.key] ?? []) {
             // Each unit takes an equal share of the rank points; a division unit then splits its share across its stations
             const unitShare = awardPointsOf(rank) / units.length;
             const pointsOfStation = new Map();
@@ -28,7 +39,7 @@ export const awardsByStation = (range, table = MONTHLY_AWARDS) => {
                 }
             }
             for (const [key, points] of pointsOfStation) {
-                (byStation[key] ??= []).push({ month: segment.key, rank, points, shared: units.length, honourable });
+                (byStation[key] ??= []).push({ month: segment.key, rank, points, shared: units.length, honourable, title });
             }
         }
     }

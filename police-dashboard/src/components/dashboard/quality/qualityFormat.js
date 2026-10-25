@@ -24,7 +24,7 @@ export const fiscalYearLabel = (monthKey) => {
 };
 
 // Header line under the title: where the self-arrest workbooks end, and that awards are added
-export const sourceNotice = (newestMonth) => `คะแนนคิดจากสถิติคดีอาญาจับเองของงานแผน (รายกลุ่มข้อหา) ข้อมูลถึง ${formatMonthThai(newestMonth)} และรวมคะแนนผลงานดีเด่นประจำเดือน`;
+export const sourceNotice = (newestMonth) => `คะแนนคิดจากสถิติคดีอาญาจับเองของงานแผน (รายกลุ่มข้อหา) ข้อมูลถึง ${formatMonthThai(newestMonth)} และรวมคะแนนรางวัลด้านปราบปราม (ประจำเดือนและครั้งคราว)`;
 
 // "ก.ย. 2569 ลำดับ 1", with the share count and an honourable mention when they apply. Points sit in their own column.
 export const awardLabel = ({ month, rank, shared, honourable }) => (
@@ -119,7 +119,7 @@ export const pointsBreakdown = (counts, awards = []) => [
     }),
     ...awards.map((award) => ({
         category: 'award',
-        label: `ผลงานดีเด่น ${awardLabel(award)}`,
+        label: `${award.title ?? 'ผลงานดีเด่น'} ${awardLabel(award)}`,
         count: 1,
         quantity: 0,
         quality: award.points,
@@ -142,10 +142,10 @@ export const scoringRules = () => [
     rule('quantity', 'flagrant', 'ทุกการจับกุมซึ่งหน้า (คนเข้าเมือง ลักทรัพย์ อาวุธปืน คดีอาญาอื่น ๆ รถหนัก)', QUANTITY.flagrant, 'ต่อคดี'),
     rule('quantity', 'drugs', 'ทุกคดียาเสพติด', QUANTITY.drugCaseBase, 'ต่อคดี'),
     rule('quality', 'flagrant', 'อาวุธปืน (เพิ่มจากปริมาณ)', QUALITY.flagrantExtra.gun, 'ต่อคดี'),
-    rule('quality', 'award', 'ประจำเดือน ลำดับ 1', AWARD_POINTS.byRank[0], 'ต่อรางวัล'),
-    rule('quality', 'award', 'ประจำเดือน ลำดับ 2', AWARD_POINTS.byRank[1], 'ต่อรางวัล'),
-    rule('quality', 'award', 'ประจำเดือน ลำดับ 3', AWARD_POINTS.byRank[2], 'ต่อรางวัล'),
-    rule('quality', 'award', 'ประจำเดือน ลำดับ 4 ขึ้นไป', AWARD_POINTS.other, 'ต่อรางวัล'),
+    rule('quality', 'award', 'ลำดับ 1', AWARD_POINTS.byRank[0], 'ต่อรางวัล'),
+    rule('quality', 'award', 'ลำดับ 2', AWARD_POINTS.byRank[1], 'ต่อรางวัล'),
+    rule('quality', 'award', 'ลำดับ 3', AWARD_POINTS.byRank[2], 'ต่อรางวัล'),
+    rule('quality', 'award', 'ลำดับ 4 ขึ้นไป', AWARD_POINTS.other, 'ต่อรางวัล'),
 ];
 
 const safeDivide = (numerator, denominator) => (denominator > 0 ? numerator / denominator : 0);
