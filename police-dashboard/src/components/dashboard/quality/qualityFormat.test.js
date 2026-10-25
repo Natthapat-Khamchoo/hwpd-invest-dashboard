@@ -49,28 +49,34 @@ test('toPercent rounds a 0-1 ratio to a whole percent', () => {
     assert.equal(toPercent(1), 100);
 });
 
-test('barItems sorts by the unit total, highest first, and carries the total for the tooltip', () => {
+test('barItems keeps unit order, not score order, and carries the total for the tooltip', () => {
     const units = [
-        { kk: '1', name: 'กก.1', points: pointsOf({ warrant: 10 }, { warrant: 5 }) },
         { kk: '2', name: 'กก.2', points: pointsOf({ warrant: 60 }, { warrant: 20 }) },
+        { kk: '1', name: 'กก.1', points: pointsOf({ warrant: 10 }, { warrant: 5 }) },
     ];
     const items = barItems(units, 'total', (unit) => unit.name);
-    assert.deepEqual(items.map((item) => item.key), ['2', '1']);
-    assert.deepEqual(items.map((item) => item.value), [80, 15]);
-    assert.deepEqual(items.map((item) => item.total), [80, 15]);
+    assert.deepEqual(items.map((item) => item.key), ['1', '2']);
+    assert.deepEqual(items.map((item) => item.value), [15, 80]);
+    assert.deepEqual(items.map((item) => item.total), [15, 80]);
 });
 
-test('barItems ranks by quality when the metric is quality', () => {
+test('barItems orders by the number in the label, so 10 follows 9', () => {
+    const units = ['ส.ทล.10', 'ส.ทล.2', 'ส.ทล.1'].map((name) => ({ kk: name, name, points: pointsOf() }));
+    const items = barItems(units, 'total', (unit) => unit.name);
+    assert.deepEqual(items.map((item) => item.label), ['ส.ทล.1', 'ส.ทล.2', 'ส.ทล.10']);
+});
+
+test('barItems reads quality when the metric is quality', () => {
     const units = [
         { kk: '1', name: 'กก.1', points: pointsOf({ warrant: 100 }, { warrant: 1 }) },
         { kk: '2', name: 'กก.2', points: pointsOf({ warrant: 1 }, { warrant: 9 }) },
     ];
     const items = barItems(units, 'quality', (unit) => unit.name);
-    assert.deepEqual(items.map((item) => item.key), ['2', '1']);
-    assert.deepEqual(items.map((item) => item.value), [9, 1]);
+    assert.deepEqual(items.map((item) => item.key), ['1', '2']);
+    assert.deepEqual(items.map((item) => item.value), [1, 9]);
 });
 
-test('barItems ranks by quantity when the metric is quantity', () => {
+test('barItems reads quantity when the metric is quantity', () => {
     const units = [
         { kk: '1', name: 'กก.1', points: pointsOf({ warrant: 100 }, { warrant: 1 }) },
         { kk: '2', name: 'กก.2', points: pointsOf({ warrant: 1 }, { warrant: 9 }) },
@@ -79,24 +85,24 @@ test('barItems ranks by quantity when the metric is quantity', () => {
     assert.deepEqual(items.map((item) => item.value), [100, 1]);
 });
 
-test('barItems ranks by one category total when the metric is a category id', () => {
+test('barItems reads one category total when the metric is a category id', () => {
     const units = [
         { kk: '1', name: 'กก.1', points: pointsOf({ drugs: 5 }, { drugs: 5 }) },
         { kk: '2', name: 'กก.2', points: pointsOf({ drugs: 20 }, { drugs: 1 }) },
     ];
     const items = barItems(units, 'drugs', (unit) => unit.name);
-    assert.deepEqual(items.map((item) => item.key), ['2', '1']);
-    assert.deepEqual(items.map((item) => item.value), [21, 10]);
+    assert.deepEqual(items.map((item) => item.key), ['1', '2']);
+    assert.deepEqual(items.map((item) => item.value), [10, 21]);
 });
 
-test('barItems ranks by the per-station average when the metric is average', () => {
+test('barItems reads the per-station average when the metric is average', () => {
     const units = [
         { kk: '1', name: 'กก.1', average: 12.5, points: pointsOf({ warrant: 500 }) },
         { kk: '2', name: 'กก.2', average: 30.2, points: pointsOf({ warrant: 10 }) },
     ];
     const items = barItems(units, 'average', (unit) => unit.name);
-    assert.deepEqual(items.map((item) => item.key), ['2', '1']);
-    assert.deepEqual(items.map((item) => item.value), [30.2, 12.5]);
+    assert.deepEqual(items.map((item) => item.key), ['1', '2']);
+    assert.deepEqual(items.map((item) => item.value), [12.5, 30.2]);
 });
 
 test('barItems returns zero values without NaN when every unit scores zero', () => {
@@ -109,7 +115,7 @@ test('barItems returns zero values without NaN when every unit scores zero', () 
     assert.ok(items.every((item) => Number.isFinite(item.value)));
 });
 
-test('barItems prefers an explicit key over kk and breaks value ties by label', () => {
+test('barItems prefers an explicit key over kk', () => {
     const units = [
         { key: 'b', kk: '9', name: 'ข', points: pointsOf({ warrant: 70 }) },
         { key: 'a', kk: '9', name: 'ก', points: pointsOf({ warrant: 70 }) },

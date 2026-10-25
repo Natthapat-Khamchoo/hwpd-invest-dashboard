@@ -47,7 +47,8 @@ const metricValue = (unit, metric) => {
 };
 
 // Units become bar items for metric 'total' | 'quantity' | 'quality' | a category id | 'average'.
-// Highest first, ties by label. `total` rides along for the tooltip.
+// Fixed unit order by the number in the label (กก.1 to กก.8, ส.ทล.1 to ส.ทล.6), whatever the metric.
+// `total` rides along for the tooltip.
 export const barItems = (units, metric, labelOf) => units
     .map((unit) => ({
         key: unit.key ?? unit.kk,
@@ -55,7 +56,7 @@ export const barItems = (units, metric, labelOf) => units
         value: metricValue(unit, metric),
         total: unit.points.total,
     }))
-    .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+    .sort((a, b) => a.label.localeCompare(b.label, 'th', { numeric: true }));
 
 const OFFENSE_NAMES = {
     drugs: 'ยาเสพติด', gun: 'อาวุธปืน', immig: 'คนเข้าเมือง', customs: 'ศุลกากร', disease: 'โรคติดต่อ', transport: 'ขนส่ง',
