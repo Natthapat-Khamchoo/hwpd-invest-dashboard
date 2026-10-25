@@ -125,8 +125,8 @@ test('in 2026-01 criminal for each station of กก.2 is its six fields plus 2/
     }
 });
 
-test('in 2025-11 royal for 3-2 is its 11 convoy days', () => {
-    assert.equal(stationOf(modelOf('2025-11'), '3-2').raw.royal, 11);
+test('in 2025-11 royal for 3-2 is its 21 convoy days, the long convoy included', () => {
+    assert.equal(stationOf(modelOf('2025-11'), '3-2').raw.royal, 21);
 });
 
 test('in 2026-04 the award dimension for 5-1 has no press conference, which counts only as OP', () => {
