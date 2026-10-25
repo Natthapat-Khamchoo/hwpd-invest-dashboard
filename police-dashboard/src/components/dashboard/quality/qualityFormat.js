@@ -138,6 +138,6 @@ const ITEM_GROUPS = [
     { kind: 'award', label: 'รางวัล' },
     { kind: 'major', label: 'คดีสำคัญ' },
     { kind: 'op', label: 'ปฏิบัติการ (OP)' },
-    { kind: 'warrant', label: 'หมายจับสำคัญ' },
+    { kind: 'warrant', label: 'หมายจับสำคัญ (บวกเพิ่มจากหมายปกติที่นับแล้ว 1 รวมเป็น 3)' },
 ];
 export const itemGroupsOf = (items) => ITEM_GROUPS.map(({ kind, label }) => ({ kind, label, rows: items[kind] ?? [] }));

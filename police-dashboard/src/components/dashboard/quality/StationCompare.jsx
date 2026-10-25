@@ -7,7 +7,7 @@ import { compareUnitKeys, formatAverage, formatCount, indexBarItems, INDEX_METRI
 const ROW_HEIGHT = 26;
 const SORTS = [
     { id: 'order', label: 'ตามลำดับหน่วย' },
-    { id: 'score', label: 'ตามคะแนน' },
+    { id: 'score', label: 'ตามค่า' },
 ];
 // Neighbouring กก. alternate shades so the 43 rows read as groups
 const BAR_FILLS = ['#06b6d4', '#6366f1'];
@@ -64,7 +64,7 @@ const StationCompare = ({ model, isDarkMode = true, onSelectStation }) => {
                 <ResponsiveContainer width="100%" height={items.length * ROW_HEIGHT + 40}>
                     <BarChart data={items} layout="vertical" margin={{ top: 4, right: 44, left: 0, bottom: 0 }}>
                         <CartesianGrid horizontal={false} stroke={gridColor} />
-                        <XAxis type="number" domain={[0, 'auto']} tickFormatter={formatCount}tick={{ fill: tickColor, fontSize: 11 }} tickLine={false} axisLine={{ stroke: gridColor }} />
+                        <XAxis type="number" domain={[0, 'auto']} tickFormatter={formatCount} tick={{ fill: tickColor, fontSize: 11 }} tickLine={false} axisLine={{ stroke: gridColor }} />
                         <YAxis type="category" dataKey="label" width={92} interval={0} tick={{ fill: tickColor, fontSize: 11 }} tickLine={false} axisLine={false} />
                         <RechartsTooltip
                             cursor={{ fill: themed(isDarkMode, 'rgba(255,255,255,0.05)', 'rgba(0,0,0,0.05)') }}

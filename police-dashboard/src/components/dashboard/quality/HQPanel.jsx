@@ -6,7 +6,8 @@ import { scoringStartDate } from '../../../lib/quality/scoringDates.js';
 import { INDEX_DIMENSIONS } from '../../../lib/quality/scoringConfig.js';
 import { dimensionRadarRows, formatThaiDate, indexBarItems, RADAR_COLORS, themed } from './qualityFormat.js';
 
-// How the index is worked out, in the order a reader needs it. Numbers come from the config, never typed in here.
+// How the index is worked out, in the order a reader needs it. Weights come from the config; the per-case points
+// (warrant 3, OP 2/1, award ranks) are typed here and must follow qualityIndexData.js and AWARD_POINTS.
 const METHOD_LINES = [
     'คะแนนแต่ละด้าน = ค่าของ ส.ทล. ÷ ค่าสูงสุดของ ส.ทล. ทั้ง 43 ในช่วงเดียวกัน × น้ำหนักของด้าน (ค่าสูงสุดเป็น 0 ให้ 0 คะแนน)',
     'ดัชนีของ ส.ทล. = ผลรวมคะแนนทั้ง 6 ด้าน (เต็ม 100) · ดัชนีของ กก. และ บก.ทล. = ค่าเฉลี่ยของ ส.ทล. ในหน่วยนั้น',

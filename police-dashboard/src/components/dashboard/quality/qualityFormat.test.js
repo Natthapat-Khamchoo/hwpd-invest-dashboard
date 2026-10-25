@@ -180,7 +180,7 @@ test('itemGroupsOf lists award, major, OP and important warrant in that order, e
     });
 
     assert.deepEqual(groups.map((group) => group.kind), ['award', 'major', 'op', 'warrant']);
-    assert.deepEqual(groups.map((group) => group.label), ['รางวัล', 'คดีสำคัญ', 'ปฏิบัติการ (OP)', 'หมายจับสำคัญ']);
+    assert.deepEqual(groups.map((group) => group.label), ['รางวัล', 'คดีสำคัญ', 'ปฏิบัติการ (OP)', 'หมายจับสำคัญ (บวกเพิ่มจากหมายปกติที่นับแล้ว 1 รวมเป็น 3)']);
     assert.equal(groups[0].rows[0].title, 'ผลงาน');
     assert.deepEqual(groups[1].rows, []);
 });

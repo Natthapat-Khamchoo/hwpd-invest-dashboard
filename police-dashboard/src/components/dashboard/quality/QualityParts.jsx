@@ -216,7 +216,7 @@ export const ItemGroupsList = ({ groups, isDarkMode = true }) => {
                                         <span className={`mr-2 whitespace-nowrap text-xs ${muted}`}>{awardLabel(row)}</span>
                                         {row.title}
                                     </span>
-                                    <span className="whitespace-nowrap font-semibold tabular-nums">{formatCount(row.value)} {group.kind === 'warrant' ? 'คดี' : 'คะแนน'}</span>
+                                    <span className="whitespace-nowrap font-semibold tabular-nums">{group.kind === 'warrant' ? `+${formatCount(row.value)} คดี` : `${formatCount(row.value)} คะแนน`}</span>
                                 </li>
                             ))}
                         </ul>
