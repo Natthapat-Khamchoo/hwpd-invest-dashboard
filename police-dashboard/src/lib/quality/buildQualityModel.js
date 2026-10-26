@@ -4,6 +4,7 @@ import { OP_CASES, ROYAL_CONVOY_DAYS } from './qualityIndexData.js';
 import { MONTHLY_AWARDS } from './monthlyAwards.js';
 import { awardsByStation } from './awards.js';
 import { isScoredMonth, latestScoredMonth, monthKeyOf, monthsIn, scoringStartDate } from './scoringDates.js';
+import { STAFFING, STATION_GROUPS, stationGroupOf } from './staffing.js';
 
 const DIM_IDS = INDEX_DIMENSIONS.map((dimension) => dimension.id);
 const DIVISIONS = Object.keys(STATIONS_PER_DIVISION);
@@ -180,18 +181,43 @@ export const buildQualityModel = (_rawData, period, today = new Date()) => {
     const prevStationIndex = new Map((previous?.stations ?? []).map((station) => [station.key, station.index]));
     const prevDivisionIndex = new Map((previous?.divisions ?? []).map((division) => [division.kk, division.index]));
 
-    const stations = current.stations.map((station) => ({
-        key: station.key,
-        kk: station.kk,
-        stl: station.stl,
-        name: `ส.ทล.${station.stl} กก.${station.kk}`,
-        counts: station.counts,
-        raw: station.raw,
-        scores: station.scores,
-        index: round1(station.index),
-        delta: previous ? deltaOf(station.index, prevStationIndex.get(station.key)) : null,
-        items: station.items,
-    }));
+    // Per head held, from unrounded values; 0 when nobody is held, so a station without a figure never shows NaN
+    const perCapitaOf = (station, held) => ({
+        criminal: safeDiv(station.raw.criminal, held),
+        truck: safeDiv(station.raw.truck, held),
+        royal: safeDiv(station.raw.royal, held),
+        indexPer10: safeDiv(station.index, held) * 10,
+    });
+
+    // Rank within the size group by the displayed index, so stations that show the same index share the better place
+    const stations = current.stations.map((station) => {
+        const group = stationGroupOf(station.key);
+        const held = STAFFING[station.key].held;
+        const index = round1(station.index);
+        const peers = current.stations.filter((other) => stationGroupOf(other.key) === group);
+        return {
+            key: station.key,
+            kk: station.kk,
+            stl: station.stl,
+            name: `ส.ทล.${station.stl} กก.${station.kk}`,
+            group,
+            held,
+            groupRank: 1 + peers.filter((other) => round1(other.index) > index).length,
+            groupSize: peers.length,
+            counts: station.counts,
+            raw: station.raw,
+            scores: station.scores,
+            index,
+            perCapita: perCapitaOf(station, held),
+            delta: previous ? deltaOf(station.index, prevStationIndex.get(station.key)) : null,
+            items: station.items,
+        };
+    });
+
+    const groups = STATION_GROUPS.map(({ id, label }) => {
+        const members = current.stations.filter((station) => stationGroupOf(station.key) === id);
+        return { id, label, stationCount: members.length, averageIndex: safeDiv(sum(members.map((station) => station.index)), members.length) };
+    });
 
     const divisions = current.divisions.map((division) => ({
         kk: division.kk,
@@ -209,5 +235,5 @@ export const buildQualityModel = (_rawData, period, today = new Date()) => {
     };
 
     const periodMeta = spec.kind === 'pastMonth' ? { kind: spec.kind, month: spec.month } : { kind: spec.kind };
-    return { period: { ...periodMeta, ...range }, max: current.max, hq, divisions, stations };
+    return { period: { ...periodMeta, ...range }, max: current.max, hq, divisions, stations, groups };
 };

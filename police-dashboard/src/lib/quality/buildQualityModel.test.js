@@ -279,3 +279,60 @@ test('the fiscal year has no delta, because it is not compared with another peri
 test('deltaOf reports 0 and never -0 when a float residue rounds to zero', () => {
     assert.ok(Object.is(deltaOf(2 * 22 * (15 / 22), 30), 0));
 });
+
+test('each station carries its size group and its held head count from the staffing table', () => {
+    const model = buildQualityModel(null, 'fy', TODAY);
+
+    assert.equal(stationOf(model, '3-2').group, 'large');
+    assert.equal(stationOf(model, '3-2').held, 66);
+    assert.equal(stationOf(model, '5-2').group, 'small');
+    assert.equal(stationOf(model, '8-3').held, 28);
+});
+
+test('group rank is 1-based by index within the size group: 3-2 leads the large group and 5-2 leads the small one', () => {
+    const model = buildQualityModel(null, 'fy', TODAY);
+
+    assert.equal(stationOf(model, '3-2').groupRank, 1);
+    assert.equal(stationOf(model, '5-2').groupRank, 1);
+    assert.equal(stationOf(model, '5-2').index, 50.7);
+    assert.equal(stationOf(model, '2-6').index, 50.0);
+    assert.equal(stationOf(model, '2-6').groupRank, 2);
+});
+
+test('group size is the number of stations in the same group, 25 large and 18 small', () => {
+    const model = buildQualityModel(null, 'fy', TODAY);
+
+    const large = model.stations.filter((station) => station.group === 'large');
+    const small = model.stations.filter((station) => station.group === 'small');
+
+    assert.equal(large.length, 25);
+    assert.equal(small.length, 18);
+    assert.ok(large.every((station) => station.groupSize === 25));
+    assert.ok(small.every((station) => station.groupSize === 18));
+});
+
+test('per-capita criminal of 3-2 in the fiscal year is its 539 cases over its 66 held', () => {
+    const model = buildQualityModel(null, 'fy', TODAY);
+
+    close(stationOf(model, '3-2').perCapita.criminal, 539 / 66, 1e-9);
+});
+
+test('per-capita index per 10 people is the unrounded index over held, times 10', () => {
+    const model = buildQualityModel(null, 'fy', TODAY);
+    const station = stationOf(model, '3-2');
+
+    close(station.perCapita.indexPer10, station.index / 66 * 10, 0.01);
+});
+
+test('the two size groups report their station count and the mean index of their stations', () => {
+    const model = buildQualityModel(null, 'fy', TODAY);
+
+    assert.deepEqual(model.groups.map((group) => [group.id, group.label, group.stationCount]), [
+        ['large', 'ส.ทล. ขนาดใหญ่ (สวญ.)', 25],
+        ['small', 'ส.ทล. ขนาดเล็ก (สว.)', 18],
+    ]);
+    for (const group of model.groups) {
+        const members = model.stations.filter((station) => station.group === group.id);
+        close(group.averageIndex, mean(members.map((station) => station.index)), 0.05);
+    }
+});
