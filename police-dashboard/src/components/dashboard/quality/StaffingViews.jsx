@@ -31,8 +31,8 @@ const legendColorOf = (label, isDarkMode) => {
 const QUADRANT_CORNERS = [
     { label: 'คนน้อย ผลงานสูง', className: 'left-14 top-2' },
     { label: 'คนมาก ผลงานสูง', className: 'right-3 top-2 text-right' },
-    { label: 'คนน้อย ผลงานต่ำ', className: 'bottom-10 left-14' },
-    { label: 'คนมาก ผลงานต่ำ', className: 'bottom-10 right-3 text-right' },
+    { label: 'คนน้อย ผลงานต่ำ', className: 'bottom-16 left-14' },
+    { label: 'คนมาก ผลงานต่ำ', className: 'bottom-16 right-3 text-right' },
 ];
 
 const ScatterTooltip = ({ active, payload, isDarkMode, means }) => {
@@ -63,8 +63,8 @@ export const StaffingScatter = ({ stations, isDarkMode = true, onSelectStation }
             <ResponsiveContainer width="100%" height={380}>
                 <ScatterChart margin={{ top: 28, right: 16, left: 0, bottom: 4 }}>
                     <CartesianGrid stroke={gridColor} />
-                    <XAxis type="number" dataKey="held" name="คนครอง" domain={['dataMin - 5', 'dataMax + 5']} tick={{ fill: tickColor, fontSize: 11 }} tickLine={false} axisLine={{ stroke: gridColor }} label={{ value: 'คนครอง', position: 'insideBottomRight', offset: -2, fill: tickColor, fontSize: 11 }} />
-                    <YAxis type="number" dataKey="index" name="ดัชนี" domain={['dataMin - 5', 'dataMax + 5']} width={48} tickFormatter={formatCount} tick={{ fill: tickColor, fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <XAxis type="number" dataKey="held" name="คนครอง" domain={[0, 120]} ticks={[0, 20, 40, 60, 80, 100, 120]} tick={{ fill: tickColor, fontSize: 11 }} tickLine={false} axisLine={{ stroke: gridColor }} label={{ value: 'คนครอง', position: 'insideBottomRight', offset: -2, fill: tickColor, fontSize: 11 }} />
+                    <YAxis type="number" dataKey="index" name="ดัชนี" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} width={48} tickFormatter={formatCount} tick={{ fill: tickColor, fontSize: 11 }} tickLine={false} axisLine={false} />
                     <ReferenceLine x={means.held} stroke={tickColor} strokeDasharray="6 4" />
                     <ReferenceLine y={means.index} stroke={tickColor} strokeDasharray="6 4" />
                     <RechartsTooltip
