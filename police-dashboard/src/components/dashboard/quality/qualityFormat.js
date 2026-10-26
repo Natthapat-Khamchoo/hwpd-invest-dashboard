@@ -1,5 +1,6 @@
 import { INDEX_DIMENSIONS } from '../../../lib/quality/scoringConfig.js';
 import { scoredDataMonths } from '../../../lib/quality/scoringDates.js';
+import { STATION_GROUPS } from '../../../lib/quality/staffing.js';
 
 const MONTHS_SHORT = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
@@ -140,3 +141,79 @@ const ITEM_GROUPS = [
     { kind: 'op', label: 'OP / ยุทธการ' },
 ];
 export const itemGroupsOf = (items) => ITEM_GROUPS.map(({ kind, label }) => ({ kind, label, rows: items[kind] ?? [] }));
+
+// Staffing is a context figure: it is shown beside the index and never weighted into it
+export const STAFFING_NOTE = 'ข้อมูลกำลังพล ณ 1 ต.ค.69 (กก.8 ณ 8 มิ.ย.69 รวมตำแหน่งสอบสวน) · ตัวชี้วัดประกอบ ไม่นำไปคิดในดัชนี';
+
+// The group filter: all stations, then each size group
+export const GROUP_FILTERS = [{ id: 'all', label: 'ทั้งหมด' }, ...STATION_GROUPS];
+
+export const groupLabelOf = (id) => STATION_GROUPS.find((group) => group.id === id)?.label ?? '';
+
+// Keeps the given order, so the callers' sort rules still apply
+export const filterStationsByGroup = (stations, groupId) => (
+    groupId === 'all' ? stations : stations.filter((station) => station.group === groupId)
+);
+
+export const groupRankLabel = ({ groupRank, groupSize }) => `ที่ ${groupRank} จาก ${groupSize}`;
+
+// Per head held: two decimals, since most values are below 10
+export const formatPerCapita = (value) => formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+export const meanOf = (values) => (values.length > 0 ? values.reduce((total, value) => total + value, 0) / values.length : 0);
+
+// The mean held and mean index of the given stations: the reference lines of the scatter
+export const meansOf = (stations) => ({
+    held: meanOf(stations.map((station) => station.held)),
+    index: meanOf(stations.map((station) => station.index)),
+});
+
+// One scatter point per station: x is held, y is the index
+export const staffingPoints = (stations) => stations.map((station) => ({
+    key: station.key,
+    label: station.name,
+    group: station.group,
+    groupLabel: groupLabelOf(station.group),
+    held: station.held,
+    index: station.index,
+}));
+
+// The quadrant of a point against the means. Above a mean counts as many (คนมาก) or high (ผลงานสูง); at the mean is low.
+export const quadrantCaption = (held, index, means) => {
+    const many = held > means.held;
+    const high = index > means.index;
+    if (many) return high ? 'คนมาก ผลงานสูง' : 'คนมาก ผลงานต่ำ';
+    return high ? 'คนน้อย ผลงานสูง' : 'คนน้อย ผลงานต่ำ';
+};
+
+// The three per-head values and the index per 10 people, in the order the station page shows them
+export const perCapitaItems = (perCapita) => [
+    { id: 'criminal', label: 'คดีอาญาต่อคน', value: formatPerCapita(perCapita.criminal) },
+    { id: 'truck', label: 'รถหนักต่อคน', value: formatPerCapita(perCapita.truck) },
+    { id: 'royal', label: 'วัน ถปภ. ต่อคน', value: formatPerCapita(perCapita.royal) },
+    { id: 'indexPer10', label: 'ดัชนีต่อ 10 คน', value: formatAverage(perCapita.indexPer10) },
+];
+
+// One table row per station: the group's label is text so the table can show it directly
+export const perCapitaRows = (stations) => stations.map((station) => ({
+    key: station.key,
+    label: station.name,
+    groupId: station.group,
+    group: groupLabelOf(station.group),
+    held: station.held,
+    criminal: station.perCapita.criminal,
+    truck: station.perCapita.truck,
+    royal: station.perCapita.royal,
+    indexPer10: station.perCapita.indexPer10,
+}));
+
+// Sorts by a column ('label', 'groupId' or a number) in 'asc' or 'desc'. Equal values keep unit order (กก. then ส.ทล.).
+export const sortStationRows = (rows, column, direction) => {
+    const sign = direction === 'asc' ? 1 : -1;
+    const compareColumn = (a, b) => {
+        if (column === 'label') return compareUnitKeys(a.key, b.key);
+        if (column === 'groupId') return a.groupId.localeCompare(b.groupId);
+        return a[column] - b[column];
+    };
+    return [...rows].sort((a, b) => sign * compareColumn(a, b) || compareUnitKeys(a.key, b.key));
+};

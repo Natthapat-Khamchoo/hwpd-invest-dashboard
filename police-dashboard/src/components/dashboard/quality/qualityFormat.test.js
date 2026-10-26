@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatThaiDate, formatPeriodRange, formatDelta, placingOf, formatCount, formatAverage, radarSummary, radarTextColor, formatMonthThai, monthOptions, fiscalYearLabel, sourceNotice, awardLabel, axisPercent, INDEX_METRICS, metricValueOf, indexBarItems, compareUnitKeys, dimensionRadarRows, breakdownRows, averageRaw, itemGroupsOf } from './qualityFormat.js';
+import { formatThaiDate, formatPeriodRange, formatDelta, placingOf, formatCount, formatAverage, radarSummary, radarTextColor, formatMonthThai, monthOptions, fiscalYearLabel, sourceNotice, awardLabel, axisPercent, INDEX_METRICS, metricValueOf, indexBarItems, compareUnitKeys, dimensionRadarRows, breakdownRows, averageRaw, itemGroupsOf, STAFFING_NOTE, GROUP_FILTERS, groupLabelOf, filterStationsByGroup, groupRankLabel, formatPerCapita, meanOf, meansOf, staffingPoints, quadrantCaption, perCapitaRows, sortStationRows, perCapitaItems } from './qualityFormat.js';
 import { INDEX_DIMENSIONS } from '../../../lib/quality/scoringConfig.js';
 
 const DIM_IDS = ['criminal', 'major', 'award', 'op', 'truck', 'royal'];
@@ -182,4 +182,108 @@ test('itemGroupsOf lists award, major and OP in that order, empty groups include
     assert.deepEqual(groups.map((group) => group.label), ['รางวัล', 'คดีสำคัญ', 'OP / ยุทธการ']);
     assert.equal(groups[0].rows[0].title, 'ผลงาน');
     assert.deepEqual(groups[1].rows, []);
+});
+
+// Stations as the model returns them, trimmed to the fields the helpers read
+const station = (key, group, held, index, perCapita = { criminal: 0, truck: 0, royal: 0, indexPer10: 0 }) => ({
+    key,
+    name: `ส.ทล.${key.split('-')[1]} กก.${key.split('-')[0]}`,
+    group,
+    held,
+    index,
+    groupRank: 1,
+    groupSize: 1,
+    perCapita,
+});
+
+test('the staffing note names the as-of dates and says the figures are not part of the index', () => {
+    assert.equal(STAFFING_NOTE, 'ข้อมูลกำลังพล ณ 1 ต.ค.69 (กก.8 ณ 8 มิ.ย.69 รวมตำแหน่งสอบสวน) · ตัวชี้วัดประกอบ ไม่นำไปคิดในดัชนี');
+});
+
+test('GROUP_FILTERS offers all stations first, then the two size groups with their labels', () => {
+    assert.deepEqual(GROUP_FILTERS, [
+        { id: 'all', label: 'ทั้งหมด' },
+        { id: 'large', label: 'ส.ทล. ขนาดใหญ่ (สวญ.)' },
+        { id: 'small', label: 'ส.ทล. ขนาดเล็ก (สว.)' },
+    ]);
+    assert.equal(groupLabelOf('small'), 'ส.ทล. ขนาดเล็ก (สว.)');
+    assert.equal(groupLabelOf('unknown'), '');
+});
+
+test('filterStationsByGroup keeps the given order and returns every station for all', () => {
+    const stations = [station('1-1', 'large', 10, 5), station('1-2', 'small', 8, 6), station('2-1', 'large', 9, 7)];
+    assert.deepEqual(filterStationsByGroup(stations, 'all'), stations);
+    assert.deepEqual(filterStationsByGroup(stations, 'large').map((item) => item.key), ['1-1', '2-1']);
+    assert.deepEqual(filterStationsByGroup(stations, 'small').map((item) => item.key), ['1-2']);
+});
+
+test('groupRankLabel reads the rank among the size group, as ที่ N จาก M', () => {
+    assert.equal(groupRankLabel({ groupRank: 1, groupSize: 25 }), 'ที่ 1 จาก 25');
+});
+
+test('formatPerCapita always shows two decimals with thousands separators', () => {
+    assert.equal(formatPerCapita(539 / 66), '8.17');
+    assert.equal(formatPerCapita(0), '0.00');
+    assert.equal(formatPerCapita(1234.5), '1,234.50');
+});
+
+test('meanOf averages values and gives 0 for none', () => {
+    assert.equal(meanOf([2, 4, 9]), 5);
+    assert.equal(meanOf([]), 0);
+});
+
+test('meansOf averages held and index over the given stations', () => {
+    const means = meansOf([station('1-1', 'large', 60, 40), station('1-2', 'small', 40, 20)]);
+    assert.deepEqual(means, { held: 50, index: 30 });
+});
+
+test('staffingPoints gives each station its held count, index, group and label for the scatter', () => {
+    const [point] = staffingPoints([station('3-2', 'large', 66, 50.5)]);
+    assert.deepEqual(point, { key: '3-2', label: 'ส.ทล.2 กก.3', group: 'large', groupLabel: 'ส.ทล. ขนาดใหญ่ (สวญ.)', held: 66, index: 50.5 });
+});
+
+test('quadrantCaption places a point against the mean held and mean index, above the mean counting as many or high', () => {
+    const means = { held: 50, index: 30 };
+    assert.equal(quadrantCaption(40, 35, means), 'คนน้อย ผลงานสูง');
+    assert.equal(quadrantCaption(60, 35, means), 'คนมาก ผลงานสูง');
+    assert.equal(quadrantCaption(40, 20, means), 'คนน้อย ผลงานต่ำ');
+    assert.equal(quadrantCaption(60, 20, means), 'คนมาก ผลงานต่ำ');
+    assert.equal(quadrantCaption(50, 30, means), 'คนน้อย ผลงานต่ำ');
+});
+
+test('perCapitaItems gives the three per-head values to two decimals and the index per 10 to one', () => {
+    assert.deepEqual(perCapitaItems({ criminal: 539 / 66, truck: 2, royal: 0.5, indexPer10: 12.345 }), [
+        { id: 'criminal', label: 'คดีอาญาต่อคน', value: '8.17' },
+        { id: 'truck', label: 'รถหนักต่อคน', value: '2.00' },
+        { id: 'royal', label: 'วัน ถปภ. ต่อคน', value: '0.50' },
+        { id: 'indexPer10', label: 'ดัชนีต่อ 10 คน', value: '12.3' },
+    ]);
+});
+
+test('perCapitaRows flattens each station into a table row keyed by its unit key', () => {
+    const rows = perCapitaRows([station('3-2', 'large', 66, 50, { criminal: 8.17, truck: 1, royal: 0.5, indexPer10: 7.6 })]);
+    assert.deepEqual(rows, [{
+        key: '3-2',
+        label: 'ส.ทล.2 กก.3',
+        groupId: 'large',
+        group: 'ส.ทล. ขนาดใหญ่ (สวญ.)',
+        held: 66,
+        criminal: 8.17,
+        truck: 1,
+        royal: 0.5,
+        indexPer10: 7.6,
+    }]);
+});
+
+test('sortStationRows sorts by a column in either direction, with unit order as the tie-break', () => {
+    const rows = [
+        { key: '1-2', groupId: 'small', held: 10, criminal: 1, truck: 0, royal: 0, indexPer10: 5 },
+        { key: '1-10', groupId: 'large', held: 10, criminal: 3, truck: 0, royal: 0, indexPer10: 5 },
+        { key: '1-1', groupId: 'large', held: 20, criminal: 2, truck: 0, royal: 0, indexPer10: 9 },
+    ];
+    assert.deepEqual(sortStationRows(rows, 'indexPer10', 'desc').map((row) => row.key), ['1-1', '1-2', '1-10']);
+    assert.deepEqual(sortStationRows(rows, 'criminal', 'asc').map((row) => row.key), ['1-2', '1-1', '1-10']);
+    assert.deepEqual(sortStationRows(rows, 'label', 'desc').map((row) => row.key), ['1-10', '1-2', '1-1']);
+    assert.deepEqual(sortStationRows(rows, 'groupId', 'asc').map((row) => row.key), ['1-1', '1-10', '1-2']);
+    assert.equal(rows[0].key, '1-2', 'the input is not reordered');
 });

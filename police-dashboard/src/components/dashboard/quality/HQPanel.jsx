@@ -2,6 +2,7 @@ import React from 'react';
 import { Gauge, BarChart3, Calculator } from 'lucide-react';
 import { IndexFigure, CategoryRadar, Panel, ScoreBarChart } from './QualityParts';
 import StationCompare from './StationCompare';
+import { StaffingPanels } from './StaffingViews';
 import { scoringStartDate } from '../../../lib/quality/scoringDates.js';
 import { INDEX_DIMENSIONS } from '../../../lib/quality/scoringConfig.js';
 import { dimensionRadarRows, formatThaiDate, indexBarItems, RADAR_COLORS, themed } from './qualityFormat.js';
@@ -51,6 +52,8 @@ const HQPanel = ({ model, isDarkMode = true, onSelectDivision, onSelectStation }
             </Panel>
 
             <StationCompare model={model} isDarkMode={isDarkMode} onSelectStation={onSelectStation} />
+
+            <StaffingPanels stations={model.stations} isDarkMode={isDarkMode} onSelectStation={onSelectStation} />
 
             <Panel title="วิธีคิดดัชนี" icon={Calculator} isDarkMode={isDarkMode}>
                 <p className={`mb-4 text-sm ${muted}`}>ดัชนีคุณภาพเต็ม 100 แบ่งเป็น 6 ด้าน</p>

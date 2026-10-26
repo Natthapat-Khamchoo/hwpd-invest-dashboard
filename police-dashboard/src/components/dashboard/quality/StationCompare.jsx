@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Building2 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, LabelList, Tooltip as RechartsTooltip } from 'recharts';
-import { MetricCard, Panel, ScoreBarTooltip } from './QualityParts';
-import { compareUnitKeys, formatAverage, formatCount, indexBarItems, INDEX_METRICS, metricValueOf, themed } from './qualityFormat.js';
+import { MetricCard, Panel, ScoreBarTooltip, SegmentedButtons } from './QualityParts';
+import { compareUnitKeys, filterStationsByGroup, formatAverage, formatCount, GROUP_FILTERS, indexBarItems, INDEX_METRICS, metricValueOf, themed } from './qualityFormat.js';
 
 const ROW_HEIGHT = 26;
 const SORTS = [
@@ -16,6 +16,7 @@ const BAR_FILLS = ['#06b6d4', '#6366f1'];
 const StationCompare = ({ model, isDarkMode = true, onSelectStation }) => {
     const [selectedMetric, setSelectedMetric] = useState('index');
     const [sort, setSort] = useState('order');
+    const [groupFilter, setGroupFilter] = useState('all');
     const muted = themed(isDarkMode, 'text-slate-400', 'text-slate-600');
     const tickColor = themed(isDarkMode, '#cbd5e1', '#334155');
     const gridColor = themed(isDarkMode, 'rgba(255,255,255,0.12)', '#cbd5e1');
@@ -23,7 +24,7 @@ const StationCompare = ({ model, isDarkMode = true, onSelectStation }) => {
     const metric = INDEX_METRICS.find((item) => item.id === selectedMetric);
 
     // Labels read ส.ทล. first, but the bars keep unit order กก. then ส.ทล. (by key); the score sort then re-orders them
-    const items = indexBarItems(model.stations, selectedMetric, (station) => `ส.ทล.${station.stl} กก.${station.kk}`)
+    const items = indexBarItems(filterStationsByGroup(model.stations, groupFilter), selectedMetric, (station) => `ส.ทล.${station.stl} กก.${station.kk}`)
         .map((item) => ({ ...item, fill: BAR_FILLS[Number(item.key.split('-')[0]) % 2] }));
     if (sort === 'score') items.sort((a, b) => b.value - a.value || compareUnitKeys(a.key, b.key));
 
@@ -42,8 +43,11 @@ const StationCompare = ({ model, isDarkMode = true, onSelectStation }) => {
                     />
                 ))}
             </div>
+            <div className="mb-3">
+                <SegmentedButtons label="กรองตามกลุ่มขนาด" options={GROUP_FILTERS} value={groupFilter} onChange={setGroupFilter} isDarkMode={isDarkMode} />
+            </div>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <p className={`text-sm ${muted}`}>เปรียบเทียบ{metric.label} ของทุก ส.ทล. · กดแท่งเพื่อดูรายละเอียด</p>
+                <p className={`text-sm ${muted}`}>เปรียบเทียบ{metric.label} ของ{groupFilter === 'all' ? 'ทุก ส.ทล.' : GROUP_FILTERS.find((item) => item.id === groupFilter).label} · กดแท่งเพื่อดูรายละเอียด</p>
                 <div role="group" aria-label="เรียงลำดับ" className="flex gap-2">
                     {SORTS.map((item) => (
                         <button

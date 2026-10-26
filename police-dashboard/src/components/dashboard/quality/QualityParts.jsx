@@ -256,3 +256,22 @@ export const MetricCard = ({ metric, value, selected, onSelect, isDarkMode, clas
         </button>
     );
 };
+
+// Chooses one of a few options as segmented buttons, the same look as the sort buttons
+export const SegmentedButtons = ({ label, options, value, onChange, isDarkMode = true }) => (
+    <div role="group" aria-label={label} className="flex flex-wrap gap-2">
+        {options.map((item) => (
+            <button
+                key={item.id}
+                type="button"
+                aria-pressed={value === item.id}
+                onClick={() => onChange(item.id)}
+                className={`min-h-[44px] cursor-pointer rounded-lg border px-3 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${value === item.id
+                    ? themed(isDarkMode, 'border-cyan-400 bg-cyan-500/15', 'border-cyan-600 bg-cyan-50')
+                    : themed(isDarkMode, 'border-white/10 bg-slate-900/40 hover:bg-slate-800/60', 'border-slate-200 bg-white hover:bg-slate-100')}`}
+            >
+                {item.label}
+            </button>
+        ))}
+    </div>
+);
