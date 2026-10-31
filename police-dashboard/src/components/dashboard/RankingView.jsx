@@ -1,5 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Trophy, Medal, Award, Star, Shield, Siren, Gavel, Target, Sparkles, Crown, Pill, FileText, ArrowLeft, X } from 'lucide-react';
+import { buildQualityModel } from '../../lib/quality/buildQualityModel.js';
+import { latestScoredMonth } from '../../lib/quality/scoringDates.js';
+import { fiscalYearLabel, monthOptions } from './quality/qualityFormat.js';
+
+// "ยอดเยี่ยมรวม" ranks by the quality index, so it has its own period (fiscal year or one past month), not the page filters.
+// The newest workbook month is the default; with no workbook the fiscal year is shown.
+const NEWEST_MONTH = latestScoredMonth();
+const DEFAULT_PERIOD = NEWEST_MONTH ? { kind: 'pastMonth', month: NEWEST_MONTH } : { kind: 'fy' };
+const FY_LABEL = NEWEST_MONTH ? fiscalYearLabel(NEWEST_MONTH) : 'ปีงบประมาณ';
+const TOP_UNITS = 5;
 
 const getRankIcon = (index) => {
     switch (index) {
@@ -112,12 +122,22 @@ const RankingView = ({ unitRankings, isDarkMode = true }) => {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [originRect, setOriginRect] = useState(null);
     const [isAnimating, setIsAnimating] = useState(false);
+    const [qualityPeriod, setQualityPeriod] = useState(DEFAULT_PERIOD);
+    const months = useMemo(() => monthOptions(), []);
+
+    // Top stations by quality index; a station with no score is not ranked
+    const overall = useMemo(() => buildQualityModel(null, qualityPeriod).stations
+        .filter((station) => station.index > 0)
+        .sort((a, b) => b.index - a.index || a.kk - b.kk || a.stl - b.stl)
+        .slice(0, TOP_UNITS)
+        .map((station) => ({ name: station.name, count: station.index })), [qualityPeriod]);
 
     if (!unitRankings) return null;
-    const { overall, drugs, drugSeizure, warrantsBigData, warrantsBodyworn } = unitRankings;
+    const { drugs, drugSeizure, warrantsBigData, warrantsBodyworn } = unitRankings;
+    const fyActive = qualityPeriod.kind === 'fy';
 
     const cards = [
-        { id: 'overall', title: "ยอดเยี่ยมรวม", icon: Crown, data: overall || [], colorClass: "bg-yellow-500", isPremium: true },
+        { id: 'overall', title: "ยอดเยี่ยมรวม", icon: Crown, data: overall, colorClass: "bg-yellow-500", isPremium: true, unitLabel: "คะแนน" },
         { id: 'drugs', title: "ปราบปรามยาเสพติด", icon: Pill, data: drugs || [], colorClass: "bg-red-500" },
         { id: 'drugSeizure', title: "ตรวจยึดยาเสพติด", icon: Shield, data: drugSeizure || [], colorClass: "bg-orange-500", unitLabel: "เม็ด" },
         { id: 'warrants_bigdata', title: "หมายจับ Big Data", icon: Target, data: warrantsBigData || [], colorClass: "bg-cyan-500" },
@@ -181,6 +201,31 @@ const RankingView = ({ unitRankings, isDarkMode = true }) => {
                     <p className="dark:text-slate-300 text-slate-600 text-lg font-medium tracking-wide">
                         ทำเนียบเกียรติยศหน่วยงานปฏิบัติการยอดเยี่ยมแห่งปี
                     </p>
+                </div>
+
+                {/* --- Period of the quality-index card --- */}
+                <div className={`flex flex-wrap items-center justify-center gap-3 transition-all duration-500 ${selectedCategory ? 'blur-sm opacity-50 pointer-events-none' : ''}`}>
+                    <span className="text-sm dark:text-slate-300 text-slate-600">ยอดเยี่ยมรวมใช้ดัชนีคุณภาพ ช่วง:</span>
+                    <button
+                        type="button"
+                        aria-pressed={fyActive}
+                        onClick={() => setQualityPeriod({ kind: 'fy' })}
+                        className={`min-h-[44px] rounded-md px-4 text-sm font-semibold transition-colors ${fyActive ? 'bg-yellow-500 text-slate-900' : 'dark:text-slate-300 text-slate-700 border border-white/10 hover:bg-white/10'}`}
+                    >
+                        {FY_LABEL}
+                    </button>
+                    <select
+                        aria-label="เลือกเดือน"
+                        value={qualityPeriod.kind === 'pastMonth' ? qualityPeriod.month : ''}
+                        onChange={(e) => setQualityPeriod({ kind: 'pastMonth', month: e.target.value })}
+                        style={{ colorScheme: isDarkMode ? 'dark' : 'light' }}
+                        className="min-h-[44px] rounded-md border border-white/10 bg-transparent px-3 text-sm font-semibold dark:text-white text-slate-900"
+                    >
+                        <option value="" disabled>เลือกเดือน</option>
+                        {months.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                    </select>
                 </div>
 
                 {/* --- Grid View --- */}
